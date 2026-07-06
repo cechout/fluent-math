@@ -86,8 +86,17 @@ namespace Calculator_WinUI.ViewModels
             {
                 switch (sign)
                 {
+                    case "cmd_nav_left":
+                        _inputManager.Move(NavDirection.Left);
+                        break;
                     case "cmd_nav_right":
-                        _inputManager.MoveRight();
+                        _inputManager.Move(NavDirection.Right);
+                        break;
+                    case "cmd_nav_up":
+                        _inputManager.Move(NavDirection.Up);
+                        break;
+                    case "cmd_nav_down":
+                        _inputManager.Move(NavDirection.Down);
                         break;
 
                     case "cmd_sqrt":
@@ -105,7 +114,7 @@ namespace Calculator_WinUI.ViewModels
                     case "cmd_pow_2":
                         _inputManager.StartPower();
                         _inputManager.AddNumber("2");
-                        _inputManager.MoveRight();
+                        _inputManager.Move(NavDirection.Right);
                         break;
 
                     case "cmd_sin":

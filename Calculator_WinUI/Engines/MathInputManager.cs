@@ -9,7 +9,8 @@ namespace Calculator_WinUI.Engines
         private readonly List<MathToken> _rootTokens = new List<MathToken>();
 
         // the stack that keeps track of which sublist we are currently writing to
-        private readonly Stack<List<MathToken>> _scopeStack = new Stack<List<MathToken>>();
+        // the stack now manages context objects instead of just lists of tokens
+        private readonly Stack<ScopeContext> _scopeStack = new Stack<ScopeContext>();
 
         // returns the top List<MathToken> from _scopeStack via Peek() if _scopeStack is not empty.
         // otherwise, returns _rootTokens when no nested scopes are active
@@ -19,7 +20,7 @@ namespace Calculator_WinUI.Engines
             {
                 if (_scopeStack.Count > 0)
                 {
-                    return _scopeStack.Peek();
+                    return _scopeStack.Peek().Tokens;
                 }
                 else
                 {
@@ -51,16 +52,84 @@ namespace Calculator_WinUI.Engines
             _scopeStack.Clear();
         }
 
-        // movement
-        // (exits the current scope to the right; e.g. exits the exponent)
-        public bool MoveRight()
+        // modular movement handler 
+        // delegates to specific handlers based on the current scope role
+        public void Move(NavDirection direction)
         {
-            if (_scopeStack.Count > 0)
+            if (_scopeStack.Count == 0) return; // at root level there is no sub-scope to leave
+
+            var currentContext = _scopeStack.Peek();
+
+            // modular movement handler; delegates to specific handlers based on the current scope role
+            switch (currentContext.Role)
+            {
+                case ScopeRole.Numerator:
+                    HandleNumeratorNavigation(direction, currentContext);
+                    break;
+
+                case ScopeRole.Denominator:
+                    HandleDenominatorNavigation(direction, currentContext);
+                    break;
+
+                // all standard types (powers, roots, logarithms) behave movement-wise linearly
+                case ScopeRole.Exponent:
+                case ScopeRole.RootRadicand:
+                case ScopeRole.RootIndex:
+                case ScopeRole.FunctionParameter:
+                case ScopeRole.LogBase:
+                case ScopeRole.LogParameter:
+                    HandleDefaultLinearNavigation(direction, currentContext);
+                    break;
+            }
+        }
+        // behavior: in numerator
+        private void HandleNumeratorNavigation(NavDirection direction, ScopeContext context)
+        {
+            var fraction = context.ParentToken as FractionToken;
+            if (fraction == null) return;
+
+            if (direction == NavDirection.Down)
+            {
+                // new pointer: leave numerator, enter denominator of the same fraction
+                _scopeStack.Pop();
+                _scopeStack.Push(new ScopeContext(fraction.DenominatorTokens, fraction, ScopeRole.Denominator));
+            }
+            else if (direction == NavDirection.Right)
+            {
+                // movement to right just leaves the whole fraction
+                _scopeStack.Pop();
+            }
+            else if (direction == NavDirection.Left)
             {
                 _scopeStack.Pop();
-                return true; // successfully moved one layer up
             }
-            return false; // we are already at root layer
+        }
+        // behavior: in denominator
+        private void HandleDenominatorNavigation(NavDirection direction, ScopeContext context)
+        {
+            var fraction = context.ParentToken as FractionToken;
+            if (fraction == null) return;
+
+            if (direction == NavDirection.Up)
+            {
+                // new pointer: leave denominator, enter numerator of the same fraction
+                _scopeStack.Pop();
+                _scopeStack.Push(new ScopeContext(fraction.NumeratorTokens, fraction, ScopeRole.Numerator));
+            }
+            else if (direction == NavDirection.Right || direction == NavDirection.Left)
+            {
+                // linearly leave the fraction to the right or left
+                _scopeStack.Pop();
+            }
+        }
+        // behavior: standard nesting (power, logarithm etc.)
+        private void HandleDefaultLinearNavigation(NavDirection direction, ScopeContext context)
+        {
+            // since powers/roots are built horizontally, they only react to horizontal vectors
+            if (direction == NavDirection.Right || direction == NavDirection.Left)
+            {
+                _scopeStack.Pop(); // leaves the exponent / parameter scope
+            }
         }
 
         public void AddNumber(string digit)
@@ -75,7 +144,6 @@ namespace Calculator_WinUI.Engines
                 CurrentScope.Add(new MathToken(TokenType.Number, digit));
             }
         }
-
         public void AddOperator(string op)
         {
             if (LastTokenInScope == null) return;
@@ -94,18 +162,16 @@ namespace Calculator_WinUI.Engines
         public void StartPower()
         {
             var powerToken = new PowerToken();
-
-            // if there was a number on the left, we take it as the base for the power
             if (LastTokenInScope != null && (LastTokenInScope.Type == TokenType.Number || LastTokenInScope.Type == TokenType.BracketClose))
             {
                 powerToken.BaseTokens.Add(LastTokenInScope);
-                CurrentScope.RemoveAt(CurrentScope.Count - 1); 
+                CurrentScope.RemoveAt(CurrentScope.Count - 1);
             }
-
             CurrentScope.Add(powerToken);
-            _scopeStack.Push(powerToken.ExponentTokens); // now we move the pointer to the exponent
-        }
 
+            // push with type as exponent; so that we can handle navigation correctly
+            _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
+        }
         // creates a root
         public void StartRoot(bool customIndex)
         {
@@ -114,45 +180,42 @@ namespace Calculator_WinUI.Engines
 
             if (customIndex)
             {
-                _scopeStack.Push(rootToken.IndexTokens); 
+                _scopeStack.Push(new ScopeContext(rootToken.IndexTokens, rootToken, ScopeRole.RootIndex));
             }
             else
             {
-                _scopeStack.Push(rootToken.RadicandTokens); 
+                _scopeStack.Push(new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand));
             }
         }
-
         // creates sin, cos, tan, ln
         public void StartFunction(string name)
         {
             var funcToken = new FunctionToken(name);
             CurrentScope.Add(funcToken);
-            _scopeStack.Push(funcToken.ParameterTokens); 
+            _scopeStack.Push(new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter));
         }
-
         // creates a fraction
         public void StartFraction()
         {
             var fracToken = new FractionToken();
             CurrentScope.Add(fracToken);
 
-            _scopeStack.Push(fracToken.NumeratorTokens); // pointer is on numerator
+            // focus first on numerator
+            _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
         }
-
         // creates a logarithm
         public void StartLogarithm(bool customBase)
         {
             var logToken = new LogarithmToken();
             CurrentScope.Add(logToken);
 
-            // we decide via the flag customBase wheter we want to point to the base or to the parameter after creation
             if (customBase)
             {
-                _scopeStack.Push(logToken.BaseTokens); 
+                _scopeStack.Push(new ScopeContext(logToken.BaseTokens, logToken, ScopeRole.LogBase));
             }
             else
             {
-                _scopeStack.Push(logToken.ParameterTokens); 
+                _scopeStack.Push(new ScopeContext(logToken.ParameterTokens, logToken, ScopeRole.LogParameter));
             }
         }
 
