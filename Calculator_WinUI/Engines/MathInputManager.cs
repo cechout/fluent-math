@@ -464,8 +464,20 @@ namespace Calculator_WinUI.Engines
             _rootContext.CursorIndex = 0;
         }
 
+        // drops everything and leaves a single number behind, which is how a finished result is carried
+        // into the calculation that continues from it
+        public void SeedWithValue(string numberText)
+        {
+            Clear();
+            _rootTokens.Add(new MathToken(TokenType.Number, numberText));
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
 
         // === output ===
+
+        // read-only view of the tree for the evaluator; this class stays the only thing that mutates it
+        public IReadOnlyList<MathToken> RootTokens => _rootTokens;
 
         // empty input renders as "0" so the display is never blank
         public string GetLatexString()

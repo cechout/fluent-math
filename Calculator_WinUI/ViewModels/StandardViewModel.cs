@@ -1,5 +1,4 @@
-﻿using Calculator_WinUI.Classes;
-using Calculator_WinUI.Engines;
+﻿using Calculator_WinUI.Engines;
 using Calculator_WinUI.Models;
 using Microsoft.UI.Xaml;
 using System.ComponentModel;
@@ -17,11 +16,15 @@ namespace Calculator_WinUI.ViewModels
     {
         // === fields ===
 
-        // the v1 string evaluator, carried over from the WPF version and currently unused; it will be
-        // replaced by a real evaluator walking the token tree rather than being wired back up
-        private Calculate _calculator = new Calculate();
-
         private readonly MathInputManager _inputManager = new MathInputManager();
+        private readonly MathEvaluator _evaluator = new MathEvaluator();
+
+        // the last successful result, kept so an operator pressed straight after = can continue from it
+        private double _lastAnswer;
+
+        // true while the display shows a result instead of the formula being typed; the next keypress
+        // decides whether that result is dropped or carried into the next calculation
+        private bool _isShowingResult;
 
 
         // === display properties ===
@@ -112,6 +115,15 @@ namespace Calculator_WinUI.ViewModels
         // nothing, which is why those buttons are currently dead rather than broken
         private void AddToTextBox(string sign)
         {
+            // shift only swaps the keyboard layer, it must never disturb the input or a shown result
+            if (sign == "cmd_shift")
+            {
+                ToggleShift();
+                return;
+            }
+
+            if (_isShowingResult) BeginInputAfterResult(sign);
+
             if (sign.StartsWith("cmd_"))
             {
                 switch (sign)
@@ -161,19 +173,6 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.StartFunction("tan");
                         break;
 
-                    case "cmd_shift":
-                        if (NormalVisibility == Visibility.Visible)
-                        {
-                            NormalVisibility = Visibility.Collapsed;
-                            ShiftVisibility = Visibility.Visible;
-                        }
-                        else
-                        {
-                            NormalVisibility = Visibility.Visible;
-                            ShiftVisibility = Visibility.Collapsed;
-                        }
-                        break;
-
                     case "cmd_frac":
                         _inputManager.StartFraction();
                         break;
@@ -201,14 +200,62 @@ namespace Calculator_WinUI.ViewModels
             InputAndResultText = _inputManager.GetLatexString();
         }
 
-        // there is no evaluator yet, so pressing equals only moves the input up into the history line
+        // after = the display holds a result rather than the formula that produced it, so the next key
+        // has to say what happens to it: an operator carries it into the next calculation, an arrow key
+        // goes back to editing the old formula, anything else starts over
+        private void BeginInputAfterResult(string sign)
+        {
+            _isShowingResult = false;
+
+            if (sign.StartsWith("cmd_nav_")) return; // the tree still holds the formula that was evaluated
+
+            if (sign == "+" || sign == "-" || sign == "*" || sign == "/")
+            {
+                _inputManager.SeedWithValue(ResultFormatter.ToPlainString(_lastAnswer));
+                return;
+            }
+
+            _inputManager.Clear();
+        }
+
+        // the second keyboard layer is two buttons stacked in the same cell, so switching layers is
+        // purely a matter of which of the two is visible
+        private void ToggleShift()
+        {
+            if (NormalVisibility == Visibility.Visible)
+            {
+                NormalVisibility = Visibility.Collapsed;
+                ShiftVisibility = Visibility.Visible;
+            }
+            else
+            {
+                NormalVisibility = Visibility.Visible;
+                ShiftVisibility = Visibility.Collapsed;
+            }
+        }
+
+        // = deliberately leaves the tree alone; only the display switches over to the result, so a
+        // Math ERROR can be corrected instead of retyped from scratch
         private void CalculateResult()
         {
-            CalculationText = InputAndResultText + "=";
+            CalculationText = _inputManager.GetLatexString() + "=";
+
+            EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
+            if (result.IsSuccess)
+            {
+                _lastAnswer = result.Value;
+                InputAndResultText = ResultFormatter.ToLatex(result.Value);
+                _isShowingResult = true;
+            }
+            else
+            {
+                InputAndResultText = ResultFormatter.ErrorToLatex(result.Error);
+            }
         }
 
         private void ClearAll()
         {
+            _isShowingResult = false;
             _inputManager.Clear();
             InputAndResultText = _inputManager.GetLatexString();
             CalculationText = "";
@@ -216,6 +263,9 @@ namespace Calculator_WinUI.ViewModels
 
         private void Backspace()
         {
+            // backspacing out of a result means going back to editing the formula behind it
+            _isShowingResult = false;
+
             _inputManager.Backspace();
             InputAndResultText = _inputManager.GetLatexString();
         }
