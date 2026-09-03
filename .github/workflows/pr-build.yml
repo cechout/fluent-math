@@ -48,6 +48,9 @@ jobs:
 
       # scoped to whitespace only, matches the .editorconfig, not style/analyzers
       # non blocking for now, flip continue-on-error to false once confirmed clean against main
+      #
+      # no -p:Platform here, dotnet format has no MSBuild property option and answers one with its
+      # usage help and a non zero exit, so the check would never actually run
       - name: dotnet format whitespace check
         continue-on-error: true
-        run: dotnet format whitespace Calculator_WinUI/Calculator_WinUI.csproj -p:Platform=x64 --verify-no-changes --verbosity diagnostic
+        run: dotnet format whitespace Calculator_WinUI/Calculator_WinUI.csproj --verify-no-changes --verbosity diagnostic
