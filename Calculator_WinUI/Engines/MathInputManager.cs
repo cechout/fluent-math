@@ -94,13 +94,14 @@ namespace Calculator_WinUI.Engines
                     HandleDenominatorNavigation(direction, ctx);
                     break;
 
+                case ScopeRole.PowerBase:
                 case ScopeRole.Exponent:
                 case ScopeRole.RootRadicand:
                 case ScopeRole.RootIndex:
                 case ScopeRole.FunctionParameter:
                 case ScopeRole.LogBase:
                 case ScopeRole.LogParameter:
-                    HandleDefaultLinearNavigation(direction, ctx);
+                    HandleLinearScopeNavigation(direction, ctx);
                     break;
             }
         }
@@ -118,35 +119,11 @@ namespace Calculator_WinUI.Engines
         {
             if (token is FractionToken) return false;
 
-            if (token is PowerToken powerToken)
-            {
-                var newCtx = new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent);
-                newCtx.CursorIndex = powerToken.ExponentTokens.Count;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is RootToken rootToken)
-            {
-                var newCtx = new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand);
-                newCtx.CursorIndex = rootToken.RadicandTokens.Count;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is FunctionToken funcToken)
-            {
-                var newCtx = new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter);
-                newCtx.CursorIndex = funcToken.ParameterTokens.Count;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is LogarithmToken logToken)
-            {
-                var newCtx = new ScopeContext(logToken.ParameterTokens, logToken, ScopeRole.LogParameter);
-                newCtx.CursorIndex = logToken.ParameterTokens.Count;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            return false;
+            List<TokenSlot> slots = GetSlots(token);
+            if (slots.Count == 0) return false;
+
+            PushScope(slots[slots.Count - 1], token, atEnd: true);
+            return true;
         }
 
         // cursor sits left of the token and the user pressed Right
@@ -154,35 +131,11 @@ namespace Calculator_WinUI.Engines
         {
             if (token is FractionToken) return false;
 
-            if (token is PowerToken powerToken)
-            {
-                var newCtx = new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent);
-                newCtx.CursorIndex = 0;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is RootToken rootToken)
-            {
-                var newCtx = new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand);
-                newCtx.CursorIndex = 0;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is FunctionToken funcToken)
-            {
-                var newCtx = new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter);
-                newCtx.CursorIndex = 0;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            if (token is LogarithmToken logToken)
-            {
-                var newCtx = new ScopeContext(logToken.ParameterTokens, logToken, ScopeRole.LogParameter);
-                newCtx.CursorIndex = 0;
-                _scopeStack.Push(newCtx);
-                return true;
-            }
-            return false;
+            List<TokenSlot> slots = GetSlots(token);
+            if (slots.Count == 0) return false;
+
+            PushScope(slots[0], token, atEnd: false);
+            return true;
         }
 
         // the two fraction halves are the only scopes where Up/Down means something: they swap sides of
@@ -235,22 +188,164 @@ namespace Calculator_WinUI.Engines
             }
         }
 
-        // exponents, radicands, function arguments: everything that reads as one line, so only
-        // Left and Right can leave it and Up/Down are ignored
-        private void HandleDefaultLinearNavigation(NavDirection direction, ScopeContext context)
+        // a slot that reads as one line: Left and Right first walk to the neighbouring slot of the same
+        // token and only leave the token once there is no neighbour left, which is what makes a root
+        // index or a logarithm base reachable with the arrow keys alone
+        private void HandleLinearScopeNavigation(NavDirection direction, ScopeContext context)
         {
-            MathToken parent = context.ParentToken;
-
             if (direction == NavDirection.Left)
             {
+                if (TryMoveToNeighbourSlot(context, next: false)) return;
+
                 _scopeStack.Pop();
-                PositionCursorAtParentToken(parent, before: true);
+                PositionCursorAtParentToken(context.ParentToken, before: true);
+                return;
             }
-            else if (direction == NavDirection.Right)
+
+            if (direction == NavDirection.Right)
             {
+                if (TryMoveToNeighbourSlot(context, next: true)) return;
+
                 _scopeStack.Pop();
-                PositionCursorAtParentToken(parent, before: false);
+                PositionCursorAtParentToken(context.ParentToken, before: false);
+                return;
             }
+
+            TrySwitchVerticalSlot(direction, context);
+        }
+
+        // which two slots sit above each other differs per token: an exponent is above its base, but a
+        // root index is above its radicand and a logarithm base below its argument
+        private void TrySwitchVerticalSlot(NavDirection direction, ScopeContext context)
+        {
+            ScopeRole upper;
+            ScopeRole lower;
+
+            switch (context.ParentToken)
+            {
+                case PowerToken:
+                    upper = ScopeRole.Exponent;
+                    lower = ScopeRole.PowerBase;
+                    break;
+
+                case RootToken:
+                    upper = ScopeRole.RootIndex;
+                    lower = ScopeRole.RootRadicand;
+                    break;
+
+                case LogarithmToken:
+                    upper = ScopeRole.LogParameter;
+                    lower = ScopeRole.LogBase;
+                    break;
+
+                default:
+                    return; // a function argument stands alone, so Up and Down do nothing there
+            }
+
+            ScopeRole target;
+            if (direction == NavDirection.Up && context.Role == lower) { target = upper; }
+            else if (direction == NavDirection.Down && context.Role == upper) { target = lower; }
+            else { return; }
+
+            TokenSlot? slot = GetSlots(context.ParentToken).Find(candidate => candidate.Role == target);
+            if (slot == null) return;
+
+            // coming from below lands at the end of the slot above, the same way the fraction halves behave
+            SwitchToSlot(slot, context.ParentToken, atEnd: direction == NavDirection.Up);
+        }
+
+
+        // === slots ===
+
+        // the slots of a structured token in reading order
+        //
+        // everything that walks between slots reads its answer out of this one list, so a further
+        // structured token needs one case here instead of a branch in each of the four callers
+        private static List<TokenSlot> GetSlots(MathToken token)
+        {
+            switch (token)
+            {
+                case FractionToken fraction:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(fraction.NumeratorTokens, ScopeRole.Numerator),
+                        new TokenSlot(fraction.DenominatorTokens, ScopeRole.Denominator)
+                    };
+
+                case PowerToken power:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(power.BaseTokens, ScopeRole.PowerBase),
+                        new TokenSlot(power.ExponentTokens, ScopeRole.Exponent)
+                    };
+
+                case RootToken root:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(root.IndexTokens, ScopeRole.RootIndex),
+                        new TokenSlot(root.RadicandTokens, ScopeRole.RootRadicand)
+                    };
+
+                case LogarithmToken logarithm:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(logarithm.BaseTokens, ScopeRole.LogBase),
+                        new TokenSlot(logarithm.ParameterTokens, ScopeRole.LogParameter)
+                    };
+
+                case FunctionToken function:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(function.ParameterTokens, ScopeRole.FunctionParameter)
+                    };
+            }
+
+            return new List<TokenSlot>();
+        }
+
+        // the slot next to the one the cursor is in, or null when the current slot is the outermost one
+        // on that side and the cursor has to leave the token instead
+        private static TokenSlot? GetNeighbourSlot(ScopeContext context, bool next)
+        {
+            if (context.ParentToken == null) return null;
+
+            List<TokenSlot> slots = GetSlots(context.ParentToken);
+            int index = slots.FindIndex(slot => ReferenceEquals(slot.Tokens, context.Tokens));
+            if (index < 0) return null;
+
+            int neighbourIndex = next ? index + 1 : index - 1;
+            if (neighbourIndex < 0 || neighbourIndex >= slots.Count) return null;
+
+            return slots[neighbourIndex];
+        }
+
+        // an empty neighbour is deliberately not skipped here; stepping into it is the only way to fill
+        // the index of a plain square root or the base of a logarithm that was left blank
+        private bool TryMoveToNeighbourSlot(ScopeContext context, bool next)
+        {
+            TokenSlot? neighbour = GetNeighbourSlot(context, next);
+            if (neighbour == null || context.ParentToken == null) return false;
+
+            SwitchToSlot(neighbour, context.ParentToken, atEnd: !next);
+            return true;
+        }
+
+        // pushes a slot as the scope being typed into, with the cursor parked at the end the cursor is
+        // arriving from
+        private void PushScope(TokenSlot slot, MathToken parentToken, bool atEnd)
+        {
+            var context = new ScopeContext(slot.Tokens, parentToken, slot.Role);
+            if (atEnd) context.CursorIndex = slot.Tokens.Count;
+
+            _scopeStack.Push(context);
+        }
+
+        // swaps the top of the stack for another slot of the same token, the way the two fraction halves
+        // already trade places
+        private void SwitchToSlot(TokenSlot slot, MathToken parentToken, bool atEnd)
+        {
+            _scopeStack.Pop();
+            PushScope(slot, parentToken, atEnd);
         }
 
         // after a pop, drop the cursor either directly before or directly after the token that owned the
@@ -489,6 +584,18 @@ namespace Calculator_WinUI.Engines
             // at the start of a sub-scope: leave it and delete the token that owned it
             if (ctx.CursorIndex == 0 && ctx.Role != ScopeRole.Root)
             {
+                // unless the same token has a slot before this one that still holds something; deleting
+                // the whole structure from there would throw away what the user already typed into it
+                //
+                // an empty previous slot is skipped on purpose, falling back into nothing would leave
+                // Backspace looking stuck
+                TokenSlot? previousSlot = GetNeighbourSlot(ctx, next: false);
+                if (previousSlot != null && previousSlot.Tokens.Count > 0 && ctx.ParentToken != null)
+                {
+                    SwitchToSlot(previousSlot, ctx.ParentToken, atEnd: true);
+                    return;
+                }
+
                 MathToken parentToken = ctx.ParentToken;
                 _scopeStack.Pop();
 

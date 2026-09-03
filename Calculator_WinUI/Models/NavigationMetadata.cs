@@ -4,12 +4,13 @@ namespace Calculator_WinUI.Models
 {
     // which slot of a structured token a scope belongs to
     // this is what decides how the cursor leaves a scope; Down out of a numerator lands in the
-    // denominator, Down out of an exponent does nothing at all
+    // denominator, Down out of an exponent lands in the base it belongs to
     public enum ScopeRole
     {
         Root,
         Numerator,
         Denominator,
+        PowerBase,
         Exponent,
         RootIndex,
         RootRadicand,
@@ -24,6 +25,21 @@ namespace Calculator_WinUI.Models
         Right,
         Up,
         Down
+    }
+
+
+    // one slot of a structured token before it becomes a scope; MathInputManager lists these in reading
+    // order to answer what sits before or after the slot the cursor is in
+    public class TokenSlot
+    {
+        public List<MathToken> Tokens { get; }
+        public ScopeRole Role { get; }
+
+        public TokenSlot(List<MathToken> tokens, ScopeRole role)
+        {
+            Tokens = tokens;
+            Role = role;
+        }
     }
 
 
