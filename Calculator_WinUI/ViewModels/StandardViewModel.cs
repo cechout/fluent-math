@@ -102,6 +102,10 @@ namespace Calculator_WinUI.ViewModels
             CalculateCommand = new RelayCommand<object>(_ => CalculateResult());
             ClearCommand = new RelayCommand<object>(_ => ClearAll());
             BackspaceCommand = new RelayCommand<object>(_ => Backspace());
+
+            // the starting display comes from the engine rather than a literal, so the cursor is already
+            // where it belongs before the first key is pressed
+            InputAndResultText = _inputManager.GetLatexString();
         }
 
 
