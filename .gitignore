@@ -198,6 +198,9 @@ publish/
 *.pubxml
 *.publishproj
 
+# our own PublishProfiles need to be committed so CI uses the exact same publish settings as local
+!Calculator_WinUI/Properties/PublishProfiles/*.pubxml
+
 # Microsoft Azure Web App publish settings. Comment the next line if you want to
 # checkin your Azure Web App publish settings, but sensitive information contained
 # in these scripts will be unencrypted
@@ -435,6 +438,10 @@ test-results/
 
 # Icon must end with two \r
 Icon
+
+# our own Calculator_WinUI/Assets/Icon folder collides with the macOS rule above
+# without this it silently excludes the app icon files from git
+!Calculator_WinUI/Assets/Icon/
 
 
 # Thumbnails

@@ -1,0 +1,73 @@
+# builds the win-x64 installer and drafts a GitHub release whenever a version tag is pushed
+# csproj Version is the single source of truth, Inno Setup receives it as a command line define
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+
+      # reads the version once so the csproj stays the only place it gets bumped by hand
+      - name: read version from csproj
+        id: version
+        shell: pwsh
+        run: |
+          $xml = [xml](Get-Content Calculator_WinUI/Calculator_WinUI.csproj)
+          $version = $xml.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      # always the project, never Calculator.slnx; the solution also contains the frozen
+      # WPF v1 (net472, packages.config) which does not build on a dotnet-only runner
+      - name: restore
+        run: dotnet restore Calculator_WinUI/Calculator_WinUI.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
+
+      # WinUI3 x:Bind on types defined in this project needs a full Build pass first, so
+      # MarkupCompilePass2 gets the LocalAssembly it resolves them against, otherwise the XAML
+      # compiler fails on a from-scratch checkout with no prior obj state (WMC1509/WMC9999)
+      - name: build win-x64
+        run: dotnet build Calculator_WinUI/Calculator_WinUI.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
+
+      # uses the real win-x64.pubxml (Properties/PublishProfiles) so CI applies the exact same
+      # settings as a local Visual Studio publish, PublishTrimmed=false included
+      - name: publish win-x64
+        run: dotnet publish Calculator_WinUI/Calculator_WinUI.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
+
+      - name: install inno setup
+        run: choco install innosetup -y --no-progress
+
+      - name: compile installer
+        shell: pwsh
+        run: >
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          /DMyAppVersion=${{ steps.version.outputs.version }}
+          Setup\CalculatorWinUI_Setup.iss
+
+      - name: upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: SimpleCalculator_Installer
+          path: Setup/Output/SimpleCalculator_Installer.exe
+
+      # create draft only
+      - name: create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >
+          gh release create ${{ github.ref_name }}
+          Setup/Output/SimpleCalculator_Installer.exe
+          --draft --generate-notes --title "Simple Calculator ${{ github.ref_name }}"

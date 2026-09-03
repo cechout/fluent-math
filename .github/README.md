@@ -6,7 +6,7 @@ Simple Calculator is a native Windows 11 application built with C#, WinUI 3, and
 
 
 ## 📖 Project History & Architecture
-The first version of this project (`v1.0.0`) was written in WPF. For version 2.0.0, the UI framework and the code structure were changed:
+The first version of this project [`v1.0.0`](https://github.com/cechout/simple-calculator/releases/tag/v1.0.0) was written in WPF. For version [`v2.0.0`](https://github.com/cechout/simple-calculator/releases/tag/v2.0.0), the UI framework and the code structure were changed:
 * **WinUI 3:** Replaced WPF controls with Windows App SDK components (like `NavigationView`).
 * **MVVM:** Separated the mathematical logic from the user interface. The code is divided into Models, Views, and ViewModels. They communicate via data binding and commands.
 
