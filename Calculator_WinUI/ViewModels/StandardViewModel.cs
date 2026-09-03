@@ -265,7 +265,7 @@ namespace Calculator_WinUI.ViewModels
         // Math ERROR can be corrected instead of retyped from scratch
         private void CalculateResult()
         {
-            CalculationText = _inputManager.GetLatexString() + "=";
+            CalculationText = _inputManager.GetLatexString(withCursor: false) + "=";
 
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (result.IsSuccess)

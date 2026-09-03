@@ -545,10 +545,21 @@ namespace Calculator_WinUI.Engines
         public IReadOnlyList<MathToken> RootTokens => _rootTokens;
 
         // empty input renders as "0" so the display is never blank
-        public string GetLatexString()
+        //
+        // the cursor belongs to the line being typed, so the history line asks for the same formula
+        // without it
+        public string GetLatexString(bool withCursor = true)
         {
-            if (_rootTokens.Count == 0) return "0";
-            return LatexHelper.GetListLatex(_rootTokens);
+            ScopeContext? activeScope = null;
+            if (withCursor) activeScope = CurrentContext;
+
+            if (_rootTokens.Count == 0)
+            {
+                if (withCursor) return "0" + LatexHelper.CursorLatex;
+                return "0";
+            }
+
+            return LatexHelper.GetListLatex(_rootTokens, activeScope);
         }
     }
 }

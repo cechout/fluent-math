@@ -24,9 +24,12 @@ namespace Calculator_WinUI.Models
     // ToLatex is the single place a token turns into something renderable, so a new token kind needs
     // exactly one override here and no change anywhere else
     //
-    // every subclass falls back to a placeholder for an empty child list, so a half-typed structure
-    // still draws instead of collapsing; a blank space where the construct already shows a frame of its
-    // own (fraction bar, root sign), a "?" where the empty slot would otherwise be invisible
+    // an empty child list falls back to an empty-slot box so a half-typed structure still draws instead
+    // of collapsing; when the cursor sits in that slot it takes the place of the box, which is what makes
+    // the cursor visible inside a structure that has nothing in it yet
+    //
+    // ToLatex takes the scope the cursor is in because the cursor is drawn into the LaTeX itself; the
+    // parameter is handed down untouched until the one list it belongs to renders it
     public class MathToken
     {
         public TokenType Type { get; set; }
@@ -38,7 +41,7 @@ namespace Calculator_WinUI.Models
             Value = value;
         }
 
-        public virtual string ToLatex() { return Value; }
+        public virtual string ToLatex(ScopeContext? activeScope) { return Value; }
     }
 
 
@@ -71,7 +74,7 @@ namespace Calculator_WinUI.Models
             }
         }
 
-        public override string ToLatex() { return _latex; }
+        public override string ToLatex(ScopeContext? activeScope) { return _latex; }
     }
 
     // sin, cos, tan, ln; renders as sin(x)
@@ -81,12 +84,9 @@ namespace Calculator_WinUI.Models
 
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName) { }
 
-        public override string ToLatex()
+        public override string ToLatex(ScopeContext? activeScope)
         {
-            string innerLatex;
-            if (ParameterTokens.Count > 0) { innerLatex = LatexHelper.GetListLatex(ParameterTokens); }
-            else { innerLatex = "?"; }
-
+            string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, activeScope);
             return $"\\{Value}({innerLatex})";
         }
     }
@@ -100,15 +100,10 @@ namespace Calculator_WinUI.Models
 
         public PowerToken() : base(TokenType.Power) { }
 
-        public override string ToLatex()
+        public override string ToLatex(ScopeContext? activeScope)
         {
-            string baseStr;
-            if (BaseTokens.Count > 0) { baseStr = LatexHelper.GetListLatex(BaseTokens); }
-            else { baseStr = "?"; }
-
-            string expStr;
-            if (ExponentTokens.Count > 0) { expStr = LatexHelper.GetListLatex(ExponentTokens); }
-            else { expStr = "?"; }
+            string baseStr = LatexHelper.GetSlotLatex(BaseTokens, activeScope);
+            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, activeScope);
 
             return $"{baseStr}^{{{expStr}}}";
         }
@@ -122,16 +117,15 @@ namespace Calculator_WinUI.Models
 
         public RootToken() : base(TokenType.Root) { }
 
-        public override string ToLatex()
+        public override string ToLatex(ScopeContext? activeScope)
         {
-            string radStr;
-            if (RadicandTokens.Count > 0) { radStr = LatexHelper.GetListLatex(RadicandTokens); }
-            else { radStr = " "; }
+            string radStr = LatexHelper.GetSlotLatex(RadicandTokens, activeScope);
 
-            if (IndexTokens.Count > 0)
-            {
-                return $"\\sqrt[{LatexHelper.GetListLatex(IndexTokens)}]{{{radStr}}}";
-            }
+            // an empty index is a plain square root rather than an empty slot, so it gets no box; a
+            // cursor standing in it still renders, which is what keeps the slot reachable while typing
+            string indexStr = LatexHelper.GetListLatex(IndexTokens, activeScope);
+            if (indexStr.Length > 0) return $"\\sqrt[{indexStr}]{{{radStr}}}";
+
             return $"\\sqrt{{{radStr}}}";
         }
     }
@@ -144,17 +138,16 @@ namespace Calculator_WinUI.Models
 
         public LogarithmToken() : base(TokenType.Logarithm) { }
 
-        public override string ToLatex()
+        public override string ToLatex(ScopeContext? activeScope)
         {
-            string baseStr;
-            if (BaseTokens.Count > 0) { baseStr = LatexHelper.GetListLatex(BaseTokens); }
-            else { baseStr = "?"; }
+            string paramStr = LatexHelper.GetSlotLatex(ParameterTokens, activeScope);
 
-            string paramStr;
-            if (ParameterTokens.Count > 0) { paramStr = LatexHelper.GetListLatex(ParameterTokens); }
-            else { paramStr = " "; }
+            // no base written out means the common logarithm, the same default the evaluator applies, so
+            // an untouched base slot disappears instead of showing an empty box
+            string baseStr = LatexHelper.GetListLatex(BaseTokens, activeScope);
+            if (baseStr.Length > 0) return $"\\log_{{{baseStr}}}({paramStr})";
 
-            return $"\\log_{{{baseStr}}}({paramStr})";
+            return $"\\log({paramStr})";
         }
     }
 
@@ -166,15 +159,10 @@ namespace Calculator_WinUI.Models
 
         public FractionToken() : base(TokenType.Fraction) { }
 
-        public override string ToLatex()
+        public override string ToLatex(ScopeContext? activeScope)
         {
-            string numStr;
-            if (NumeratorTokens.Count > 0) { numStr = LatexHelper.GetListLatex(NumeratorTokens); }
-            else { numStr = " "; }
-
-            string denStr;
-            if (DenominatorTokens.Count > 0) { denStr = LatexHelper.GetListLatex(DenominatorTokens); }
-            else { denStr = " "; }
+            string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, activeScope);
+            string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, activeScope);
 
             return $"\\frac{{{numStr}}}{{{denStr}}}";
         }
@@ -183,13 +171,30 @@ namespace Calculator_WinUI.Models
 
     // walks a token list and concatenates the LaTeX of every node; the recursion into nested lists
     // happens through the ToLatex overrides above, which call back in here
+    //
+    // the cursor is drawn here rather than by the caller, because only this loop knows where one token
+    // ends and the next begins; activeScope names the single list it belongs to, every other list is
+    // rendered without a cursor
     public static class LatexHelper
     {
-        public static string GetListLatex(List<MathToken> tokens)
+        // a thin bar tagged with a css class the display animates; KaTeX only keeps the class when the
+        // render call runs with trust enabled
+        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0.06em}{1.1em}}";
+
+        // the box a Casio shows for a slot that still has to be filled
+        private const string EmptySlotLatex = "\\square";
+
+        public static string GetListLatex(List<MathToken> tokens, ScopeContext? activeScope)
         {
+            bool isActiveList = activeScope != null && ReferenceEquals(tokens, activeScope.Tokens);
+
             string latex = "";
-            foreach (var currentToken in tokens)
+            for (int i = 0; i < tokens.Count; i++)
             {
+                if (isActiveList && i == activeScope!.CursorIndex) latex += CursorLatex;
+
+                MathToken currentToken = tokens[i];
+
                 // operators are the one kind that does not render as its own value; * and / get proper
                 // math symbols, and every operator gets padding so terms do not run together
                 if (currentToken.Type == TokenType.Operator)
@@ -203,10 +208,22 @@ namespace Calculator_WinUI.Models
                 }
                 else
                 {
-                    latex += currentToken.ToLatex();
+                    latex += currentToken.ToLatex(activeScope);
                 }
             }
+
+            if (isActiveList && activeScope!.CursorIndex >= tokens.Count) latex += CursorLatex;
             return latex;
+        }
+
+        // a slot of a structured token, where nothing at all would let the structure collapse; the box
+        // only appears when the slot is truly empty, a cursor standing in it counts as content
+        public static string GetSlotLatex(List<MathToken> tokens, ScopeContext? activeScope)
+        {
+            string latex = GetListLatex(tokens, activeScope);
+            if (latex.Length > 0) return latex;
+
+            return EmptySlotLatex;
         }
     }
 }

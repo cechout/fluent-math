@@ -36,6 +36,15 @@ namespace Calculator_WinUI.Views
                     color: [COLOR]; /* replaced from C# */
                     font-size: [SIZE]; /* replaced from C# */
                 }
+
+                /* the input cursor, tagged by the LaTeX the engine emits */
+                @keyframes cursor-blink {
+                    0%, 49% { opacity: 1; }
+                    50%, 100% { opacity: 0; }
+                }
+                .cursor {
+                    animation: cursor-blink 1.1s infinite;
+                }
             </style>
         </head>
         <body>
@@ -45,7 +54,10 @@ namespace Calculator_WinUI.Views
                 function updateMath(latexString) {
                     katex.render(latexString, document.getElementById('math-container'), {
                         throwOnError: false, // half-typed input is normal here, show it raw instead of failing
-                        displayMode: true
+                        displayMode: true,
+                        // the cursor arrives as \htmlClass, which KaTeX drops unless both of these are set
+                        trust: true,
+                        strict: false
                     });
                 }
             </script>
