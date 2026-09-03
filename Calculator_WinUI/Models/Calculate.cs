@@ -11,7 +11,7 @@ namespace Calculator_WinUI.Classes
 
             int numberOfBrackets = 0;
             int currentBracketRank = 0;
-            int highestBracketRank; 
+            int highestBracketRank;
             int highestBracketPosition = 0;
 
             int numberOfPowerootCalculations;
