@@ -7,41 +7,16 @@ namespace Calculator_WinUI.Engines
     public class MathInputManager
     {
         private readonly List<MathToken> _rootTokens = new List<MathToken>();
-
-        // the stack that keeps track of which sublist we are currently writing to
-        // the stack now manages context objects instead of just lists of tokens
         private readonly Stack<ScopeContext> _scopeStack = new Stack<ScopeContext>();
-
-        // returns the top List<MathToken> from _scopeStack via Peek() if _scopeStack is not empty.
-        // otherwise, returns _rootTokens when no nested scopes are active
-        private List<MathToken> CurrentScope
-        {
-            get
-            {
-                if (_scopeStack.Count > 0)
-                {
-                    return _scopeStack.Peek().Tokens;
-                }
-                else
-                {
-                    return _rootTokens;
-                }
-            }
-        }
-
-        // return last token from current scope
-        private MathToken LastTokenInScope
-        {
-            get
-            {
-                return CurrentScope.LastOrDefault();
-            }
-        }
+        private readonly ScopeContext _rootContext;
+        private List<MathToken> CurrentScope => _scopeStack.Peek().Tokens; // the token list we are currently writing into
+        private ScopeContext CurrentContext => _scopeStack.Peek(); // the full context object (list + role + cursor position)
 
 
         // constructor
         public MathInputManager()
         {
+            _rootContext = new ScopeContext(_rootTokens, parentToken: null, ScopeRole.Root);
             ResetToRoot();
         }
 
@@ -50,38 +25,145 @@ namespace Calculator_WinUI.Engines
         public void ResetToRoot()
         {
             _scopeStack.Clear();
+            _scopeStack.Push(_rootContext);
+            _rootContext.CursorIndex = _rootTokens.Count; // cursor at the end by default
         }
 
         // modular movement handler 
         // delegates to specific handlers based on the current scope role
         public void Move(NavDirection direction)
         {
-            if (_scopeStack.Count == 0) return; // at root level there is no sub-scope to leave
+            var ctx = CurrentContext;
 
-            var currentContext = _scopeStack.Peek();
+            // step 1: try to move WITHIN the current scope first
+            if (direction == NavDirection.Left)
+            {
+                // is there a complex token we should step INTO instead of just stepping over?
+                if (ctx.CursorIndex > 0)
+                {
+                    MathToken tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1];
+                    if (TryEnterTokenFromRight(tokenLeftOfCursor)) return;
 
-            // modular movement handler; delegates to specific handlers based on the current scope role
-            switch (currentContext.Role)
+                    // no enter -> just move cursor one position left
+                    ctx.CursorIndex--;
+                    return;
+                }
+                // else: cursor at index 0, fall through to scope-exit logic
+            }
+            else if (direction == NavDirection.Right)
+            {
+                if (ctx.CursorIndex < ctx.Tokens.Count)
+                {
+                    MathToken tokenRightOfCursor = ctx.Tokens[ctx.CursorIndex];
+                    if (TryEnterTokenFromLeft(tokenRightOfCursor)) return;
+
+                    // no enter -> just move cursor one position right
+                    ctx.CursorIndex++;
+                    return;
+                }
+                // else: cursor at end of list, fall through to scope-exit logic
+            }
+
+            // step 2: cursor at edge (or Up/Down) -> use scope-role-specific logic
+            if (ctx.Role == ScopeRole.Root) return; // nowhere to exit to from root
+
+            switch (ctx.Role)
             {
                 case ScopeRole.Numerator:
-                    HandleNumeratorNavigation(direction, currentContext);
+                    HandleNumeratorNavigation(direction, ctx);
                     break;
 
                 case ScopeRole.Denominator:
-                    HandleDenominatorNavigation(direction, currentContext);
+                    HandleDenominatorNavigation(direction, ctx);
                     break;
 
-                // all standard types (powers, roots, logarithms) behave movement-wise linearly
                 case ScopeRole.Exponent:
                 case ScopeRole.RootRadicand:
                 case ScopeRole.RootIndex:
                 case ScopeRole.FunctionParameter:
                 case ScopeRole.LogBase:
                 case ScopeRole.LogParameter:
-                    HandleDefaultLinearNavigation(direction, currentContext);
+                    HandleDefaultLinearNavigation(direction, ctx);
                     break;
             }
         }
+        // move helper
+        // called when cursor sits right of `token` and user pressed Left.
+        // returns true if we entered a sub-scope of the token (cursor lands at its END).
+        // returns false if the token should be treated as atomic and just skipped over.
+        private bool TryEnterTokenFromRight(MathToken token)
+        {
+            // fractions are atomic for left/right navigation (only Up/Down enters them)
+            if (token is FractionToken) return false;
+
+            if (token is PowerToken powerToken)
+            {
+                var newCtx = new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent);
+                newCtx.CursorIndex = powerToken.ExponentTokens.Count; // land at the end
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is RootToken rootToken)
+            {
+                var newCtx = new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand);
+                newCtx.CursorIndex = rootToken.RadicandTokens.Count;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is FunctionToken funcToken)
+            {
+                var newCtx = new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter);
+                newCtx.CursorIndex = funcToken.ParameterTokens.Count;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is LogarithmToken logToken)
+            {
+                var newCtx = new ScopeContext(logToken.ParameterTokens, logToken, ScopeRole.LogParameter);
+                newCtx.CursorIndex = logToken.ParameterTokens.Count;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            return false;
+        }
+
+        // called when cursor sits left of `token` and user pressed Right.
+        // returns true if we entered a sub-scope of the token (cursor lands at its START).
+        private bool TryEnterTokenFromLeft(MathToken token)
+        {
+            if (token is FractionToken) return false;
+
+            if (token is PowerToken powerToken)
+            {
+                var newCtx = new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent);
+                newCtx.CursorIndex = 0; // land at the start
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is RootToken rootToken)
+            {
+                var newCtx = new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand);
+                newCtx.CursorIndex = 0;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is FunctionToken funcToken)
+            {
+                var newCtx = new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter);
+                newCtx.CursorIndex = 0;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            if (token is LogarithmToken logToken)
+            {
+                var newCtx = new ScopeContext(logToken.ParameterTokens, logToken, ScopeRole.LogParameter);
+                newCtx.CursorIndex = 0;
+                _scopeStack.Push(newCtx);
+                return true;
+            }
+            return false;
+        }
+
         // behavior: in numerator
         private void HandleNumeratorNavigation(NavDirection direction, ScopeContext context)
         {
@@ -90,18 +172,23 @@ namespace Calculator_WinUI.Engines
 
             if (direction == NavDirection.Down)
             {
-                // new pointer: leave numerator, enter denominator of the same fraction
+                // leave numerator, enter denominator of the same fraction
                 _scopeStack.Pop();
-                _scopeStack.Push(new ScopeContext(fraction.DenominatorTokens, fraction, ScopeRole.Denominator));
-            }
-            else if (direction == NavDirection.Right)
-            {
-                // movement to right just leaves the whole fraction
-                _scopeStack.Pop();
+                var newCtx = new ScopeContext(fraction.DenominatorTokens, fraction, ScopeRole.Denominator);
+                newCtx.CursorIndex = 0;
+                _scopeStack.Push(newCtx);
             }
             else if (direction == NavDirection.Left)
             {
+                // exit fraction to the LEFT: cursor lands BEFORE the fraction token in parent
                 _scopeStack.Pop();
+                PositionCursorAtParentToken(fraction, before: true);
+            }
+            else if (direction == NavDirection.Right)
+            {
+                // exit fraction to the RIGHT: cursor lands AFTER the fraction token in parent
+                _scopeStack.Pop();
+                PositionCursorAtParentToken(fraction, before: false);
             }
         }
         // behavior: in denominator
@@ -112,71 +199,136 @@ namespace Calculator_WinUI.Engines
 
             if (direction == NavDirection.Up)
             {
-                // new pointer: leave denominator, enter numerator of the same fraction
+                // leave denominator, enter numerator
                 _scopeStack.Pop();
-                _scopeStack.Push(new ScopeContext(fraction.NumeratorTokens, fraction, ScopeRole.Numerator));
+                var newCtx = new ScopeContext(fraction.NumeratorTokens, fraction, ScopeRole.Numerator);
+                newCtx.CursorIndex = fraction.NumeratorTokens.Count; // land at end of numerator
+                _scopeStack.Push(newCtx);
             }
-            else if (direction == NavDirection.Right || direction == NavDirection.Left)
+            else if (direction == NavDirection.Left)
             {
-                // linearly leave the fraction to the right or left
                 _scopeStack.Pop();
+                PositionCursorAtParentToken(fraction, before: true);
+            }
+            else if (direction == NavDirection.Right)
+            {
+                _scopeStack.Pop();
+                PositionCursorAtParentToken(fraction, before: false);
             }
         }
         // behavior: standard nesting (power, logarithm etc.)
         private void HandleDefaultLinearNavigation(NavDirection direction, ScopeContext context)
         {
-            // since powers/roots are built horizontally, they only react to horizontal vectors
-            if (direction == NavDirection.Right || direction == NavDirection.Left)
+            MathToken parent = context.ParentToken;
+
+            if (direction == NavDirection.Left)
             {
-                _scopeStack.Pop(); // leaves the exponent / parameter scope
+                _scopeStack.Pop();
+                PositionCursorAtParentToken(parent, before: true);
+            }
+            else if (direction == NavDirection.Right)
+            {
+                _scopeStack.Pop();
+                PositionCursorAtParentToken(parent, before: false);
+            }
+            // Up and Down: no effect for linear sub-scopes (like exponent, root radicand)
+        }
+        // after popping a sub-scope, place the cursor either right before or right after
+        // the parent token in the (now current) parent scope.
+        private void PositionCursorAtParentToken(MathToken parentToken, bool before)
+        {
+            var parentCtx = CurrentContext;
+            int parentTokenIndex = parentCtx.Tokens.IndexOf(parentToken);
+            if (parentTokenIndex == -1) return; // safety: shouldn't happen
+
+            if (before)
+            {
+                parentCtx.CursorIndex = parentTokenIndex;
+            }
+            else
+            {
+                parentCtx.CursorIndex = parentTokenIndex + 1;
             }
         }
 
         public void AddNumber(string digit)
         {
-            if (LastTokenInScope != null && LastTokenInScope.Type == TokenType.Number)
+            var ctx = CurrentContext;
+
+            // check if there is a number token direcly left of the cursor to append to
+            MathToken tokenLeftOfCursor;
+            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
+            else { tokenLeftOfCursor = null; }
+
+            if (tokenLeftOfCursor != null && tokenLeftOfCursor.Type == TokenType.Number)
             {
-                if (digit == "." && LastTokenInScope.Value.Contains(".")) return;
-                LastTokenInScope.Value += digit;
+                if (digit == "." && tokenLeftOfCursor.Value.Contains(".")) return;
+                tokenLeftOfCursor.Value += digit;
+                // cursor index does not change, we just appended a char to an existing token
             }
             else
             {
-                CurrentScope.Add(new MathToken(TokenType.Number, digit));
+                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, digit));
+                ctx.CursorIndex++;
             }
         }
         public void AddOperator(string op)
         {
-            if (LastTokenInScope == null) return;
+            var ctx = CurrentContext;
 
-            if (LastTokenInScope.Type == TokenType.Operator)
+            MathToken tokenLeftOfCursor;
+            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
+            else { tokenLeftOfCursor = null; }
+
+            // don't allow an operator as the first token in a scope (leading + or *)
+            if (tokenLeftOfCursor == null) return;
+
+            if (tokenLeftOfCursor.Type == TokenType.Operator)
             {
-                LastTokenInScope.Value = op;
+                // replace: user typed one operator and immediately another; second one wins
+                tokenLeftOfCursor.Value = op;
             }
             else
             {
-                CurrentScope.Add(new MathToken(TokenType.Operator, op));
+                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
+                ctx.CursorIndex++;
             }
         }
 
         // creates a power x^y
         public void StartPower()
         {
+            var ctx = CurrentContext;
             var powerToken = new PowerToken();
-            if (LastTokenInScope != null && (LastTokenInScope.Type == TokenType.Number || LastTokenInScope.Type == TokenType.BracketClose))
-            {
-                powerToken.BaseTokens.Add(LastTokenInScope);
-                CurrentScope.RemoveAt(CurrentScope.Count - 1);
-            }
-            CurrentScope.Add(powerToken);
 
-            // push with type as exponent; so that we can handle navigation correctly
+            // check token directly left of cursor, thats the base candidate
+            MathToken tokenLeftOfCursor;
+            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
+            else { tokenLeftOfCursor = null; }
+
+            if (tokenLeftOfCursor != null && (tokenLeftOfCursor.Type == TokenType.Number || tokenLeftOfCursor.Type == TokenType.BracketClose))
+            {
+                // move the token from the parent scope into the powers BaseTokens
+                powerToken.BaseTokens.Add(tokenLeftOfCursor);
+                ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
+                ctx.CursorIndex--; // parent scope shrank by 1 to the left of cursor
+            }
+
+            // insert the power token at the current cursor position and step over it
+            ctx.Tokens.Insert(ctx.CursorIndex, powerToken);
+            ctx.CursorIndex++;
+
+            // enter the exponent scope, cursor at position 0 (empty)
             _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
         }
         // creates a root
         public void StartRoot(bool customIndex)
         {
+            var ctx = CurrentContext;
             var rootToken = new RootToken();
-            CurrentScope.Add(rootToken);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, rootToken);
+            ctx.CursorIndex++;
 
             if (customIndex)
             {
@@ -190,24 +342,33 @@ namespace Calculator_WinUI.Engines
         // creates sin, cos, tan, ln
         public void StartFunction(string name)
         {
+            var ctx = CurrentContext;
             var funcToken = new FunctionToken(name);
-            CurrentScope.Add(funcToken);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, funcToken);
+            ctx.CursorIndex++;
+
             _scopeStack.Push(new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter));
         }
         // creates a fraction
         public void StartFraction()
         {
+            var ctx = CurrentContext;
             var fracToken = new FractionToken();
-            CurrentScope.Add(fracToken);
 
-            // focus first on numerator
+            ctx.Tokens.Insert(ctx.CursorIndex, fracToken);
+            ctx.CursorIndex++;
+
             _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
         }
         // creates a logarithm
         public void StartLogarithm(bool customBase)
         {
+            var ctx = CurrentContext;
             var logToken = new LogarithmToken();
-            CurrentScope.Add(logToken);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, logToken);
+            ctx.CursorIndex++;
 
             if (customBase)
             {
@@ -222,33 +383,43 @@ namespace Calculator_WinUI.Engines
 
         public void Backspace()
         {
-            // case 1: we are in an empty subsection (empty exponent or smth)
-            // we delete the whole math token
-            if (CurrentScope.Count == 0 && _scopeStack.Count > 0)
+            var ctx = CurrentContext;
+
+            // case 1: cursor is at the very start of a sub-scope (not root)
+            // leave the scope and delete the parent token that owned this scope
+            if (ctx.CursorIndex == 0 && ctx.Role != ScopeRole.Root)
             {
+                MathToken parentToken = ctx.ParentToken;
                 _scopeStack.Pop();
-                if (CurrentScope.Count > 0)
+
+                // now we are in the parent scope; the parent token sits right at (cursor - 1)
+                // because StartXXX inserted it and stepped the cursor over it.
+                var parentCtx = CurrentContext;
+                if (parentCtx.CursorIndex > 0 && parentCtx.Tokens[parentCtx.CursorIndex - 1] == parentToken)
                 {
-                    CurrentScope.RemoveAt(CurrentScope.Count - 1);
+                    parentCtx.Tokens.RemoveAt(parentCtx.CursorIndex - 1);
+                    parentCtx.CursorIndex--;
                 }
                 return;
             }
 
-            // case 2: the current section has tokens 
-            if (CurrentScope.Count > 0)
-            {
-                var lastToken = LastTokenInScope;
+            // case 2: cursor is at start of root scope; nothing to delete
+            if (ctx.CursorIndex == 0) return;
 
-                // if token is multi-digit number
-                if (lastToken.Type == TokenType.Number && lastToken.Value.Length > 1)
-                {
-                    lastToken.Value = lastToken.Value.Substring(0, lastToken.Value.Length - 1);
-                }
-                else
-                {
-                    // if token is single-digit number of function or whatever
-                    CurrentScope.RemoveAt(CurrentScope.Count - 1);
-                }
+            // case 3: normal case, delete/shrink the token directly left of the cursor
+            MathToken tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1];
+
+            // multi-digit number: just shrink the value by one char
+            if (tokenLeftOfCursor.Type == TokenType.Number && tokenLeftOfCursor.Value.Length > 1)
+            {
+                tokenLeftOfCursor.Value = tokenLeftOfCursor.Value.Substring(0, tokenLeftOfCursor.Value.Length - 1);
+                // cursor stays where it is
+            }
+            else
+            {
+                // single-digit number, operator, or complex token; remove entirely
+                ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
+                ctx.CursorIndex--;
             }
         }
 
@@ -256,6 +427,8 @@ namespace Calculator_WinUI.Engines
         {
             _rootTokens.Clear();
             _scopeStack.Clear();
+            _scopeStack.Push(_rootContext);
+            _rootContext.CursorIndex = 0;
         }
 
         public string GetLatexString()

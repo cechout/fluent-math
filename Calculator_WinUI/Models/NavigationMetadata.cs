@@ -30,11 +30,16 @@ namespace Calculator_WinUI.Models
         public MathToken ParentToken { get; }
         public ScopeRole Role { get; }
 
-        public ScopeContext(List<MathToken> tokens, MathToken parentToken, ScopeRole role)
+        // cursor position within Tokens; valid range: 0 - Tokens.Count
+        // index i means: cursor sits before Tokens[i], index Tokens.Count means: cursor at very end
+        public int CursorIndex { get; set; }
+
+        public ScopeContext(List<MathToken> tokens, MathToken parentToken, ScopeRole role, int cursorIndex = 0)
         {
             Tokens = tokens;
             ParentToken = parentToken;
             Role = role;
+            CursorIndex = cursorIndex;
         }
     }
 }
