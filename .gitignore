@@ -483,3 +483,13 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Google Antigravity & Agent configs
+.agent/
+.antigravity/
+.gemini/
+
+# Claude Code (local agent guidance, not shared)
+/CLAUDE.md
+/CLAUDE.local.md
+.claude/
