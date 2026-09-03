@@ -305,8 +305,16 @@ namespace Calculator_WinUI.Engines
             if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
             else { tokenLeftOfCursor = null; }
 
-            // an operator needs something on its left, so a scope can never start with one
-            if (tokenLeftOfCursor == null) return;
+            // an operator needs something on its left to work on; the sole exception is a minus, which
+            // reads as a sign there and is the only way a negative number can be typed at all
+            if (tokenLeftOfCursor == null || tokenLeftOfCursor.Type == TokenType.BracketOpen)
+            {
+                if (op != "-") return;
+
+                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
+                ctx.CursorIndex++;
+                return;
+            }
 
             if (tokenLeftOfCursor.Type == TokenType.Operator)
             {
@@ -318,6 +326,28 @@ namespace Calculator_WinUI.Engines
                 ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
                 ctx.CursorIndex++;
             }
+        }
+
+        public void AddConstant(string name)
+        {
+            var ctx = CurrentContext;
+
+            ctx.Tokens.Insert(ctx.CursorIndex, new ConstantToken(name));
+            ctx.CursorIndex++;
+        }
+
+        // brackets stay flat tokens in the list rather than a scope of their own, the way they do on a
+        // pocket calculator; the evaluator is what pairs them up again
+        public void AddBracket(bool open)
+        {
+            var ctx = CurrentContext;
+
+            MathToken bracket;
+            if (open) { bracket = new MathToken(TokenType.BracketOpen, "("); }
+            else { bracket = new MathToken(TokenType.BracketClose, ")"); }
+
+            ctx.Tokens.Insert(ctx.CursorIndex, bracket);
+            ctx.CursorIndex++;
         }
 
 
@@ -337,7 +367,20 @@ namespace Calculator_WinUI.Engines
             if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
             else { tokenLeftOfCursor = null; }
 
-            if (tokenLeftOfCursor != null && (tokenLeftOfCursor.Type == TokenType.Number || tokenLeftOfCursor.Type == TokenType.BracketClose))
+            if (tokenLeftOfCursor != null && tokenLeftOfCursor.Type == TokenType.BracketClose)
+            {
+                // the base of (1+2) squared is the whole group, so the search runs back to the partner
+                // bracket; an unmatched closing bracket leaves the base empty rather than eating the list
+                int groupStart = FindMatchingBracketOpen(ctx.Tokens, ctx.CursorIndex - 1);
+                if (groupStart >= 0)
+                {
+                    int groupLength = ctx.CursorIndex - groupStart;
+                    powerToken.BaseTokens.AddRange(ctx.Tokens.GetRange(groupStart, groupLength));
+                    ctx.Tokens.RemoveRange(groupStart, groupLength);
+                    ctx.CursorIndex -= groupLength;
+                }
+            }
+            else if (tokenLeftOfCursor != null && (tokenLeftOfCursor.Type == TokenType.Number || tokenLeftOfCursor.Type == TokenType.Constant))
             {
                 powerToken.BaseTokens.Add(tokenLeftOfCursor);
                 ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
@@ -348,6 +391,28 @@ namespace Calculator_WinUI.Engines
             ctx.CursorIndex++;
 
             _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
+        }
+
+        // walks left from a closing bracket to its partner so the whole group can be treated as one
+        // operand; returns -1 when the opening bracket was never typed
+        private static int FindMatchingBracketOpen(List<MathToken> tokens, int closeIndex)
+        {
+            int depth = 0;
+
+            for (int i = closeIndex; i >= 0; i--)
+            {
+                if (tokens[i].Type == TokenType.BracketClose)
+                {
+                    depth++;
+                }
+                else if (tokens[i].Type == TokenType.BracketOpen)
+                {
+                    depth--;
+                    if (depth == 0) return i;
+                }
+            }
+
+            return -1;
         }
 
         // customIndex picks which slot the user lands in: the index of an nth root, or the radicand of a

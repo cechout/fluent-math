@@ -110,9 +110,8 @@ namespace Calculator_WinUI.ViewModels
         // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
         // and anything else, which is treated as a digit or a decimal point
         //
-        // several keys in the XAML send a cmd_ value that has no arm yet (cmd_pi, cmd_e, cmd_more,
-        // cmd_paren_open, cmd_paren_close and the inverse trig keys); they fall through the switch and do
-        // nothing, which is why those buttons are currently dead rather than broken
+        // cmd_more is the only key left without an arm; it is meant to open a further layer of the
+        // keypad that does not exist yet, so it falls through the switch and does nothing
         private void AddToTextBox(string sign)
         {
             // shift only swaps the keyboard layer, it must never disturb the input or a shown result
@@ -171,6 +170,34 @@ namespace Calculator_WinUI.ViewModels
 
                     case "cmd_tan":
                         _inputManager.StartFunction("tan");
+                        break;
+
+                    case "cmd_asin":
+                        _inputManager.StartFunction("arcsin");
+                        break;
+
+                    case "cmd_acos":
+                        _inputManager.StartFunction("arccos");
+                        break;
+
+                    case "cmd_atan":
+                        _inputManager.StartFunction("arctan");
+                        break;
+
+                    case "cmd_pi":
+                        _inputManager.AddConstant("pi");
+                        break;
+
+                    case "cmd_e":
+                        _inputManager.AddConstant("e");
+                        break;
+
+                    case "cmd_paren_open":
+                        _inputManager.AddBracket(open: true);
+                        break;
+
+                    case "cmd_paren_close":
+                        _inputManager.AddBracket(open: false);
                         break;
 
                     case "cmd_frac":

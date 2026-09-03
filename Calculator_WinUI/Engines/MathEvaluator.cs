@@ -15,7 +15,8 @@ namespace Calculator_WinUI.Engines
     //   expression := term (plus or minus, term)*
     //   term       := unary (times or divided by or implicit, unary)*
     //   unary      := sign* atom
-    //   atom       := number | bracketed expression | fraction | power | root | function | logarithm
+    //   atom       := number | constant | bracketed expression | fraction | power | root | function
+    //                  | logarithm
     //
     // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
     // half-typed formula is the normal state of the input rather than an exceptional one
@@ -173,6 +174,10 @@ namespace Calculator_WinUI.Engines
                 case FunctionToken function:
                     position++;
                     return EvaluateFunction(function);
+
+                case ConstantToken constant:
+                    position++;
+                    return constant.NumericValue;
             }
 
             if (token.Type == TokenType.Number)
@@ -203,6 +208,7 @@ namespace Calculator_WinUI.Engines
         private static bool StartsAtom(MathToken token)
         {
             if (token.Type == TokenType.Number) return true;
+            if (token.Type == TokenType.Constant) return true;
             if (token.Type == TokenType.BracketOpen) return true;
 
             return token is FractionToken

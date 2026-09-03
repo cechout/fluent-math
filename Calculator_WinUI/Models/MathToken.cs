@@ -1,14 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models
 {
-    // Function and BracketOpen are not produced anywhere yet; BracketClose is only read
-    // (StartPower accepts it as a power base) and starts being created once bracket input is wired up
     public enum TokenType
     {
         Number,
         Operator,
-        Function,
+        Constant,
         BracketOpen,
         BracketClose,
         Fraction,
@@ -42,6 +41,38 @@ namespace Calculator_WinUI.Models
         public virtual string ToLatex() { return Value; }
     }
 
+
+    // pi and e; both the numeric value and the symbol hang off the token, so a further constant is one
+    // entry here and no change in the evaluator or the renderer
+    public class ConstantToken : MathToken
+    {
+        public double NumericValue { get; }
+
+        private readonly string _latex;
+
+        public ConstantToken(string name) : base(TokenType.Constant, name)
+        {
+            switch (name)
+            {
+                case "pi":
+                    NumericValue = Math.PI;
+                    _latex = "\\pi";
+                    break;
+
+                case "e":
+                    NumericValue = Math.E;
+                    _latex = "e";
+                    break;
+
+                default:
+                    NumericValue = 0;
+                    _latex = name;
+                    break;
+            }
+        }
+
+        public override string ToLatex() { return _latex; }
+    }
 
     // sin, cos, tan, ln; renders as sin(x)
     public class FunctionToken : MathToken
