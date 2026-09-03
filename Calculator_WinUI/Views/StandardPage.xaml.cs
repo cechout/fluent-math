@@ -5,7 +5,7 @@ namespace Calculator_WinUI.Views
 {
     public sealed partial class StandardPage : Page
     {
-        public StandardViewModel ViewModel { get; } 
+        public StandardViewModel ViewModel { get; }
 
         public StandardPage()
         {
