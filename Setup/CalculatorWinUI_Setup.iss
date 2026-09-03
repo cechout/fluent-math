@@ -3,7 +3,11 @@
 ; Non-commercial use only
 
 #define MyAppName "Simple Calculator"
-#define MyAppVersion "2.0.0"
+; overridable so CI can pass the version from Calculator_WinUI.csproj via /DMyAppVersion
+; local manual compiles keep using this fallback untouched
+#ifndef MyAppVersion
+  #define MyAppVersion "2.0.0"
+#endif
 #define MyAppPublisher "Daniel Čech"
 #define MyAppExeName "Calculator_WinUI.exe"
 
@@ -15,8 +19,13 @@ AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoProductName={#MyAppName}
+VersionInfoDescription={#MyAppName} Setup
+VersionInfoVersion={#MyAppVersion}.0
 DefaultDirName={autopf}\{#MyAppName}
 UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayName={#MyAppName}
 ; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
 ; on anything but x64 and Windows 11 on Arm.
 ArchitecturesAllowed=x64compatible
@@ -26,7 +35,7 @@ ArchitecturesAllowed=x64compatible
 ; the 64-bit view of the registry.
 ArchitecturesInstallIn64BitMode=x64compatible
 DisableProgramGroupPage=yes
-LicenseFile=C:\Privat\Programmieren\C#\Projekte\WPF Projekte\Calculator\LICENSE.txt
+LicenseFile=..\LICENSE.txt
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 OutputDir=.\Output
@@ -42,8 +51,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "..\Calculator_WinUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\Calculator_WinUI\bin\x64\Release\net8.0-windows10.0.19041.0\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; must stay in sync with PublishDir in Calculator_WinUI/Properties/PublishProfiles/win-x64.pubxml
+Source: "..\Calculator_WinUI\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\Calculator_WinUI\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
