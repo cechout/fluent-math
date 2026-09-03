@@ -20,6 +20,7 @@
         </Grid.RowDefinitions>
 
         <!--  custom title bar  -->
+        <!--  (the window extends its content into the caption area, so the bar is drawn here)  -->
         <TitleBar
             Title="Simple Calculator"
             Grid.Row="0"
@@ -66,7 +67,7 @@
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <!--  margin to manually get rid of border from navigation view  -->
+            <!--  (negative top margin swallows the separator line the navigation view draws above its content)  -->
             <Frame x:Name="MainFrame" Margin="0,-2,0,0" />
         </NavigationView>
     </Grid>

@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models
 {
+    // Function and BracketOpen are not produced anywhere yet; BracketClose is only read
+    // (StartPower accepts it as a power base) and starts being created once bracket input is wired up
     public enum TokenType
     {
         Number,
@@ -21,13 +19,20 @@ namespace Calculator_WinUI.Models
     }
 
 
+    // one node of the input tree; a plain MathToken is a leaf carrying its own text (a number or an
+    // operator), the subclasses below add child token lists and become the branches
+    //
+    // ToLatex is the single place a token turns into something renderable, so a new token kind needs
+    // exactly one override here and no change anywhere else
+    //
+    // every subclass falls back to a placeholder for an empty child list, so a half-typed structure
+    // still draws instead of collapsing; a blank space where the construct already shows a frame of its
+    // own (fraction bar, root sign), a "?" where the empty slot would otherwise be invisible
     public class MathToken
     {
         public TokenType Type { get; set; }
         public string Value { get; set; }
 
-
-        // constructor
         public MathToken(TokenType type, string value = "")
         {
             Type = type;
@@ -38,13 +43,11 @@ namespace Calculator_WinUI.Models
     }
 
 
-    // for sin, cos etc -> sin(x)
+    // sin, cos, tan, ln; renders as sin(x)
     public class FunctionToken : MathToken
     {
         public List<MathToken> ParameterTokens { get; } = new List<MathToken>();
 
-        // explicitly calls the base class constructor to initialize the inherited fields (Type, Value) before
-        // the derived class constructor block is executed, guaranteeing valid object state
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName) { }
 
         public override string ToLatex()
@@ -57,11 +60,13 @@ namespace Calculator_WinUI.Models
         }
     }
 
-    // for powers -> base^{exponent}
+    // base^{exponent}
+    // BaseTokens is settable because StartPower moves an already-typed number into it after the fact
     public class PowerToken : MathToken
     {
         public List<MathToken> BaseTokens { get; set; } = new List<MathToken>();
         public List<MathToken> ExponentTokens { get; } = new List<MathToken>();
+
         public PowerToken() : base(TokenType.Power) { }
 
         public override string ToLatex()
@@ -78,11 +83,12 @@ namespace Calculator_WinUI.Models
         }
     }
 
-    // for roots -> \sqrt[index]{radicand}
+    // \sqrt[index]{radicand}, where an empty index means a plain square root rather than an empty slot
     public class RootToken : MathToken
     {
-        public List<MathToken> IndexTokens { get; } = new List<MathToken>(); 
+        public List<MathToken> IndexTokens { get; } = new List<MathToken>();
         public List<MathToken> RadicandTokens { get; } = new List<MathToken>();
+
         public RootToken() : base(TokenType.Root) { }
 
         public override string ToLatex()
@@ -95,15 +101,16 @@ namespace Calculator_WinUI.Models
             {
                 return $"\\sqrt[{LatexHelper.GetListLatex(IndexTokens)}]{{{radStr}}}";
             }
-            return $"\\sqrt{{{radStr}}}"; // standard square root
+            return $"\\sqrt{{{radStr}}}";
         }
     }
 
-    // for logarithms -> \log_{base}(x)
+    // \log_{base}(x)
     public class LogarithmToken : MathToken
     {
         public List<MathToken> BaseTokens { get; } = new List<MathToken>();
         public List<MathToken> ParameterTokens { get; } = new List<MathToken>();
+
         public LogarithmToken() : base(TokenType.Logarithm) { }
 
         public override string ToLatex()
@@ -113,18 +120,18 @@ namespace Calculator_WinUI.Models
             else { baseStr = "?"; }
 
             string paramStr;
-            if (ParameterTokens.Count > 0) { paramStr = LatexHelper.GetListLatex(ParameterTokens);  }
-            else {  paramStr = " "; }
+            if (ParameterTokens.Count > 0) { paramStr = LatexHelper.GetListLatex(ParameterTokens); }
+            else { paramStr = " "; }
 
             return $"\\log_{{{baseStr}}}({paramStr})";
         }
     }
 
-    // for fractions -> \frac{numerator}{denominator}
+    // \frac{numerator}{denominator}
     public class FractionToken : MathToken
     {
-        public List<MathToken> NumeratorTokens { get; } = new List<MathToken>(); 
-        public List<MathToken> DenominatorTokens { get; } = new List<MathToken>(); 
+        public List<MathToken> NumeratorTokens { get; } = new List<MathToken>();
+        public List<MathToken> DenominatorTokens { get; } = new List<MathToken>();
 
         public FractionToken() : base(TokenType.Fraction) { }
 
@@ -142,7 +149,9 @@ namespace Calculator_WinUI.Models
         }
     }
 
-    // helper class for recursively generating token lists in LaTeX
+
+    // walks a token list and concatenates the LaTeX of every node; the recursion into nested lists
+    // happens through the ToLatex overrides above, which call back in here
     public static class LatexHelper
     {
         public static string GetListLatex(List<MathToken> tokens)
@@ -150,6 +159,8 @@ namespace Calculator_WinUI.Models
             string latex = "";
             foreach (var currentToken in tokens)
             {
+                // operators are the one kind that does not render as its own value; * and / get proper
+                // math symbols, and every operator gets padding so terms do not run together
                 if (currentToken.Type == TokenType.Operator)
                 {
                     latex += currentToken.Value switch

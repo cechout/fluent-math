@@ -3,6 +3,12 @@ using System.Globalization;
 
 namespace Calculator_WinUI.Classes
 {
+    // the evaluator from the WPF version, carried over unchanged
+    //
+    // it works on the raw input string: it finds the innermost bracket, collapses the calculations inside
+    // it in precedence order, writes the result back over that part of the string, and repeats
+    // that only works because v1 had no structured input; the token tree cannot be expressed as a flat
+    // string, so this class is currently unused and will be replaced by an evaluator that walks the tree
     class Calculate
     {
         public string PreCalculate(string inputTextBlockText)
@@ -11,14 +17,14 @@ namespace Calculator_WinUI.Classes
 
             int numberOfBrackets = 0;
             int currentBracketRank = 0;
-            int highestBracketRank; 
+            int highestBracketRank;
             int highestBracketPosition = 0;
 
             int numberOfPowerootCalculations;
             int numberOfPointCalculations;
             int numberOfLineCalculations;
 
-            //Detect how many Brackets there are
+            // how many brackets have to be collapsed in total
             while (tempIndex1 < inputTextBlockText.Length - 1)
             {
                 if (inputTextBlockText[tempIndex1] == '(')
@@ -28,7 +34,7 @@ namespace Calculator_WinUI.Classes
                 tempIndex1++;
             }
 
-            //Calculating all brackets first
+            // one pass per bracket, innermost first
             while (numberOfBrackets > 0 && currentBracketRank == 0)
             {
                 tempIndex1 = 0;
@@ -39,7 +45,8 @@ namespace Calculator_WinUI.Classes
                 numberOfPointCalculations = 0;
                 numberOfLineCalculations = 0;
 
-                //Detect highest Bracket
+                // the deepest nesting level is the one that has to be evaluated next, so the rank counts
+                // up on every opening bracket and down on every closing one
                 while (tempIndex1 <= inputTextBlockText.Length - 1)
                 {
                     if (inputTextBlockText[tempIndex1] == '(')
@@ -60,24 +67,23 @@ namespace Calculator_WinUI.Classes
                 }
                 tempIndex1 = highestBracketPosition + 1;
 
+                // count the operators inside that bracket, grouped by precedence
                 while (!(inputTextBlockText[tempIndex1] == ')'))
                 {
-                    //Detect how many poweroot calculations are in the bracket
                     if (inputTextBlockText[tempIndex1] == '^' || inputTextBlockText[tempIndex1] == '√')
                     {
                         numberOfPowerootCalculations++;
                     }
-                    //Detect how many point calculations are in the highest bracket
                     if (inputTextBlockText[tempIndex1] == '*' || inputTextBlockText[tempIndex1] == '/')
                     {
                         numberOfPointCalculations++;
                     }
-                    //Detect how many line calculations are in the highest bracket
                     if (inputTextBlockText[tempIndex1] == '+')
                     {
                         numberOfLineCalculations++;
                     }
-                    //check if the "-" sign belongs to the calcucaltion
+                    // a minus only counts as an operator when it follows a digit; otherwise it is the
+                    // sign of the number behind it
                     if (tempIndex1 >= 1)
                     {
                         if ((inputTextBlockText[tempIndex1 - 1] == '0' || inputTextBlockText[tempIndex1 - 1] == '1' || inputTextBlockText[tempIndex1 - 1] == '2' || inputTextBlockText[tempIndex1 - 1] == '3' || inputTextBlockText[tempIndex1 - 1] == '4' || inputTextBlockText[tempIndex1 - 1] == '5' || inputTextBlockText[tempIndex1 - 1] == '6' || inputTextBlockText[tempIndex1 - 1] == '7' || inputTextBlockText[tempIndex1 - 1] == '8' || inputTextBlockText[tempIndex1 - 1] == '9') && inputTextBlockText[tempIndex1] == '-')
@@ -89,14 +95,12 @@ namespace Calculator_WinUI.Classes
                 }
                 if (!((numberOfPowerootCalculations == 0 && numberOfPointCalculations == 0 && numberOfLineCalculations == 0) || inputTextBlockText == "0"))
                 {
-
-                    //Calculate all poweroot calculations and get inputTextBlock.Text back
+                    // strict precedence order; each call collapses its own operator class and hands the
+                    // shortened string to the next one
                     inputTextBlockText = SaveNum1AndNum2(inputTextBlockText, highestBracketPosition, numberOfPowerootCalculations, numberOfPointCalculations, numberOfLineCalculations, '^', '√');
 
-                    //Calculate all point calculations and get inputTextBlock.Text back
                     inputTextBlockText = SaveNum1AndNum2(inputTextBlockText, highestBracketPosition, numberOfPowerootCalculations, numberOfPointCalculations, numberOfLineCalculations, '*', '/');
 
-                    //Calculate all line calculations and get inputTextBlock.Text back
                     inputTextBlockText = SaveNum1AndNum2(inputTextBlockText, highestBracketPosition, numberOfPowerootCalculations, numberOfPointCalculations, numberOfLineCalculations, '+', '-');
                 }
                 else return "Error";
@@ -106,6 +110,10 @@ namespace Calculator_WinUI.Classes
             return inputTextBlockText;
         }
 
+        // collapses every occurrence of one operator pair inside the current bracket, left to right
+        //
+        // it reads the two operands out of the string around the operator, computes them, and splices the
+        // result back in over the whole term, so the string gets shorter with every calculation
         static string SaveNum1AndNum2(string inputTextBlockText, int highestBracketPosition, int numberOfPowerootCalculations, int numberOfPointCalculations, int numberOfLineCalculations, char operationType1, char operationType2)
         {
             int numberOfCalculations = 0;
@@ -124,21 +132,22 @@ namespace Calculator_WinUI.Classes
 
             int tempIndex1 = highestBracketPosition + 1;
 
+            // the caller counted all three classes up front, pick the one this call is responsible for
             if (operationType1 == '^') numberOfCalculations = numberOfPowerootCalculations;
             if (operationType1 == '*') numberOfCalculations = numberOfPointCalculations;
             if (operationType1 == '+') numberOfCalculations = numberOfLineCalculations;
 
             try
             {
-                //detect and save the two numbers 
                 while (currentnumberOfCalculations < numberOfCalculations)
                 {
-                    //detect the first point calculation in the bracket
+                    // walk right until the next operator of this class shows up
                     while (startingPointNumber2 == 0)
                     {
                         if (inputTextBlockText[tempIndex1] == operationType1 || inputTextBlockText[tempIndex1] == operationType2)
                         {
-                            //check if '-' belongs to calculation or to a presign of a number
+                            // same rule as above: a minus after a bracket or another operator is a sign,
+                            // not a subtraction
                             if (!(inputTextBlockText[tempIndex1] == operationType2 && operationType2 == '-' && (inputTextBlockText[tempIndex1 - 1] == '(' || inputTextBlockText[tempIndex1 - 1] == '+' || inputTextBlockText[tempIndex1 - 1] == '-' || inputTextBlockText[tempIndex1 - 1] == '*' || inputTextBlockText[tempIndex1 - 1] == '/')))
                             {
                                 startingPointNumber2 = tempIndex1 + 1;
@@ -158,30 +167,29 @@ namespace Calculator_WinUI.Classes
                         else tempIndex1++;
                     }
 
-                    //Save both numbers in currentNumbersForCalculation[]
                     while (firstNumberSaved == false || secondNumberSaved == false)
                     {
-                        //save first number
+                        // left operand: walk back from the operator until something that cannot be part
+                        // of a number appears
                         while (firstNumberSaved == false)
                         {
                             tempIndex1--;
 
-                            //detect start of the first number for Calculation
                             if (inputTextBlockText[tempIndex1] == '(' || inputTextBlockText[tempIndex1] == '+' || inputTextBlockText[tempIndex1] == '-' || inputTextBlockText[tempIndex1] == '*' || inputTextBlockText[tempIndex1] == '/')
                             {
+                                // a minus here belongs to the number, so it is kept
                                 if (inputTextBlockText[tempIndex1] == '-') startingPointNumber1 = tempIndex1;
                                 else startingPointNumber1 = tempIndex1 + 1;
 
                                 int IndexStartingPointNumber1 = startingPointNumber1;
 
-                                //Save first number for multiplication/division
                                 while (IndexStartingPointNumber1 <= endPointNumber1)
                                 {
                                     tempNumberString += inputTextBlockText[IndexStartingPointNumber1];
                                     IndexStartingPointNumber1++;
                                 }
 
-                                //this method takes the "." as a decimal point
+                                // invariant culture, so the "." in the input stays the decimal point
                                 currentNumbersForCalculation[0] = double.Parse(tempNumberString, CultureInfo.InvariantCulture);
 
                                 firstNumberSaved = true;
@@ -190,30 +198,26 @@ namespace Calculator_WinUI.Classes
                         }
                         tempIndex1 = startingPointNumber2;
 
-                        //save second number
+                        // right operand: same walk in the other direction
                         while (secondNumberSaved == false)
                         {
                             tempIndex1++;
 
-                            //detect end of the second number for pointCalculation/division
                             if (inputTextBlockText[tempIndex1] == ')' || inputTextBlockText[tempIndex1] == '+' || inputTextBlockText[tempIndex1] == '-' || inputTextBlockText[tempIndex1] == '*' || inputTextBlockText[tempIndex1] == '/')
                             {
-                                ////endPointNumber1 is now the end point for number 2
+                                // endPointNumber1 is reused as the end of the second number
                                 endPointNumber1 = tempIndex1 - 1;
 
-                                //Save second number for multiplication/division
                                 while (startingPointNumber2 <= endPointNumber1)
                                 {
                                     tempNumberString += inputTextBlockText[startingPointNumber2];
                                     startingPointNumber2++;
                                 }
 
-                                //this method takes the "." as a decimal point
                                 currentNumbersForCalculation[1] = double.Parse(tempNumberString, CultureInfo.InvariantCulture);
 
                                 secondNumberSaved = true;
 
-                                //Calculate first number and second number
                                 double resultDouble = 0;
                                 int decimalpoints = 3;
 
@@ -244,19 +248,20 @@ namespace Calculator_WinUI.Classes
                                 }
                                 if (currentOperation == 5)
                                 {
-                                    //num1 √ num2 is the same as num2^1/num1
+                                    // num1 √ num2 is the same as num2^(1/num1)
                                     resultDouble = Math.Pow(currentNumbersForCalculation[1], 1 / currentNumbersForCalculation[0]);
                                     resultDouble = Math.Round(resultDouble, decimalpoints);
                                 }
 
                                 string resultString = Convert.ToString(resultDouble);
 
-                                //normally the decimal point would be "," so we replace it with "."
+                                // ToString follows the system culture, which writes a comma in most regions
                                 resultString = resultString.Replace(",", ".");
 
                                 int resultStringLengh = resultString.Length;
 
-                                //remove the brackets only if there is no line calculation or the last calculation was just calculated
+                                // the surrounding brackets are only dropped once nothing inside them is
+                                // left to calculate, otherwise the next pass would lose its boundaries
                                 if ((numberOfLineCalculations == 0 || (currentnumberOfCalculations == numberOfLineCalculations - 1 && operationType1 == '+')) && currentnumberOfCalculations == numberOfCalculations - 1)
                                 {
                                     startingPointNumber1--;
@@ -265,10 +270,10 @@ namespace Calculator_WinUI.Classes
 
                                 int removeLengh = endPointNumber1 - (startingPointNumber1 + (resultStringLengh - 1));
 
-                                //putting the result into the inputTextBlock.Text
+                                // overwrite the term with its result, then delete whatever the shorter
+                                // result left behind
                                 inputTextBlockText = inputTextBlockText.Remove(startingPointNumber1, resultStringLengh).Insert(startingPointNumber1, resultString);
 
-                                //cutting the leftovers
                                 startingPointNumber1 += resultStringLengh;
 
                                 inputTextBlockText = inputTextBlockText.Remove(startingPointNumber1, removeLengh);
@@ -276,7 +281,7 @@ namespace Calculator_WinUI.Classes
                         }
                     }
 
-                    //resetting all the variables
+                    // back to the start of the bracket for the next operator of the same class
                     startingPointNumber1 = 0;
                     startingPointNumber2 = 0;
                     endPointNumber1 = 0;
@@ -293,6 +298,8 @@ namespace Calculator_WinUI.Classes
             }
             catch (Exception)
             {
+                // any malformed input walks an index off the string; there is no partial result worth
+                // salvaging, so the whole calculation reports as failed
                 return "Error";
             }
         }

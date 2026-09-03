@@ -11,9 +11,11 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
+            <!--  dark values are alpha over the Mica backdrop, light values are opaque  -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
-                    <!--  fill colors  -->
+
+                    <!--  === fill colors ===  -->
                     <!--  number pad  -->
                     <SolidColorBrush x:Key="NumPadNormal" Color="#1FFFFFFF" />
                     <SolidColorBrush x:Key="NumPadHover" Color="#14FFFFFF" />
@@ -24,7 +26,7 @@
                     <SolidColorBrush x:Key="OpHover" Color="#24FFFFFF" />
                     <SolidColorBrush x:Key="OpPressed" Color="#14FFFFFF" />
 
-                    <!--  border colors  -->
+                    <!--  === border colors ===  -->
                     <!--  number pad  -->
                     <LinearGradientBrush x:Key="NumPadBorder" StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Offset="0.7" Color="#25FFFFFF" />
@@ -41,7 +43,8 @@
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
-                    <!--  fill colors  -->
+
+                    <!--  === fill colors ===  -->
                     <!--  number pad  -->
                     <SolidColorBrush x:Key="NumPadNormal" Color="#FFFFFFFF" />
                     <SolidColorBrush x:Key="NumPadHover" Color="#FFF9F9F9" />
@@ -52,7 +55,7 @@
                     <SolidColorBrush x:Key="OpHover" Color="#FFFFFFFF" />
                     <SolidColorBrush x:Key="OpPressed" Color="#FFF9F9F9" />
 
-                    <!--  border colors  -->
+                    <!--  === border colors ===  -->
                     <!--  number pad  -->
                     <LinearGradientBrush x:Key="NumPadBorder" StartPoint="0,0" EndPoint="0,1">
                         <GradientStop Offset="0.7" Color="#FFE5E5E5" />
@@ -69,7 +72,8 @@
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
-            <!--  Number Pad Button Style  -->
+            <!--  number pad key  -->
+            <!--  brighter fill, used for digits and the decimal point  -->
             <Style x:Key="NumberPadButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{ThemeResource NumPadNormal}" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -134,7 +138,8 @@
                 </Setter>
             </Style>
 
-            <!--  Operator Button Style  -->
+            <!--  operator key  -->
+            <!--  quieter fill, used for everything that is not a digit  -->
             <Style x:Key="OperatorButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{ThemeResource OpNormal}" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />

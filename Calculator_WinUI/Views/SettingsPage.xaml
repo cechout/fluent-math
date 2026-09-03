@@ -16,6 +16,8 @@
                 <RowDefinition Height="*" />
             </Grid.RowDefinitions>
 
+            <!--  page header  -->
+            <!--  (the left margin clears the navigation views hamburger button)  -->
             <Grid
                 Grid.Row="0"
                 Height="38"
@@ -41,6 +43,7 @@
                         Style="{StaticResource BodyStrongTextBlockStyle}"
                         Text="Appearance" />
 
+                    <!--  (the selection is applied through MainWindow and is not persisted across restarts)  -->
                     <controls:SettingsCard
                         Description="Select your preferred color mode for the calculator"
                         Header="App Theme"

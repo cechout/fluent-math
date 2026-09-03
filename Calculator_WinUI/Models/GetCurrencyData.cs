@@ -5,14 +5,15 @@ using System.Xml;
 
 namespace Calculator_WinUI.Models
 {
+    // pulls the daily reference rates published by the European Central Bank
+    // feed reference: https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html
     class GetCurrencyData
     {
         public static Dictionary<string, double> FetchAllRates()
         {
-            // a dictionary to store the currency codes and their corresponding rates
             var rates = new Dictionary<string, double>();
 
-            // euro ist the base currency
+            // the feed quotes everything against the euro and therefore never lists EUR itself
             rates.Add("EUR", 1.0);
 
             string url = "https://www.ecb.europa.eu/stats/eurofxref/eurofxref-daily.xml";
@@ -23,13 +24,13 @@ namespace Calculator_WinUI.Models
                 {
                     while (reader.Read())
                     {
-                        // we only search elements named "Cube" that have attributes, because the rates are stored in such elements
+                        // the feed nests three levels of elements all named Cube; only the innermost
+                        // ones carry attributes, which is what separates a rate from a wrapper
                         if (reader.NodeType == XmlNodeType.Element && reader.Name == "Cube" && reader.HasAttributes)
                         {
                             string currency = reader.GetAttribute("currency");
                             string rateString = reader.GetAttribute("rate");
 
-                            // if we found a currency and a rate, we parse the rate and add it to our dictionary
                             if (!string.IsNullOrEmpty(currency) && !string.IsNullOrEmpty(rateString))
                             {
                                 double rate = double.Parse(rateString, CultureInfo.InvariantCulture);

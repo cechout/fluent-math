@@ -8,12 +8,25 @@ using System.Windows.Input;
 
 namespace Calculator_WinUI.ViewModels
 {
+    // the only translator between the keypad and the input engine
+    //
+    // every button in StandardPage is bound to the same InputCommand and identifies itself through its
+    // CommandParameter, so adding a key is a XAML change plus one arm in the switch below; the page
+    // itself stays free of input logic
     public class StandardViewModel : INotifyPropertyChanged
     {
+        // === fields ===
+
+        // the v1 string evaluator, carried over from the WPF version and currently unused; it will be
+        // replaced by a real evaluator walking the token tree rather than being wired back up
         private Calculate _calculator = new Calculate();
+
         private readonly MathInputManager _inputManager = new MathInputManager();
 
-        // ui properties 
+
+        // === display properties ===
+
+        // both hold LaTeX, not plain text; StandardPage feeds them straight to KaTeX
         private string _inputAndResultText = "0";
         public string InputAndResultText
         {
@@ -23,10 +36,11 @@ namespace Calculator_WinUI.ViewModels
                 if (_inputAndResultText != value)
                 {
                     _inputAndResultText = value;
-                    OnPropertyChanged(); 
+                    OnPropertyChanged();
                 }
             }
         }
+
         private string _calculationText = "";
         public string CalculationText
         {
@@ -41,7 +55,11 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
-        // toggle visibility of secondary buttons
+
+        // === shift layer ===
+
+        // the second keyboard layer is not a separate panel; each shiftable key is two buttons stacked in
+        // the same grid cell, and these two properties swap which of them is visible
         private Visibility _normalVisibility = Visibility.Visible;
         public Visibility NormalVisibility
         {
@@ -52,6 +70,7 @@ namespace Calculator_WinUI.ViewModels
                 OnPropertyChanged();
             }
         }
+
         private Visibility _shiftVisibility = Visibility.Collapsed;
         public Visibility ShiftVisibility
         {
@@ -63,14 +82,17 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
-        // commands
+
+        // === commands ===
+
         public ICommand InputCommand { get; }
         public ICommand CalculateCommand { get; }
         public ICommand ClearCommand { get; }
         public ICommand BackspaceCommand { get; }
 
 
-        // constructor
+        // === constructor ===
+
         public StandardViewModel()
         {
             InputCommand = new RelayCommand<string>(AddToTextBox);
@@ -80,6 +102,14 @@ namespace Calculator_WinUI.ViewModels
         }
 
 
+        // === input handling ===
+
+        // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
+        // and anything else, which is treated as a digit or a decimal point
+        //
+        // several keys in the XAML send a cmd_ value that has no arm yet (cmd_pi, cmd_e, cmd_more,
+        // cmd_paren_open, cmd_paren_close and the inverse trig keys); they fall through the switch and do
+        // nothing, which is why those buttons are currently dead rather than broken
         private void AddToTextBox(string sign)
         {
             if (sign.StartsWith("cmd_"))
@@ -111,6 +141,8 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.StartPower();
                         break;
 
+                    // x squared is the generic power with the exponent prefilled; the Right afterwards
+                    // steps back out so typing continues after the power instead of inside it
                     case "cmd_pow_2":
                         _inputManager.StartPower();
                         _inputManager.AddNumber("2");
@@ -155,7 +187,6 @@ namespace Calculator_WinUI.ViewModels
                         break;
                 }
             }
-            // old logic
             else if (sign == "+" || sign == "-" || sign == "*" || sign == "/")
             {
                 _inputManager.AddOperator(sign);
@@ -165,10 +196,12 @@ namespace Calculator_WinUI.ViewModels
                 _inputManager.AddNumber(sign);
             }
 
-            // update UI
+            // the engine has no change notification of its own, so the display is republished after
+            // every single keypress
             InputAndResultText = _inputManager.GetLatexString();
         }
 
+        // there is no evaluator yet, so pressing equals only moves the input up into the history line
         private void CalculateResult()
         {
             CalculationText = InputAndResultText + "=";
@@ -188,8 +221,10 @@ namespace Calculator_WinUI.ViewModels
         }
 
 
-        // INotifyPropertyChanged Implementation
+        // === property changed ===
+
         public event PropertyChangedEventHandler PropertyChanged;
+
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));

@@ -1,8 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models
 {
+    // which slot of a structured token a scope belongs to
+    // this is what decides how the cursor leaves a scope; Down out of a numerator lands in the
+    // denominator, Down out of an exponent does nothing at all
     public enum ScopeRole
     {
         Root,
@@ -24,14 +26,20 @@ namespace Calculator_WinUI.Models
         Down
     }
 
+
+    // one editable slot: the token list being typed into, the token that owns that list, and where the
+    // cursor currently sits inside it
+    //
+    // MathInputManager keeps these on a stack, so entering a fraction or an exponent is a push and
+    // leaving it is a pop; nesting needs no other bookkeeping
     public class ScopeContext
     {
         public List<MathToken> Tokens { get; }
         public MathToken ParentToken { get; }
         public ScopeRole Role { get; }
 
-        // cursor position within Tokens; valid range: 0 - Tokens.Count
-        // index i means: cursor sits before Tokens[i], index Tokens.Count means: cursor at very end
+        // cursor position within Tokens, valid from 0 to Tokens.Count
+        // index i means the cursor sits before Tokens[i], Tokens.Count means it sits at the very end
         public int CursorIndex { get; set; }
 
         public ScopeContext(List<MathToken> tokens, MathToken parentToken, ScopeRole role, int cursorIndex = 0)

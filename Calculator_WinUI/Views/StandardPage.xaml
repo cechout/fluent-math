@@ -17,7 +17,8 @@
             </Grid.RowDefinitions>
 
 
-            <!--  header  -->
+            <!--  page header  -->
+            <!--  (the left margin clears the navigation views hamburger button)  -->
             <Grid
                 Grid.Row="0"
                 Height="38"
@@ -28,14 +29,13 @@
                     Orientation="Horizontal"
                     Spacing="8">
 
-                    <!--  page title  -->
                     <TextBlock
                         HorizontalAlignment="Left"
                         VerticalAlignment="Center"
                         Style="{ThemeResource SubtitleTextBlockStyle}"
                         Text="Standard" />
 
-                    <!--  compact mode button  -->
+                    <!--  planned: compact mode toggle  -->
                     <!--<Button
                         Width="32"
                         Height="32"
@@ -45,6 +45,7 @@
                     </Button>-->
                 </StackPanel>
 
+                <!--  planned: history flyout  -->
                 <!--<Button
                     Width="32"
                     Height="32"
@@ -56,42 +57,13 @@
             </Grid>
 
 
-            <!--  output display (old)  -->
-            <!--<ScrollViewer
-                x:Name="outputScrollviewer"
-                Grid.Row="1"
-                Grid.ColumnSpan="4"
-                Margin="4,0,4,8"
-                Background="Transparent"
-                HorizontalScrollBarVisibility="Auto"
-                VerticalScrollBarVisibility="Disabled">
-                <Grid>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="2*" />
-                        <RowDefinition Height="3*" MinHeight="40" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock
-                        Grid.Row="0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        Style="{ThemeResource BodyTextBlockStyle}"
-                        Text="{x:Bind ViewModel.CalculationText, Mode=OneWay}" />
-
-                    <TextBlock
-                        Grid.Row="1"
-                        Margin="0,-8,0,0"
-                        HorizontalAlignment="Right"
-                        VerticalAlignment="Center"
-                        Style="{ThemeResource TitleLargeTextBlockStyle}"
-                        Text="{x:Bind ViewModel.InputAndResultText, Mode=OneWay}" />
-                </Grid>
-            </ScrollViewer>-->
-
-
             <!--  calculator display  -->
+            <!--
+                both lines are KaTeX in a WebView2 rather than a TextBlock, because
+                XAML cannot draw a stacked fraction or a real root sign
+                Top is the previous calculation, bottom is the current input; content is pushed in from
+                the code-behind, there is no binding on a WebView2
+            -->
             <Grid Grid.Row="1">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="2*" />
@@ -112,7 +84,13 @@
             </Grid>
 
 
-            <!--  input buttons  -->
+            <!--  keypad  -->
+            <!--
+                every key binds to the same InputCommand and identifies itself through its
+                CommandParameter, so the page carries no input logic at all
+                A shiftable key is two buttons in the same cell whose Visibility is driven by
+                NormalVisibility / ShiftVisibility, one of which is always collapsed
+            -->
             <Grid
                 Grid.Row="2"
                 ColumnSpacing="2.5"
@@ -135,7 +113,7 @@
                     <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
-                <!--  extra buttons  -->
+                <!--  parked keys: no grid position and collapsed, kept for when the layout gains room  -->
                 <Button
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
