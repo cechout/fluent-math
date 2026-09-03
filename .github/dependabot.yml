@@ -1,0 +1,24 @@
+version: 2
+updates:
+  # scoped to the WinUI project on purpose, the repository also contains the frozen WPF v1
+  # (net472, packages.config) which is never rebuilt and should not produce update PRs
+  - package-ecosystem: "nuget"
+    directory: "/Calculator_WinUI"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"

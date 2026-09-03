@@ -2,6 +2,15 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+
+    <!-- only place the version gets bumped, AssemblyVersion/FileVersion/InformationalVersion derive from this automatically -->
+    <!-- release.yml reads it from here and hands it to Inno Setup, so the installer can never drift out of sync -->
+    <Version>2.0.0</Version>
+
+    <Authors>Daniel Čech</Authors>
+    <Product>Simple Calculator</Product>
+    <Copyright>© 2026 Daniel Čech</Copyright>
+
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>Calculator_WinUI</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -95,6 +104,7 @@
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">True</PublishTrimmed>
+    <!-- trimming strips the WinRT/COM interop types the Windows App SDK resolves at runtime and crashes the app, never turn this on -->
+    <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">False</PublishTrimmed>
   </PropertyGroup>
 </Project>
