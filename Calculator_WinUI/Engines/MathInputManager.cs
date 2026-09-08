@@ -369,27 +369,36 @@ namespace Calculator_WinUI.Engines
 
         // === plain input ===
 
-        // digits grow the number token left of the cursor instead of piling up one token per keystroke,
-        // which is what keeps "125" a single number rather than three
+        // one token per digit, so the cursor can stand between any two characters of a number the same
+        // way it stands between any two tokens; "125" is three tokens and the evaluator is the one place
+        // that reads such a run back as a single value
         public void AddNumber(string digit)
         {
             var ctx = CurrentContext;
 
-            MathToken tokenLeftOfCursor;
-            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
-            else { tokenLeftOfCursor = null; }
+            if (digit == "." && NumberRunHasDecimalPoint(ctx)) return; // one decimal point per number
 
-            if (tokenLeftOfCursor != null && tokenLeftOfCursor.Type == TokenType.Number)
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, digit));
+            ctx.CursorIndex++;
+        }
+
+        // the number tokens on both sides of the cursor read as one number, so a second decimal point
+        // anywhere in that run has to be refused, not only one sitting directly left of the cursor
+        private static bool NumberRunHasDecimalPoint(ScopeContext context)
+        {
+            for (int i = context.CursorIndex - 1; i >= 0; i--)
             {
-                if (digit == "." && tokenLeftOfCursor.Value.Contains(".")) return; // one decimal point per number
-                tokenLeftOfCursor.Value += digit;
-                // no cursor change, a character was appended inside a token that was already there
+                if (context.Tokens[i].Type != TokenType.Number) break;
+                if (context.Tokens[i].Value == ".") return true;
             }
-            else
+
+            for (int i = context.CursorIndex; i < context.Tokens.Count; i++)
             {
-                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, digit));
-                ctx.CursorIndex++;
+                if (context.Tokens[i].Type != TokenType.Number) break;
+                if (context.Tokens[i].Value == ".") return true;
             }
+
+            return false;
         }
 
         public void AddOperator(string op)
@@ -458,29 +467,7 @@ namespace Calculator_WinUI.Engines
 
             // a power typed after a number should raise that number rather than open an empty base, so
             // the token to the left is pulled out of the parent scope and becomes the base
-            MathToken tokenLeftOfCursor;
-            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
-            else { tokenLeftOfCursor = null; }
-
-            if (tokenLeftOfCursor != null && tokenLeftOfCursor.Type == TokenType.BracketClose)
-            {
-                // the base of (1+2) squared is the whole group, so the search runs back to the partner
-                // bracket; an unmatched closing bracket leaves the base empty rather than eating the list
-                int groupStart = FindMatchingBracketOpen(ctx.Tokens, ctx.CursorIndex - 1);
-                if (groupStart >= 0)
-                {
-                    int groupLength = ctx.CursorIndex - groupStart;
-                    powerToken.BaseTokens.AddRange(ctx.Tokens.GetRange(groupStart, groupLength));
-                    ctx.Tokens.RemoveRange(groupStart, groupLength);
-                    ctx.CursorIndex -= groupLength;
-                }
-            }
-            else if (tokenLeftOfCursor != null && (tokenLeftOfCursor.Type == TokenType.Number || tokenLeftOfCursor.Type == TokenType.Constant))
-            {
-                powerToken.BaseTokens.Add(tokenLeftOfCursor);
-                ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
-                ctx.CursorIndex--; // the parent scope just lost a token left of the cursor
-            }
+            MoveOperandIntoSlot(ctx, powerToken.BaseTokens);
 
             ctx.Tokens.Insert(ctx.CursorIndex, powerToken);
             ctx.CursorIndex++;
@@ -508,6 +495,50 @@ namespace Calculator_WinUI.Engines
             }
 
             return -1;
+        }
+
+        // the run of tokens directly left of the cursor that reads as one operand: everything back to
+        // the nearest operator, opening bracket or start of the scope, with a bracket group counted as
+        // one piece, so the base of (1+2) squared is the whole group
+        //
+        // returns cursorIndex itself when there is nothing to take, which is what leaves an empty slot
+        private static int FindOperandStart(List<MathToken> tokens, int cursorIndex)
+        {
+            int start = cursorIndex;
+
+            while (start > 0)
+            {
+                MathToken token = tokens[start - 1];
+
+                if (token.Type == TokenType.Operator || token.Type == TokenType.BracketOpen) break;
+
+                if (token.Type == TokenType.BracketClose)
+                {
+                    // an unmatched closing bracket stops the search rather than eating the whole list
+                    int groupStart = FindMatchingBracketOpen(tokens, start - 1);
+                    if (groupStart < 0) break;
+
+                    start = groupStart;
+                    continue;
+                }
+
+                start--;
+            }
+
+            return start;
+        }
+
+        // moves that operand out of the scope and into the slot a structured token is about to own,
+        // which is what lets the fraction and the power keys continue from what is already typed
+        private static void MoveOperandIntoSlot(ScopeContext context, List<MathToken> slot)
+        {
+            int start = FindOperandStart(context.Tokens, context.CursorIndex);
+            int length = context.CursorIndex - start;
+            if (length == 0) return;
+
+            slot.AddRange(context.Tokens.GetRange(start, length));
+            context.Tokens.RemoveRange(start, length);
+            context.CursorIndex = start; // the parent scope just lost everything left of the cursor
         }
 
         // customIndex picks which slot the user lands in: the index of an nth root, or the radicand of a
@@ -542,15 +573,22 @@ namespace Calculator_WinUI.Engines
             _scopeStack.Push(new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter));
         }
 
+        // the numerator continues from whatever already stands left of the cursor, the way a Casio does
+        // it: 5 + 45 followed by the fraction key lifts the 45 over the bar and parks the cursor beside
+        // it, rather than opening an empty fraction next to the 45
         public void StartFraction()
         {
             var ctx = CurrentContext;
             var fracToken = new FractionToken();
 
+            MoveOperandIntoSlot(ctx, fracToken.NumeratorTokens);
+
             ctx.Tokens.Insert(ctx.CursorIndex, fracToken);
             ctx.CursorIndex++;
 
-            _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
+            var numeratorCtx = new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator);
+            numeratorCtx.CursorIndex = fracToken.NumeratorTokens.Count; // right of what was just taken over
+            _scopeStack.Push(numeratorCtx);
         }
 
         // customBase starts in the subscript for log_b(x), otherwise straight in the argument
@@ -582,50 +620,98 @@ namespace Calculator_WinUI.Engines
             var ctx = CurrentContext;
 
             // at the start of a sub-scope: leave it and delete the token that owned it
-            if (ctx.CursorIndex == 0 && ctx.Role != ScopeRole.Root)
+            if (ctx.CursorIndex == 0 && ctx.Role != ScopeRole.Root && ctx.ParentToken != null)
             {
-                // unless the same token has a slot before this one that still holds something; deleting
-                // the whole structure from there would throw away what the user already typed into it
+                // as long as only one slot of the token is still in use, the structure can be dropped
+                // without losing anything, so that always wins; this is what stops an emptied exponent
+                // from leaving a box behind that no further Backspace can reach
+                if (CountFilledSlots(ctx.ParentToken) <= 1)
+                {
+                    DissolveStructure(ctx.ParentToken);
+                    return;
+                }
+
+                // more than one slot is in use, so fall back into a previous one that holds something
+                // rather than deleting the lot
                 //
                 // an empty previous slot is skipped on purpose, falling back into nothing would leave
                 // Backspace looking stuck
                 TokenSlot? previousSlot = GetNeighbourSlot(ctx, next: false);
-                if (previousSlot != null && previousSlot.Tokens.Count > 0 && ctx.ParentToken != null)
+                if (previousSlot != null && previousSlot.Tokens.Count > 0)
                 {
                     SwitchToSlot(previousSlot, ctx.ParentToken, atEnd: true);
                     return;
                 }
 
-                MathToken parentToken = ctx.ParentToken;
-                _scopeStack.Pop();
-
-                // the owning token sits directly left of the cursor in the parent scope, because every
-                // StartXXX inserted it there and then stepped over it
-                var parentCtx = CurrentContext;
-                if (parentCtx.CursorIndex > 0 && parentCtx.Tokens[parentCtx.CursorIndex - 1] == parentToken)
-                {
-                    parentCtx.Tokens.RemoveAt(parentCtx.CursorIndex - 1);
-                    parentCtx.CursorIndex--;
-                }
+                RemoveStructure(ctx.ParentToken);
                 return;
             }
 
             // at the start of the root scope there is nothing left to delete
             if (ctx.CursorIndex == 0) return;
 
-            MathToken tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1];
+            // digit, operator or a whole structure; everything left of the cursor is one token now, so
+            // it all goes away in one piece
+            ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
+            ctx.CursorIndex--;
+        }
 
-            // a multi-digit number loses one character and stays a token, mirroring how AddNumber built it
-            if (tokenLeftOfCursor.Type == TokenType.Number && tokenLeftOfCursor.Value.Length > 1)
+        // how many slots of a structured token still hold something
+        //
+        // the salvage below decides on this rather than on the slot the cursor happens to be in: with a
+        // single slot in use, putting its contents back can never run two separate numbers into one
+        private static int CountFilledSlots(MathToken token)
+        {
+            int filled = 0;
+            foreach (TokenSlot slot in GetSlots(token))
             {
-                tokenLeftOfCursor.Value = tokenLeftOfCursor.Value.Substring(0, tokenLeftOfCursor.Value.Length - 1);
+                if (slot.Tokens.Count > 0) filled++;
             }
-            else
+
+            return filled;
+        }
+
+        // drops the structure but keeps what was already typed into it, by putting the contents of its
+        // one remaining slot back into the parent scope where the token itself stood
+        //
+        // deleting the 7 out of 5^7 twice therefore leaves the 5 rather than taking it along; the slots
+        // are walked in reading order, though only one of them can contribute anything, since the caller
+        // only gets here while at most one is in use
+        private void DissolveStructure(MathToken structureToken)
+        {
+            _scopeStack.Pop();
+
+            var parentCtx = CurrentContext;
+            int tokenIndex = parentCtx.Tokens.IndexOf(structureToken);
+            if (tokenIndex == -1) return; // safety, a scope always sits in its parents list
+
+            var salvaged = new List<MathToken>();
+            foreach (TokenSlot slot in GetSlots(structureToken))
             {
-                // single digit, operator or a whole structure; goes away in one piece
-                ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
-                ctx.CursorIndex--;
+                salvaged.AddRange(slot.Tokens);
             }
+
+            parentCtx.Tokens.RemoveAt(tokenIndex);
+            parentCtx.Tokens.InsertRange(tokenIndex, salvaged);
+            parentCtx.CursorIndex = tokenIndex + salvaged.Count;
+        }
+
+        // deletes the structure with everything still in it, for the case where there is nothing left
+        // to fall back into and salvaging the slots would run two separate numbers into one
+        //
+        // the token is looked up rather than assumed to sit left of the cursor: entering a structure
+        // from the left leaves the parent cursor on the token instead of after it, and the old
+        // assumption made Backspace silently do nothing in exactly that case
+        private void RemoveStructure(MathToken structureToken)
+        {
+            _scopeStack.Pop();
+
+            var parentCtx = CurrentContext;
+            int tokenIndex = parentCtx.Tokens.IndexOf(structureToken);
+            if (tokenIndex == -1) return;
+
+            parentCtx.Tokens.RemoveAt(tokenIndex);
+            parentCtx.CursorIndex = tokenIndex;
         }
 
         public void Clear()
@@ -641,7 +727,21 @@ namespace Calculator_WinUI.Engines
         public void SeedWithValue(string numberText)
         {
             Clear();
-            _rootTokens.Add(new MathToken(TokenType.Number, numberText));
+
+            // one token per character, exactly what typing the same number by hand would leave behind;
+            // a leading minus is a sign rather than a digit, so it goes in as the operator the evaluator
+            // already reads that way
+            foreach (char character in numberText)
+            {
+                if (character == '-')
+                {
+                    _rootTokens.Add(new MathToken(TokenType.Operator, "-"));
+                    continue;
+                }
+
+                _rootTokens.Add(new MathToken(TokenType.Number, character.ToString()));
+            }
+
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 

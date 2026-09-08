@@ -87,7 +87,7 @@ namespace Calculator_WinUI.Models
         public override string ToLatex(ScopeContext? activeScope)
         {
             string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, activeScope);
-            return $"\\{Value}({innerLatex})";
+            return LatexHelper.Tagged("m-func", $"\\{Value}({innerLatex})");
         }
     }
 
@@ -105,7 +105,7 @@ namespace Calculator_WinUI.Models
             string baseStr = LatexHelper.GetSlotLatex(BaseTokens, activeScope);
             string expStr = LatexHelper.GetSlotLatex(ExponentTokens, activeScope);
 
-            return $"{baseStr}^{{{expStr}}}";
+            return LatexHelper.Tagged("m-pow", $"{baseStr}^{{{expStr}}}");
         }
     }
 
@@ -124,9 +124,9 @@ namespace Calculator_WinUI.Models
             // an empty index is a plain square root rather than an empty slot, so it gets no box; a
             // cursor standing in it still renders, which is what keeps the slot reachable while typing
             string indexStr = LatexHelper.GetListLatex(IndexTokens, activeScope);
-            if (indexStr.Length > 0) return $"\\sqrt[{indexStr}]{{{radStr}}}";
+            if (indexStr.Length > 0) return LatexHelper.Tagged("m-root", $"\\sqrt[{indexStr}]{{{radStr}}}");
 
-            return $"\\sqrt{{{radStr}}}";
+            return LatexHelper.Tagged("m-root", $"\\sqrt{{{radStr}}}");
         }
     }
 
@@ -145,9 +145,9 @@ namespace Calculator_WinUI.Models
             // no base written out means the common logarithm, the same default the evaluator applies, so
             // an untouched base slot disappears instead of showing an empty box
             string baseStr = LatexHelper.GetListLatex(BaseTokens, activeScope);
-            if (baseStr.Length > 0) return $"\\log_{{{baseStr}}}({paramStr})";
+            if (baseStr.Length > 0) return LatexHelper.Tagged("m-log", $"\\log_{{{baseStr}}}({paramStr})");
 
-            return $"\\log({paramStr})";
+            return LatexHelper.Tagged("m-log", $"\\log({paramStr})");
         }
     }
 
@@ -164,7 +164,7 @@ namespace Calculator_WinUI.Models
             string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, activeScope);
             string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, activeScope);
 
-            return $"\\frac{{{numStr}}}{{{denStr}}}";
+            return LatexHelper.Tagged("m-frac", $"\\frac{{{numStr}}}{{{denStr}}}");
         }
     }
 
@@ -179,10 +179,26 @@ namespace Calculator_WinUI.Models
     {
         // a thin bar tagged with a css class the display animates; KaTeX only keeps the class when the
         // render call runs with trust enabled
-        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0.06em}{1.1em}}";
+        //
+        // the bar is kept just above a digit rather than a full line tall, because it takes part in the
+        // layout of whatever slot it stands in: a taller rule inside a numerator stretches that half of
+        // the fraction and visibly pushes the content away from the bar while the user is typing there
+        public const string CursorLatex = "\\htmlClass{cursor}{\\rule[-0.1em]{0.06em}{0.8em}}";
 
         // the box a Casio shows for a slot that still has to be filled
         private const string EmptySlotLatex = "\\square";
+
+        // hands a whole structured token to the display under a css class, which is what lets the size
+        // of a fraction or a root be set from C# without touching the LaTeX around it
+        //
+        // the tag always goes around the whole structure and never around one of its slots: KaTeX writes
+        // the offsets inside a fraction or a superscript as inline em values, so a size set on the
+        // wrapper carries content and alignment with it, while one set on a numerator alone would leave
+        // those offsets sized for the old em and drag the content away from the bar
+        public static string Tagged(string cssClass, string latex)
+        {
+            return $"\\htmlClass{{{cssClass}}}{{{latex}}}";
+        }
 
         public static string GetListLatex(List<MathToken> tokens, ScopeContext? activeScope)
         {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Calculator_WinUI.Models;
 
 namespace Calculator_WinUI.Engines
@@ -182,8 +183,17 @@ namespace Calculator_WinUI.Engines
 
             if (token.Type == TokenType.Number)
             {
-                position++;
-                if (!double.TryParse(token.Value, NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
+                // the input keeps one token per character, so the whole run is what makes up one value
+                // reading it greedily is also what stops the implicit multiplication above from turning
+                // 45 into 4 times 5
+                var literal = new StringBuilder();
+                while (position < tokens.Count && tokens[position].Type == TokenType.Number)
+                {
+                    literal.Append(tokens[position].Value);
+                    position++;
+                }
+
+                if (!double.TryParse(literal.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
                 {
                     return Fail(EvaluationError.Syntax); // a lone decimal point is the realistic case
                 }
