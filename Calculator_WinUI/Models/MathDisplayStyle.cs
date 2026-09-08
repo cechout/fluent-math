@@ -43,6 +43,18 @@ namespace Calculator_WinUI.Models
         public double FractionBarThickness { get; set; } = 0.04; // em, the KaTeX default
         public bool UseSansSerif { get; set; } = true; // upright sans digits, the way a Casio display draws them
 
+        // operators are sized and spaced on their own, because KaTeX draws one at full size with a fixed
+        // space on either side and that reads far heavier than a pocket calculator does
+        //
+        // the gap is em of the operator, so it follows OperatorScale rather than the text around it
+        public double OperatorScale { get; set; } = 0.8;
+        public double OperatorGap { get; set; } = 0.1;
+
+        // the input caret, painted by css rather than by KaTeX so it shrinks together with a slot
+        public double CursorWidth { get; set; } = 0.06; // em
+        public double CursorHeight { get; set; } = 0.8; // em, the height MathToken already reserves for it
+        public double CursorShift { get; set; } = -0.1; // em, negative drops the caret below the baseline
+
 
         // === presets ===
 
@@ -86,6 +98,11 @@ namespace Calculator_WinUI.Models
             css.AppendLine($"    --func-scale: {FunctionScale.ToString(invariant)}em;");
             css.AppendLine($"    --frac-bar: {FractionBarThickness.ToString(invariant)}em;");
             css.AppendLine($"    --min-fit-scale: {MinFitScale.ToString(invariant)};");
+            css.AppendLine($"    --op-scale: {OperatorScale.ToString(invariant)}em;");
+            css.AppendLine($"    --op-gap: {OperatorGap.ToString(invariant)}em;");
+            css.AppendLine($"    --cursor-width: {CursorWidth.ToString(invariant)}em;");
+            css.AppendLine($"    --cursor-height: {CursorHeight.ToString(invariant)}em;");
+            css.AppendLine($"    --cursor-shift: {CursorShift.ToString(invariant)}em;");
             css.Append("}");
 
             return css.ToString();

@@ -76,8 +76,10 @@ namespace Calculator_WinUI.Models
                 exponent++;
             }
 
+            // the times sign goes through the same helper the input line uses, so a result is not spaced
+            // differently from the formula that produced it
             string mantissaText = mantissa.ToString(PlainNumberFormat, CultureInfo.InvariantCulture);
-            return $"{mantissaText} \\times 10^{{{exponent}}}";
+            return $"{mantissaText}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
         }
 
         private static double RoundToSignificantDigits(double value, int digits)

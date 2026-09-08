@@ -177,13 +177,19 @@ namespace Calculator_WinUI.Models
     // rendered without a cursor
     public static class LatexHelper
     {
-        // a thin bar tagged with a css class the display animates; KaTeX only keeps the class when the
-        // render call runs with trust enabled
+        // an anchor tagged with a css class the display draws and animates; KaTeX only keeps the class
+        // when the render call runs with trust enabled
         //
-        // the bar is kept just above a digit rather than a full line tall, because it takes part in the
-        // layout of whatever slot it stands in: a taller rule inside a numerator stretches that half of
-        // the fraction and visibly pushes the content away from the bar while the user is typing there
-        public const string CursorLatex = "\\htmlClass{cursor}{\\rule[-0.1em]{0.06em}{0.8em}}";
+        // the rule carries no width of its own, the visible bar is a css border on the same span; that
+        // is what lets the cursor shrink together with the slot it stands in, an em inside a KaTeX rule
+        // follows the size KaTeX picked for the structure rather than the font-size on screen
+        //
+        // the height stays here instead of moving to css because KaTeX has to reserve it, otherwise a
+        // slot holding nothing but the cursor collapses; it is kept just above a digit rather than a
+        // full line tall, because it takes part in the layout of whatever slot it stands in: a taller
+        // rule inside a numerator stretches that half of the fraction and visibly pushes the content
+        // away from the bar while the user is typing there
+        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0em}{0.8em}}";
 
         // the box a Casio shows for a slot that still has to be filled
         private const string EmptySlotLatex = "\\square";
@@ -200,6 +206,16 @@ namespace Calculator_WinUI.Models
             return $"\\htmlClass{{{cssClass}}}{{{latex}}}";
         }
 
+        // an operator under the class the display sizes and spaces it with
+        //
+        // \mathord is what makes that spacing controllable at all: KaTeX pads a binary operator with a
+        // fixed medium space on either side, and demoting it to an ordinary atom is the only way to get
+        // that space back before the css puts a chosen amount of it in again
+        public static string TaggedOperator(string symbol)
+        {
+            return $"\\mathord{{{Tagged("m-op", symbol)}}}";
+        }
+
         public static string GetListLatex(List<MathToken> tokens, ScopeContext? activeScope)
         {
             bool isActiveList = activeScope != null && ReferenceEquals(tokens, activeScope.Tokens);
@@ -212,15 +228,17 @@ namespace Calculator_WinUI.Models
                 MathToken currentToken = tokens[i];
 
                 // operators are the one kind that does not render as its own value; * and / get proper
-                // math symbols, and every operator gets padding so terms do not run together
+                // math symbols, and the size and spacing of all of them comes from the display
                 if (currentToken.Type == TokenType.Operator)
                 {
-                    latex += currentToken.Value switch
+                    string symbol = currentToken.Value switch
                     {
-                        "*" => " \\cdot ",
-                        "/" => " \\div ",
-                        _ => $" {currentToken.Value} "
+                        "*" => "\\cdot",
+                        "/" => "\\div",
+                        _ => currentToken.Value
                     };
+
+                    latex += TaggedOperator(symbol);
                 }
                 else
                 {

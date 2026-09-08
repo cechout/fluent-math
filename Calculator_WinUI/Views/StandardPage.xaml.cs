@@ -64,12 +64,26 @@ namespace Calculator_WinUI.Views
                 .m-log { font-size: var(--log-scale); }
                 .m-func { font-size: var(--func-scale); }
 
-                /* the input cursor, tagged by the LaTeX the engine emits */
+                /* the engine hands operators over as ordinary atoms, so KaTeX adds no space of its own
+                   and the entire gap around + - and the two symbols is the one set here */
+                .m-op {
+                    font-size: var(--op-scale);
+                    padding: 0 var(--op-gap);
+                }
+
+                /* the input cursor, tagged by the LaTeX the engine emits; that LaTeX only reserves the
+                   space, the visible bar is the border below, which is what makes the caret follow the
+                   font size of the slot it stands in */
                 @keyframes cursor-blink {
                     0%, 49% { opacity: 1; }
                     50%, 100% { opacity: 0; }
                 }
                 .cursor {
+                    display: inline-block;
+                    width: 0;
+                    height: var(--cursor-height);
+                    border-left: var(--cursor-width) solid currentColor;
+                    vertical-align: var(--cursor-shift);
                     animation: cursor-blink 1.1s infinite;
                 }
             </style>
@@ -118,6 +132,22 @@ namespace Calculator_WinUI.Views
                     if (scale < floor) scale = floor;
                     container.style.transform = 'scale(' + scale + ')';
                 }
+
+                // a KaTeX font is only fetched once a glyph actually needs it, which on the history line
+                // is the moment the first result appears; asking for them up front takes that fetch out
+                // of the first render, where it shows as the line settling into shape a moment late
+                function warmFonts() {
+                    if (!document.fonts || !document.fonts.load) return;
+
+                    var families = ['KaTeX_Main', 'KaTeX_SansSerif', 'KaTeX_Math', 'KaTeX_Size1', 'KaTeX_Size2'];
+                    families.forEach(function (family) { document.fonts.load('1em ' + family); });
+                }
+
+                warmFonts();
+
+                // a formula measured before its fonts arrived is measured at the wrong height, so the
+                // fit is taken again once they are in
+                if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitToBox);
             </script>
         </body>
         </html>";
@@ -153,8 +183,16 @@ namespace Calculator_WinUI.Views
             RebuildStyles();
 
             // the JS function does not exist until the page finished loading, so the starting value can
-            // only be pushed from here; the history line needs no initial push, it stays empty until the
-            // first calculation
+            // only be pushed from here
+            //
+            // the history line is pushed too although it has nothing to show yet; without it its first
+            // render would be the one = triggers, and that single call would still be waiting for KaTeX
+            // to arrive from the CDN, which is visible as the line settling a moment after the result
+            MathWebView1.NavigationCompleted += async (s, args) =>
+            {
+                await UpdateWebViewMath(MathWebView1, ViewModel.CalculationText, _historyStyle);
+            };
+
             MathWebView2.NavigationCompleted += async (s, args) =>
             {
                 await UpdateWebViewMath(MathWebView2, ViewModel.InputAndResultText, _inputStyle);

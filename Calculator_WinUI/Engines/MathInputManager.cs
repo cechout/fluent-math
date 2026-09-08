@@ -81,44 +81,25 @@ namespace Calculator_WinUI.Engines
                 // cursor sits at the end of the list, fall through to the scope-exit logic
             }
 
-            // step 2: at a scope edge, or Up/Down, so hand over to the role-specific handler
+            // step 2: at a scope edge, or Up/Down, so hand over to the slot walker
             if (ctx.Role == ScopeRole.Root) return; // root has nowhere to exit to
 
-            switch (ctx.Role)
-            {
-                case ScopeRole.Numerator:
-                    HandleNumeratorNavigation(direction, ctx);
-                    break;
-
-                case ScopeRole.Denominator:
-                    HandleDenominatorNavigation(direction, ctx);
-                    break;
-
-                case ScopeRole.PowerBase:
-                case ScopeRole.Exponent:
-                case ScopeRole.RootRadicand:
-                case ScopeRole.RootIndex:
-                case ScopeRole.FunctionParameter:
-                case ScopeRole.LogBase:
-                case ScopeRole.LogParameter:
-                    HandleLinearScopeNavigation(direction, ctx);
-                    break;
-            }
+            HandleSlotNavigation(direction, ctx);
         }
 
         // both helpers below follow the same shape for every structured token: push the sub-scope the
         // cursor should land in and park the cursor at the far end, so entering from the right starts at
         // the end of the slot and entering from the left starts at its beginning
         //
-        // a fraction is deliberately missing from both; it is atomic for Left/Right and only Up/Down
-        // ever crosses the bar, otherwise walking past a fraction would force the user through both halves
+        // a fraction takes part like everything else: arriving from the left lands at the start of the
+        // numerator and arriving from the right at the end of the denominator, so both halves are
+        // reachable without switching to the Up and Down keys; the cost is that merely walking past a
+        // fraction now goes through it rather than over it
 
         // cursor sits right of the token and the user pressed Left
         // returns false when the token should be treated as atomic and simply stepped over
         private bool TryEnterTokenFromRight(MathToken token)
         {
-            if (token is FractionToken) return false;
-
             List<TokenSlot> slots = GetSlots(token);
             if (slots.Count == 0) return false;
 
@@ -129,8 +110,6 @@ namespace Calculator_WinUI.Engines
         // cursor sits left of the token and the user pressed Right
         private bool TryEnterTokenFromLeft(MathToken token)
         {
-            if (token is FractionToken) return false;
-
             List<TokenSlot> slots = GetSlots(token);
             if (slots.Count == 0) return false;
 
@@ -138,60 +117,10 @@ namespace Calculator_WinUI.Engines
             return true;
         }
 
-        // the two fraction halves are the only scopes where Up/Down means something: they swap sides of
-        // the same fraction instead of leaving it
-        private void HandleNumeratorNavigation(NavDirection direction, ScopeContext context)
-        {
-            var fraction = context.ParentToken as FractionToken;
-            if (fraction == null) return;
-
-            if (direction == NavDirection.Down)
-            {
-                _scopeStack.Pop();
-                var newCtx = new ScopeContext(fraction.DenominatorTokens, fraction, ScopeRole.Denominator);
-                newCtx.CursorIndex = 0;
-                _scopeStack.Push(newCtx);
-            }
-            else if (direction == NavDirection.Left)
-            {
-                _scopeStack.Pop();
-                PositionCursorAtParentToken(fraction, before: true);
-            }
-            else if (direction == NavDirection.Right)
-            {
-                _scopeStack.Pop();
-                PositionCursorAtParentToken(fraction, before: false);
-            }
-        }
-
-        private void HandleDenominatorNavigation(NavDirection direction, ScopeContext context)
-        {
-            var fraction = context.ParentToken as FractionToken;
-            if (fraction == null) return;
-
-            if (direction == NavDirection.Up)
-            {
-                _scopeStack.Pop();
-                var newCtx = new ScopeContext(fraction.NumeratorTokens, fraction, ScopeRole.Numerator);
-                newCtx.CursorIndex = fraction.NumeratorTokens.Count; // coming from below, land at the end
-                _scopeStack.Push(newCtx);
-            }
-            else if (direction == NavDirection.Left)
-            {
-                _scopeStack.Pop();
-                PositionCursorAtParentToken(fraction, before: true);
-            }
-            else if (direction == NavDirection.Right)
-            {
-                _scopeStack.Pop();
-                PositionCursorAtParentToken(fraction, before: false);
-            }
-        }
-
-        // a slot that reads as one line: Left and Right first walk to the neighbouring slot of the same
-        // token and only leave the token once there is no neighbour left, which is what makes a root
-        // index or a logarithm base reachable with the arrow keys alone
-        private void HandleLinearScopeNavigation(NavDirection direction, ScopeContext context)
+        // Left and Right first walk to the neighbouring slot of the same token and only leave the token
+        // once there is no neighbour left, which is what makes a root index, a logarithm base or the far
+        // half of a fraction reachable with the arrow keys alone
+        private void HandleSlotNavigation(NavDirection direction, ScopeContext context)
         {
             if (direction == NavDirection.Left)
             {
@@ -223,6 +152,11 @@ namespace Calculator_WinUI.Engines
 
             switch (context.ParentToken)
             {
+                case FractionToken:
+                    upper = ScopeRole.Numerator;
+                    lower = ScopeRole.Denominator;
+                    break;
+
                 case PowerToken:
                     upper = ScopeRole.Exponent;
                     lower = ScopeRole.PowerBase;
@@ -530,15 +464,20 @@ namespace Calculator_WinUI.Engines
 
         // moves that operand out of the scope and into the slot a structured token is about to own,
         // which is what lets the fraction and the power keys continue from what is already typed
-        private static void MoveOperandIntoSlot(ScopeContext context, List<MathToken> slot)
+        //
+        // says whether anything was taken; that is what decides which half the fraction key leaves the
+        // cursor in
+        private static bool MoveOperandIntoSlot(ScopeContext context, List<MathToken> slot)
         {
             int start = FindOperandStart(context.Tokens, context.CursorIndex);
             int length = context.CursorIndex - start;
-            if (length == 0) return;
+            if (length == 0) return false;
 
             slot.AddRange(context.Tokens.GetRange(start, length));
             context.Tokens.RemoveRange(start, length);
             context.CursorIndex = start; // the parent scope just lost everything left of the cursor
+
+            return true;
         }
 
         // customIndex picks which slot the user lands in: the index of an nth root, or the radicand of a
@@ -574,21 +513,28 @@ namespace Calculator_WinUI.Engines
         }
 
         // the numerator continues from whatever already stands left of the cursor, the way a Casio does
-        // it: 5 + 45 followed by the fraction key lifts the 45 over the bar and parks the cursor beside
-        // it, rather than opening an empty fraction next to the 45
+        // it: 5 + 45 followed by the fraction key lifts the 45 over the bar and drops the cursor into the
+        // denominator, which is the half still waiting to be typed
+        //
+        // with nothing to lift there is no half to continue into either, so an empty fraction opens in
+        // the numerator instead
         public void StartFraction()
         {
             var ctx = CurrentContext;
             var fracToken = new FractionToken();
 
-            MoveOperandIntoSlot(ctx, fracToken.NumeratorTokens);
+            bool captured = MoveOperandIntoSlot(ctx, fracToken.NumeratorTokens);
 
             ctx.Tokens.Insert(ctx.CursorIndex, fracToken);
             ctx.CursorIndex++;
 
-            var numeratorCtx = new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator);
-            numeratorCtx.CursorIndex = fracToken.NumeratorTokens.Count; // right of what was just taken over
-            _scopeStack.Push(numeratorCtx);
+            if (captured)
+            {
+                _scopeStack.Push(new ScopeContext(fracToken.DenominatorTokens, fracToken, ScopeRole.Denominator));
+                return;
+            }
+
+            _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
         }
 
         // customBase starts in the subscript for log_b(x), otherwise straight in the argument
