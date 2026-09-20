@@ -165,6 +165,15 @@ namespace Calculator_WinUI.ViewModels
 
             if (_isShowingResult) BeginInputAfterResult(sign);
 
+            // an empty formula is shown as a 0, so a key that reads an operand has to find one standing
+            // there; without this the 0 on screen has nothing behind it and x squared opens on an empty
+            // box instead, which reads as the 0 having been deleted
+            // only at the root, since an empty slot shows a box rather than a 0 and promises nothing
+            if (ContinuesFromResult(sign) && _inputManager.RootTokens.Count == 0)
+            {
+                _inputManager.AddNumber("0");
+            }
+
             if (sign.StartsWith("cmd_"))
             {
                 switch (sign)

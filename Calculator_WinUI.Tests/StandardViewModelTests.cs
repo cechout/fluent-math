@@ -209,6 +209,48 @@ namespace Calculator_WinUI.Tests
         }
 
 
+        // === the zero an empty display shows ===
+
+        [Theory]
+        [InlineData("cmd_pow_n", "2", "0")]
+        [InlineData("cmd_pow_2", "", "0")]
+        [InlineData("cmd_frac", "2", "0")]
+        [InlineData("cmd_exp", "5", "0")]
+        [InlineData("cmd_fact", "", "1")]
+        public void TakesTheZeroOnAnEmptyDisplayAsATypedOne(string key, string followUp, string expected)
+        {
+            // an empty formula is drawn as a 0, so a key that reads an operand has to find it; without
+            // that the 0 vanishes and the key opens on an empty box instead
+            var viewModel = new StandardViewModel();
+
+            Press(viewModel, key);
+            if (followUp.Length > 0) Press(viewModel, followUp);
+            Press(viewModel, "=");
+
+            Assert.Equal(expected, viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void TakesTheReciprocalOfTheZeroOnAnEmptyDisplay()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_inv", "=");
+
+            Assert.Contains("Math ERROR", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void LeavesAnEmptySlotAloneWhereNoZeroWasPromised()
+        {
+            // inside a structure an empty slot draws a box rather than a 0, so nothing was promised and
+            // the power opens on an empty base the way it always did
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_sqrt", "cmd_pow_n", "2", "=");
+
+            Assert.Contains("ERROR", viewModel.InputAndResultText);
+        }
+
+
         // === the history line ===
 
         [Fact]
