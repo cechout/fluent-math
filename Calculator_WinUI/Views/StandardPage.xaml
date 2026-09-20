@@ -176,7 +176,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_shift"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <FontIcon FontSize="14" Glyph="&#xE752;" />
                 </Button>
                 <Button
@@ -187,7 +187,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_shift"
                     Style="{ThemeResource AccentButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <FontIcon FontSize="14" Glyph="&#xE752;" />
                 </Button>
                 <Button
@@ -419,7 +419,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_sqrt"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="²√" />
                 </Button>
                 <Button
@@ -430,7 +430,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_root_n"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ⁿ√" />
                 </Button>
                 <Button
@@ -441,7 +441,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_pow_2"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x²" />
                 </Button>
                 <Button
@@ -452,7 +452,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_pow_n"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="xⁿ" />
                 </Button>
                 <Button
@@ -463,7 +463,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_ln"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ln" />
                 </Button>
                 <Button
@@ -474,7 +474,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_log"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="log" />
                 </Button>
                 <Button
@@ -497,7 +497,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_sin"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin" />
                 </Button>
                 <Button
@@ -508,7 +508,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_asin"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin⁻¹" />
                 </Button>
                 <Button
@@ -519,7 +519,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_cos"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos" />
                 </Button>
                 <Button
@@ -530,7 +530,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_acos"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos⁻¹" />
                 </Button>
                 <Button
@@ -541,7 +541,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_tan"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.NormalVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan" />
                 </Button>
                 <Button
@@ -552,7 +552,7 @@
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_atan"
                     Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.ShiftVisibility, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan⁻¹" />
                 </Button>
                 <Button

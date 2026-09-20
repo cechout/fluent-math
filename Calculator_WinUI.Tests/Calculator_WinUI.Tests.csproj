@@ -8,10 +8,11 @@
   </PropertyGroup>
 
   <!--
-    the engine is linked in rather than referenced: the app is a WinExe on a Windows target framework
-    and cannot be referenced from a plain net8.0 library, while everything under test here is ordinary
-    C# and runs on any dotnet runner
-    MathDisplayStyle is the one file in Models that touches WinUI, so it is deliberately left out
+    the engine and the ViewModel are linked in rather than referenced: the app is a WinExe on a Windows
+    target framework and cannot be referenced from a plain net8.0 library, while everything under test
+    here is ordinary C# and runs on any dotnet runner
+    MathDisplayStyle is the one file in Models that touches WinUI, so it is deliberately left out; the
+    ViewModel only got here at all once its two Visibility properties became bools
   -->
   <ItemGroup>
     <Compile Include="..\Calculator_WinUI\Engines\*.cs" />
@@ -19,6 +20,8 @@
     <Compile Include="..\Calculator_WinUI\Models\NavigationMetadata.cs" />
     <Compile Include="..\Calculator_WinUI\Models\EvaluationMetadata.cs" />
     <Compile Include="..\Calculator_WinUI\Models\ResultFormatter.cs" />
+    <Compile Include="..\Calculator_WinUI\ViewModels\StandardViewModel.cs" />
+    <Compile Include="..\Calculator_WinUI\ViewModels\RelayCommand.cs" />
   </ItemGroup>
 
   <ItemGroup>

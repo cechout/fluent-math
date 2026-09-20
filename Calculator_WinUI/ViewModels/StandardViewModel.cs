@@ -1,6 +1,5 @@
 ﻿using Calculator_WinUI.Engines;
 using Calculator_WinUI.Models;
-using Microsoft.UI.Xaml;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -104,28 +103,15 @@ namespace Calculator_WinUI.ViewModels
         // === shift layer ===
 
         // the second keyboard layer is not a separate panel; each shiftable key is two buttons stacked in
-        // the same grid cell, and these two properties swap which of them is visible
-        private Visibility _normalVisibility = Visibility.Visible;
-        public Visibility NormalVisibility
-        {
-            get => _normalVisibility;
-            set
-            {
-                _normalVisibility = value;
-                OnPropertyChanged();
-            }
-        }
+        // the same grid cell, and these two flags swap which of them is visible
+        //
+        // plain bools rather than Visibility, which x:Bind converts on its own; that keeps the whole
+        // ViewModel free of WinUI and is what lets it be tested without the Windows App SDK
+        private bool _isShiftLayer;
 
-        private Visibility _shiftVisibility = Visibility.Collapsed;
-        public Visibility ShiftVisibility
-        {
-            get => _shiftVisibility;
-            set
-            {
-                _shiftVisibility = value;
-                OnPropertyChanged();
-            }
-        }
+        public bool IsNormalLayer => !_isShiftLayer;
+
+        public bool IsShiftLayer => _isShiftLayer;
 
 
         // === commands ===
@@ -403,8 +389,9 @@ namespace Calculator_WinUI.ViewModels
         }
 
         // the keys that read an operand to their left instead of opening a new one; pressing one of
-        // them on a shown result continues from it, the way 5 = followed by x squared becomes Ans
-        // squared on a Casio rather than starting over
+        // them on a shown result continues from it, the way 5 = followed by x squared carries on with
+        // the 5 on a Casio rather than starting over
+        //
         private static bool ContinuesFromResult(string sign)
         {
             return sign == "cmd_fact"
@@ -424,16 +411,10 @@ namespace Calculator_WinUI.ViewModels
         // purely a matter of which of the two is visible
         private void ToggleShift()
         {
-            if (NormalVisibility == Visibility.Visible)
-            {
-                NormalVisibility = Visibility.Collapsed;
-                ShiftVisibility = Visibility.Visible;
-            }
-            else
-            {
-                NormalVisibility = Visibility.Visible;
-                ShiftVisibility = Visibility.Collapsed;
-            }
+            _isShiftLayer = !_isShiftLayer;
+
+            OnPropertyChanged(nameof(IsNormalLayer));
+            OnPropertyChanged(nameof(IsShiftLayer));
         }
 
         // = deliberately leaves the tree alone; only the display switches over to the result, so a
