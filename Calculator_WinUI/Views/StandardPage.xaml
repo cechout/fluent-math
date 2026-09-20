@@ -46,6 +46,16 @@
                     </Button>-->
                 </StackPanel>
 
+                <!--  angle unit indicator  -->
+                <!--  (the unit itself is picked in the extra functions flyout on the keypad)  -->
+                <TextBlock
+                    Margin="0,0,4,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
+
                 <!--  planned: history flyout  -->
                 <!--<Button
                     Width="32"

@@ -26,7 +26,9 @@ namespace Calculator_WinUI.Engines
     {
         // === fields ===
 
-        private readonly AngleMode _angleMode;
+        // settable so one evaluator can follow the mode the user picks without being rebuilt; the
+        // constructor argument stays for callers that only ever want one unit
+        public AngleMode AngleMode { get; set; }
 
         // set the moment any sub-expression fails; every loop checks it so the parse stops early
         private EvaluationError _error;
@@ -41,7 +43,7 @@ namespace Calculator_WinUI.Engines
 
         public MathEvaluator(AngleMode angleMode = AngleMode.Degrees)
         {
-            _angleMode = angleMode;
+            AngleMode = angleMode;
         }
 
 
@@ -457,16 +459,29 @@ namespace Calculator_WinUI.Engines
 
         // === angles ===
 
+        // a half turn in the unit currently selected: 180 degrees or 200 gradians
+        // radians never ask, they are handed through untouched below
+        private double HalfTurn()
+        {
+            if (AngleMode == AngleMode.Gradians) return 200.0;
+
+            return 180.0;
+        }
+
+        // radians are returned unchanged rather than scaled by one, which also keeps an angle near the
+        // top of the double range from overflowing on a conversion that would not move it
         private double ToRadians(double angle)
         {
-            if (_angleMode == AngleMode.Degrees) return angle * Math.PI / 180.0;
-            return angle;
+            if (AngleMode == AngleMode.Radians) return angle;
+
+            return angle * Math.PI / HalfTurn();
         }
 
         private double FromRadians(double angle)
         {
-            if (_angleMode == AngleMode.Degrees) return angle * 180.0 / Math.PI;
-            return angle;
+            if (AngleMode == AngleMode.Radians) return angle;
+
+            return angle * HalfTurn() / Math.PI;
         }
 
         // sin(180) comes out as 1.2e-16 rather than 0, because the degree to radian conversion can never
@@ -476,15 +491,17 @@ namespace Calculator_WinUI.Engines
             return Math.Round(value, 12);
         }
 
-        // tan has a pole every 180 degrees offset by 90, and floating point never lands exactly on it, so
-        // the check is on the angle rather than on an infinite result
+        // tan has a pole every half turn offset by a quarter, and floating point never lands exactly on
+        // it, so the check is on the angle rather than on an infinite result
         // in radians no double hits pi/2 exactly, so there is nothing to catch there
         private bool IsTangentPole(double angle)
         {
-            if (_angleMode != AngleMode.Degrees) return false;
+            if (AngleMode == AngleMode.Radians) return false;
 
-            double normalized = Math.Abs(angle % 180);
-            return Math.Abs(normalized - 90) < 1e-9;
+            double halfTurn = HalfTurn();
+            double normalized = Math.Abs(angle % halfTurn);
+
+            return Math.Abs(normalized - halfTurn / 2) < 1e-9;
         }
 
 

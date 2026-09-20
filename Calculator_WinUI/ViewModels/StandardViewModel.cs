@@ -56,6 +56,43 @@ namespace Calculator_WinUI.ViewModels
         }
 
 
+        // === angle mode ===
+
+        // the evaluator owns the mode; this pair exists so the keypad can set it and the indicator above
+        // the display can follow it
+        public AngleMode CurrentAngleMode
+        {
+            get => _evaluator.AngleMode;
+            set
+            {
+                if (_evaluator.AngleMode == value) return;
+
+                _evaluator.AngleMode = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(AngleModeLabel));
+            }
+        }
+
+        // the three letters a Casio shows above the formula
+        public string AngleModeLabel
+        {
+            get
+            {
+                if (CurrentAngleMode == AngleMode.Radians) return "RAD";
+                if (CurrentAngleMode == AngleMode.Gradians) return "GRA";
+
+                return "DEG";
+            }
+        }
+
+        private void SetAngleMode(string sign)
+        {
+            if (sign == "cmd_angle_rad") { CurrentAngleMode = AngleMode.Radians; }
+            else if (sign == "cmd_angle_gra") { CurrentAngleMode = AngleMode.Gradians; }
+            else { CurrentAngleMode = AngleMode.Degrees; }
+        }
+
+
         // === shift layer ===
 
         // the second keyboard layer is not a separate panel; each shiftable key is two buttons stacked in
@@ -119,6 +156,14 @@ namespace Calculator_WinUI.ViewModels
             if (sign == "cmd_shift")
             {
                 ToggleShift();
+                return;
+            }
+
+            // the angle unit is a mode rather than an input, so like shift it must leave both the
+            // formula and a shown result exactly where they are
+            if (sign.StartsWith("cmd_angle_"))
+            {
+                SetAngleMode(sign);
                 return;
             }
 

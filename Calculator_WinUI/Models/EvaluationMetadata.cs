@@ -12,12 +12,13 @@ namespace Calculator_WinUI.Models
     }
 
 
-    // whether the trigonometric functions read their argument as degrees or radians
+    // whether the trigonometric functions read their argument as degrees, radians or gradians
     // Degrees is the default, same as a Casio out of the box
     public enum AngleMode
     {
         Degrees,
-        Radians
+        Radians,
+        Gradians
     }
 
 
