@@ -650,7 +650,7 @@ namespace Calculator_WinUI.Engines
                 // from leaving a box behind that no further Backspace can reach
                 if (CountFilledSlots(ctx.ParentToken) <= 1)
                 {
-                    DissolveStructure(ctx.ParentToken);
+                    DissolveStructure(ctx.ParentToken, ctx.Tokens);
                     return;
                 }
 
@@ -704,7 +704,7 @@ namespace Calculator_WinUI.Engines
         // deleting the 7 out of 5^7 twice therefore leaves the 5 rather than taking it along; the slots
         // are walked in reading order, though only one of them can contribute anything, since the caller
         // only gets here while at most one is in use
-        private void DissolveStructure(MathToken structureToken)
+        private void DissolveStructure(MathToken structureToken, List<MathToken> leavingSlot)
         {
             _scopeStack.Pop();
 
@@ -712,7 +712,7 @@ namespace Calculator_WinUI.Engines
             int tokenIndex = parentCtx.Tokens.IndexOf(structureToken);
             if (tokenIndex == -1) return; // safety, a scope always sits in its parents list
 
-            List<MathToken> salvaged = SalvagedTokens(structureToken, out int cursorOffset);
+            List<MathToken> salvaged = SalvagedTokens(structureToken, leavingSlot, out int cursorOffset);
 
             parentCtx.Tokens.RemoveAt(tokenIndex);
             parentCtx.Tokens.InsertRange(tokenIndex, salvaged);
@@ -721,35 +721,45 @@ namespace Calculator_WinUI.Engines
 
         // what a dissolved structure leaves behind, and where in it the cursor lands
         //
-        // the default is everything that was typed into its slots, with the cursor after it
+        // the cursor stays at the point the slot it was standing in used to begin, so it does not jump
+        // over content it was in front of: backspacing out of the argument of 2sin(30) leaves the caret
+        // between the 2 and the 30, and out of the exponent of 5^7 leaves it behind the 5
         //
         // a scientific token also draws a times sign and a ten that were never tokens of their own, so
         // those go back in as well; without them 3x10^5 would collapse to 35, a different number with
         // nothing on screen saying so
         // an untouched one has nothing on screen worth keeping and disappears whole
-        private static List<MathToken> SalvagedTokens(MathToken structureToken, out int cursorOffset)
+        private static List<MathToken> SalvagedTokens(MathToken structureToken, List<MathToken> leavingSlot,
+            out int cursorOffset)
         {
             var salvaged = new List<MathToken>();
 
-            if (structureToken is ScientificToken scientific && scientific.ExponentTokens.Count > 0)
+            if (structureToken is ScientificToken scientific)
             {
+                cursorOffset = 0;
+                if (scientific.ExponentTokens.Count == 0) return salvaged;
+
                 salvaged.Add(new MathToken(TokenType.Operator, "*"));
                 salvaged.Add(new MathToken(TokenType.Number, "1"));
                 salvaged.Add(new MathToken(TokenType.Number, "0"));
 
-                // the cursor stays where the structure boundary was, between the ten and the exponent
                 cursorOffset = salvaged.Count;
                 salvaged.AddRange(scientific.ExponentTokens);
 
                 return salvaged;
             }
 
+            cursorOffset = 0;
+            bool reachedLeavingSlot = false;
+
             foreach (TokenSlot slot in GetSlots(structureToken))
             {
+                if (ReferenceEquals(slot.Tokens, leavingSlot)) reachedLeavingSlot = true;
+                if (!reachedLeavingSlot) cursorOffset += slot.Tokens.Count;
+
                 salvaged.AddRange(slot.Tokens);
             }
 
-            cursorOffset = salvaged.Count;
             return salvaged;
         }
 

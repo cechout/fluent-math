@@ -115,6 +115,22 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void LeavesTheCaretWhereTheDissolvedSlotBegan()
+        {
+            // out of the argument of 2sin(30) the caret belongs in front of the 30, where the argument
+            // began, not behind everything that was salvaged
+            MathInputManager function = Keys.Press("2", "fn:sin", "30", "left", "left", "back");
+            function.AddNumber("9");
+            Assert.Equal(2930, Value(function));
+
+            // out of an exponent it belongs behind the base, since the base is what stood in front of
+            // the caret before the structure went away
+            MathInputManager power = Keys.Press("5", "pow", "7", "back", "back");
+            power.AddNumber("9");
+            Assert.Equal(59, Value(power));
+        }
+
+        [Fact]
         public void DeletesAPlainTokenFromTheRight()
         {
             Assert.Equal(12, Value(Keys.Press("123", "back")));
