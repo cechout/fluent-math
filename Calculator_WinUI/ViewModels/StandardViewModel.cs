@@ -392,6 +392,10 @@ namespace Calculator_WinUI.ViewModels
         // them on a shown result continues from it, the way 5 = followed by x squared carries on with
         // the 5 on a Casio rather than starting over
         //
+        // a key missing from this list is not merely inconvenient: the result is cleared first, the key
+        // then finds nothing to work on and refuses, and the display is left showing a bare 0 with the
+        // formula gone
+        // CommandVocabularyTests presses every key in the vocabulary on a result to catch exactly that
         private static bool ContinuesFromResult(string sign)
         {
             return sign == "cmd_fact"
@@ -399,7 +403,8 @@ namespace Calculator_WinUI.ViewModels
                 || sign == "cmd_percent"
                 || sign == "cmd_pow_2"
                 || sign == "cmd_pow_n"
-                || sign == "cmd_frac";
+                || sign == "cmd_frac"
+                || sign == "cmd_exp";
         }
 
         private static bool IsOperator(string sign)
