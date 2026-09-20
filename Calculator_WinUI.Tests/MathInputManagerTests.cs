@@ -15,6 +15,14 @@ namespace Calculator_WinUI.Tests
             return result.Value;
         }
 
+        private static EvaluationError ErrorOf(MathInputManager manager)
+        {
+            EvaluationResult result = new MathEvaluator().Evaluate(manager.RootTokens);
+
+            Assert.False(result.IsSuccess, "expected a failure but got " + result.Value);
+            return result.Error;
+        }
+
 
         // === plain input ===
 
@@ -93,6 +101,34 @@ namespace Calculator_WinUI.Tests
             // the caret stays where the structure boundary was, between the ten and the exponent
             manager.AddNumber("9");
             Assert.Equal(3.0 * 1095.0, Value(manager));
+        }
+
+        // every caret position in 3x10^5 and what Backspace does from it, as one table
+        //
+        // rows 0 and 4 are the trap: the caret at the end of the exponent and the caret behind the whole
+        // token sit almost on top of each other on screen, and Backspace does something quite different
+        // from each
+        [Fact]
+        public void BackspacesOutOfAScientificTokenFromEveryCaretPosition()
+        {
+            // row 0, caret right of the 5, still inside the exponent: the 5 goes and the box stays
+            MathInputManager insideAtEnd = Keys.Press("3", "exp", "5", "back");
+            Assert.Equal(2, insideAtEnd.RootTokens.Count);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(insideAtEnd));
+
+            // row 1, caret left of the 5: the structure dissolves into 3*105
+            Assert.Equal(315, Value(Keys.Press("3", "exp", "5", "left", "back")));
+
+            // row 2, caret between the 3 and the times sign: the 3 goes and the exponent is stranded
+            MathInputManager stranded = Keys.Press("3", "exp", "5", "left", "left", "back");
+            Assert.Single(stranded.RootTokens);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(stranded));
+
+            // row 3, caret in front of everything: nothing to delete, nothing changes
+            Assert.Equal(3e5, Value(Keys.Press("3", "exp", "5", "left", "left", "left", "back")));
+
+            // row 4, caret behind the whole token: the whole times ten to the n goes in one press
+            Assert.Equal(3, Value(Keys.Press("3", "exp", "5", "right", "back")));
         }
 
         [Fact]
