@@ -395,6 +395,32 @@ namespace Calculator_WinUI.Engines
                 case "ln":
                     if (parameter <= 0) return Fail(EvaluationError.Domain);
                     return Math.Log(parameter);
+
+                // the hyperbolic family reads a plain real rather than an angle, so none of it goes
+                // through ToRadians the way the trigonometric functions above do; routing it through the
+                // angle mode would silently change every result as soon as the mode is switched
+                case "sinh":
+                    return Math.Sinh(parameter);
+
+                case "cosh":
+                    return Math.Cosh(parameter);
+
+                case "tanh":
+                    return Math.Tanh(parameter);
+
+                case "arsinh":
+                    return Math.Asinh(parameter);
+
+                case "arcosh":
+                    if (parameter < 1) return Fail(EvaluationError.Domain);
+                    return Math.Acosh(parameter);
+
+                case "artanh":
+                    if (parameter <= -1 || parameter >= 1) return Fail(EvaluationError.Domain);
+                    return Math.Atanh(parameter);
+
+                case "abs":
+                    return Math.Abs(parameter);
             }
 
             return Fail(EvaluationError.Syntax);

@@ -168,17 +168,52 @@ namespace Calculator_WinUI.Models
         public override string ToLatex(LatexRenderContext context) { return _latex; }
     }
 
-    // sin, cos, tan, ln; renders as sin(x)
+    // sin, cos, tan, ln and the hyperbolic family; renders as sin(x)
+    //
+    // the name the evaluator switches on is not always the name KaTeX is handed, so the two are kept
+    // apart: Value stays the plain function name, _latexName is the command that draws it
     public class FunctionToken : MathToken
     {
         public List<MathToken> ParameterTokens { get; } = new List<MathToken>();
 
-        public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName) { }
+        private readonly string _latexName;
+        private readonly bool _drawsAsBars;
+
+        public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName)
+        {
+            _latexName = functionName;
+
+            switch (functionName)
+            {
+                // KaTeX has no command for the inverse hyperbolics, so they print the way a Casio does,
+                // as the plain function carrying a raised minus one
+                case "arsinh":
+                    _latexName = "sinh^{-1}";
+                    break;
+
+                case "arcosh":
+                    _latexName = "cosh^{-1}";
+                    break;
+
+                case "artanh":
+                    _latexName = "tanh^{-1}";
+                    break;
+
+                // the absolute value is a pair of bars rather than a named call; keeping it a
+                // FunctionToken is what lets slots, navigation and Backspace stay untouched
+                case "abs":
+                    _drawsAsBars = true;
+                    break;
+            }
+        }
 
         public override string ToLatex(LatexRenderContext context)
         {
             string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, context, 0);
-            return LatexHelper.Tagged("m-func", $"\\{Value}({innerLatex})");
+
+            if (_drawsAsBars) return LatexHelper.Tagged("m-func", $"\\left|{innerLatex}\\right|");
+
+            return LatexHelper.Tagged("m-func", $"\\{_latexName}({innerLatex})");
         }
     }
 

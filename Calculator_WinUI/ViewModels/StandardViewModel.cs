@@ -200,6 +200,34 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.StartFunction("arctan");
                         break;
 
+                    case "cmd_sinh":
+                        _inputManager.StartFunction("sinh");
+                        break;
+
+                    case "cmd_cosh":
+                        _inputManager.StartFunction("cosh");
+                        break;
+
+                    case "cmd_tanh":
+                        _inputManager.StartFunction("tanh");
+                        break;
+
+                    case "cmd_asinh":
+                        _inputManager.StartFunction("arsinh");
+                        break;
+
+                    case "cmd_acosh":
+                        _inputManager.StartFunction("arcosh");
+                        break;
+
+                    case "cmd_atanh":
+                        _inputManager.StartFunction("artanh");
+                        break;
+
+                    case "cmd_abs":
+                        _inputManager.StartFunction("abs");
+                        break;
+
                     case "cmd_pi":
                         _inputManager.AddConstant("pi");
                         break;
