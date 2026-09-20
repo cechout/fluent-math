@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Calculator_WinUI.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     mc:Ignorable="d">
 
     <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
@@ -76,11 +77,22 @@
                     Margin="4,0,4,0"
                     DefaultBackgroundColor="Transparent" />
 
-                <WebView2
-                    x:Name="MathWebView2"
-                    Grid.Row="1"
-                    Margin="4,0,4,8"
-                    DefaultBackgroundColor="Transparent" />
+                <!--
+                    the input line scrolls inside the page, the scrollbar only mirrors that
+                    A WebView2 brings its own Chromium scrollbar, which follows no Fluent theme, so
+                    that one is hidden and this WinUI one shows the same state; it stays collapsed
+                    until the formula is really wider than the display
+                -->
+                <Grid Grid.Row="1" Margin="4,0,4,8">
+                    <WebView2 x:Name="MathWebView2" DefaultBackgroundColor="Transparent" />
+
+                    <primitives:ScrollBar
+                        x:Name="InputScrollBar"
+                        VerticalAlignment="Bottom"
+                        IndicatorMode="MouseIndicator"
+                        Orientation="Horizontal"
+                        Visibility="Collapsed" />
+                </Grid>
             </Grid>
 
 

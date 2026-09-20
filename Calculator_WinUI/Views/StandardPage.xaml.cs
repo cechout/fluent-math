@@ -2,8 +2,11 @@
 using Calculator_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Controls.Primitives;
+using Microsoft.Web.WebView2.Core;
 using System;
 using System.ComponentModel;
+using System.Globalization;
 using System.Threading.Tasks;
 using Windows.UI.ViewManagement;
 
@@ -32,14 +35,28 @@ namespace Calculator_WinUI.Views
             <style>
                 body {
                     margin: 0;
-                    padding: 0 10px;
-                    display: flex;
-                    justify-content: flex-end; /* right aligned, like a calculator display */
-                    align-items: center;
                     height: 100vh;
                     overflow: hidden;
                     color: var(--math-color);
                 }
+
+                /* the scrolling deliberately sits on a div rather than on the body: overflow set on
+                   the body while the html element is still visible propagates to the viewport, and
+                   the element that then really scrolls is documentElement, not the one styled here
+                   it also carries no padding of its own, because a scroll containers padding counts
+                   towards its scrollable area and would report an overflow of exactly that much even
+                   with nothing to scroll to; the breathing room sits on the content instead */
+                #scroll-area {
+                    height: 100%;
+                    display: flex;
+                    align-items: center;
+                    overflow-x: auto;
+                    overflow-y: hidden;
+                }
+
+                /* the bar the user sees is a WinUI ScrollBar sitting over this page, so Chromium draws
+                   none of its own; the area still scrolls, by wheel and from the host */
+                #scroll-area::-webkit-scrollbar { display: none; }
 
                 /* KaTeX puts its own 1.21em on top of whatever it inherits, so the size is set here
                    instead of on the body to make the value coming from C# the one on screen */
@@ -53,8 +70,14 @@ namespace Calculator_WinUI.Views
                     border-bottom-width: var(--frac-bar) !important;
                 }
 
-                /* the right edge is the anchor, so shrinking to fit leaves the newest input in place */
+                /* right aligned like a calculator display, but through an auto margin rather than
+                   justify-content: a flex item pushed over by justify-content cannot be scrolled back
+                   to on its start side, the overflow there stays unreachable
+                   the right edge is also the anchor for shrinking to fit, so that leaves the newest
+                   input in place */
                 #math-container {
+                    margin-left: auto;
+                    padding: 0 10px;
                     transform-origin: 100% 50%;
                 }
 
@@ -105,7 +128,7 @@ namespace Calculator_WinUI.Views
             </style>
         </head>
         <body>
-            <div id='math-container'></div>
+            <div id='scroll-area'><div id='math-container'></div></div>
             <script>
                 // called from C# on every keypress
                 function updateMath(latexString) {
@@ -119,12 +142,16 @@ namespace Calculator_WinUI.Views
                         strict: false
                     });
                     fitToBox();
+                    revealCursor();
+                    reportScroll();
                 }
 
                 // called from C# whenever the theme changes, so the page never has to be reloaded
                 function applyStyle(cssText) {
                     document.getElementById('style-set').textContent = cssText;
                     fitToBox();
+                    revealCursor();
+                    reportScroll();
                 }
 
                 // the display box is a fixed height while a formula is not, so anything taller than the
@@ -137,7 +164,9 @@ namespace Calculator_WinUI.Views
                     const container = document.getElementById('math-container');
                     container.style.transform = 'none';
 
-                    const available = document.documentElement.clientHeight - 2;
+                    // the scroll areas client height already excludes the horizontal scrollbar, so a
+                    // visible bar cannot make the formula believe it has more room than it has
+                    const available = document.getElementById('scroll-area').clientHeight - 2;
                     const needed = container.getBoundingClientRect().height;
                     if (needed <= 0 || needed <= available) return;
 
@@ -148,6 +177,43 @@ namespace Calculator_WinUI.Views
                     if (scale < floor) scale = floor;
                     container.style.transform = 'scale(' + scale + ')';
                 }
+
+                // width is scrolled rather than scaled, so the caret has to be pulled back into view
+                // after every keypress, otherwise typing past the right edge types out of sight
+                //
+                // a margin is kept around it so it never ends up flush against an edge with no context
+                // left or right of it; the history line has no caret and simply falls out here
+                function revealCursor() {
+                    const caret = document.querySelector('.cursor');
+                    if (!caret) return;
+
+                    const area = document.getElementById('scroll-area');
+                    const margin = 24;
+                    const box = caret.getBoundingClientRect();
+                    const view = area.getBoundingClientRect();
+
+                    if (box.left < view.left + margin) {
+                        area.scrollLeft -= (view.left + margin) - box.left;
+                    }
+                    else if (box.right > view.right - margin) {
+                        area.scrollLeft += box.right - (view.right - margin);
+                    }
+                }
+
+                // the host owns the visible scrollbar, so the page tells it what to show and takes a
+                // position back the same way
+                function reportScroll() {
+                    const area = document.getElementById('scroll-area');
+                    window.chrome.webview.postMessage('scroll:' + Math.round(area.scrollLeft)
+                        + ':' + Math.round(area.scrollWidth)
+                        + ':' + Math.round(area.clientWidth));
+                }
+
+                function setScrollLeft(value) {
+                    document.getElementById('scroll-area').scrollLeft = value;
+                }
+
+                document.getElementById('scroll-area').addEventListener('scroll', reportScroll);
 
                 // a KaTeX font is only fetched once a glyph actually needs it, which on the history line
                 // is the moment the first result appears; asking for them up front takes that fetch out
@@ -177,6 +243,9 @@ namespace Calculator_WinUI.Views
         // is needed, because a collected UISettings silently stops raising ColorValuesChanged
         private readonly UISettings _uiSettings = new UISettings();
 
+        // what the page puts in front of a message to say which kind it is
+        private const string ScrollMessage = "scroll:";
+
 
         // === constructor ===
 
@@ -204,6 +273,10 @@ namespace Calculator_WinUI.Views
 
             // the page sits in the tree by now, so ActualTheme finally answers with the theme in force
             RebuildStyles();
+
+            // only the input line talks back; the history line carries neither a cursor nor a scrollbar
+            MathWebView2.CoreWebView2.WebMessageReceived += MathWebView2_WebMessageReceived;
+            InputScrollBar.Scroll += InputScrollBar_Scroll;
 
             // the JS function does not exist until the page finished loading, so the starting value can
             // only be pushed from here
@@ -236,6 +309,61 @@ namespace Calculator_WinUI.Views
         private void StandardPage_Unloaded(object sender, RoutedEventArgs e)
         {
             _uiSettings.ColorValuesChanged -= StandardPage_ColorValuesChanged;
+        }
+
+
+        // === messages from the page ===
+
+        // the page reports what its horizontal scroll currently looks like, as a plain string
+        private void MathWebView2_WebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
+        {
+            string message = args.TryGetWebMessageAsString();
+
+            if (message.StartsWith(ScrollMessage)) ShowScrollState(message.Substring(ScrollMessage.Length));
+        }
+
+        // the formula scrolls inside the page, and this mirrors that onto the scrollbar the user sees
+        //
+        // a WebView2 draws a Chromium scrollbar, which follows neither the Fluent theme nor the system
+        // setting for it, so that one is hidden and a real WinUI ScrollBar shows the same numbers
+        private void ShowScrollState(string state)
+        {
+            string[] parts = state.Split(':');
+            if (parts.Length != 3) return;
+
+            if (!TryReadPixels(parts[0], out double offset)) return;
+            if (!TryReadPixels(parts[1], out double content)) return;
+            if (!TryReadPixels(parts[2], out double viewport)) return;
+
+            // under a pixel of difference is rounding in the page, not something to scroll
+            double overflow = content - viewport;
+            if (overflow <= 1)
+            {
+                InputScrollBar.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            InputScrollBar.Maximum = overflow;
+            InputScrollBar.ViewportSize = viewport;
+            InputScrollBar.Value = offset;
+            InputScrollBar.Visibility = Visibility.Visible;
+        }
+
+        // dragging the scrollbar is the one direction the page does not drive itself
+        //
+        // setting Value above raises ValueChanged but not Scroll, so pushing the position back here
+        // cannot loop with the report that caused it
+        private async void InputScrollBar_Scroll(object sender, ScrollEventArgs e)
+        {
+            if (MathWebView2.CoreWebView2 == null) return;
+
+            await MathWebView2.ExecuteScriptAsync(
+                $"setScrollLeft({e.NewValue.ToString(CultureInfo.InvariantCulture)});");
+        }
+
+        private static bool TryReadPixels(string text, out double value)
+        {
+            return double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out value);
         }
 
 
