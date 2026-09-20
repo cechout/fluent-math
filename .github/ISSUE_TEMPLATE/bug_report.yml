@@ -1,0 +1,57 @@
+name: Bug Report
+description: Report something that is broken or behaves unexpectedly.
+title: "Bug: "
+labels: ["bug"]
+body:
+
+  - type: markdown
+    attributes:
+      value: |
+        > [!TIP]
+        > Please search the [existing issues](https://github.com/cechout/simple-calculator/issues?q=is%3Aissue) first. Someone may have run into the same thing already.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happens, and what did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: If it is about a calculation, the keys you pressed in order is the most useful thing you can give.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App version
+      description: Shown in Windows Settings under Apps > Installed apps, next to "Simple Calculator".
+      placeholder: "v2.0.0"
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version
+      description: Press Win+R, run `winver`, and copy the edition and build line.
+      placeholder: "Windows 11 24H2, build 26100.2314"
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot
+      description: Drag an image into this field to attach it. A shot of the affected screen usually says more than a description.
+    validations:
+      required: false
