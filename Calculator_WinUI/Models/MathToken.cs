@@ -161,7 +161,11 @@ namespace Calculator_WinUI.Models
             string baseStr = LatexHelper.GetSlotLatex(BaseTokens, context, 0);
             string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 1);
 
-            return LatexHelper.Tagged("m-pow", $"{baseStr}^{{{expStr}}}");
+            // the base is braced because ^ raises whatever single atom stands in front of it, not the
+            // whole slot; an unbraced base handed the exponent only the last thing in it, so a cursor
+            // at the end of the base became the base, and KaTeX dropped the exponent onto the height
+            // of a caret that has none
+            return LatexHelper.Tagged("m-pow", $"{{{baseStr}}}^{{{expStr}}}");
         }
     }
 
