@@ -78,5 +78,245 @@ namespace Calculator_WinUI.Tests
             Assert.Contains("2", viewModel.InputAndResultText);
             Assert.Contains("10^", viewModel.InputAndResultText);
         }
+
+        [Theory]
+        [InlineData("+")]
+        [InlineData("-")]
+        [InlineData("*")]
+        [InlineData("/")]
+        [InlineData("cmd_pow_2")]
+        [InlineData("cmd_pow_n")]
+        [InlineData("cmd_fact")]
+        [InlineData("cmd_inv")]
+        [InlineData("cmd_percent")]
+        [InlineData("cmd_frac")]
+        [InlineData("cmd_exp")]
+        public void KeepsTheResultOnScreenForEveryKeyThatReadsAnOperand(string key)
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, key);
+
+            Assert.Contains("2", viewModel.InputAndResultText);
+        }
+
+        [Theory]
+        [InlineData("7")]
+        [InlineData("cmd_pi")]
+        [InlineData("cmd_sin")]
+        [InlineData("cmd_sqrt")]
+        [InlineData("cmd_root_n")]
+        [InlineData("cmd_log")]
+        [InlineData("cmd_ln")]
+        [InlineData("cmd_paren_open")]
+        public void StartsOverForEveryKeyThatOpensSomethingNew(string key)
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, key);
+
+            Assert.DoesNotContain("2", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void GoesBackToEditingTheOldFormulaOnAnArrowKey()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, "cmd_nav_left");
+
+            // the tree still holds 1+1, so the arrow key brings the formula back rather than the result
+            Assert.Contains("1", viewModel.InputAndResultText);
+            Assert.Contains("+", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void EditsTheOldFormulaOnBackspace()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, "back", "3", "=");
+
+            Assert.Equal("4", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void ClearsEverythingOnAllClear()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, "AC");
+
+            Assert.Equal("", viewModel.CalculationText);
+            Assert.Contains("0", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void RepeatsTheSameResultOnASecondEquals()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Press(viewModel, "=");
+
+            Assert.Equal("2", viewModel.InputAndResultText);
+        }
+
+
+        // === modes leave the formula alone ===
+
+        [Fact]
+        public void SwapsTheKeyboardLayerWithoutTouchingTheInput()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "+", "1");
+
+            string before = viewModel.InputAndResultText;
+
+            Assert.True(viewModel.IsNormalLayer);
+            Assert.False(viewModel.IsShiftLayer);
+
+            Press(viewModel, "cmd_shift");
+            Assert.False(viewModel.IsNormalLayer);
+            Assert.True(viewModel.IsShiftLayer);
+            Assert.Equal(before, viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_shift");
+            Assert.True(viewModel.IsNormalLayer);
+            Assert.Equal(before, viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void LeavesAShownResultAloneWhenTheAngleUnitChanges()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+
+            Press(viewModel, "cmd_angle_rad");
+            Assert.Equal("RAD", viewModel.AngleModeLabel);
+            Assert.Equal("2", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_angle_gra");
+            Assert.Equal("GRA", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_deg");
+            Assert.Equal("DEG", viewModel.AngleModeLabel);
+            Assert.Equal("2", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void AppliesTheAngleUnitToTheNextEvaluation()
+        {
+            var viewModel = new StandardViewModel();
+
+            Press(viewModel, "cmd_sin", "3", "0", "=");
+            Assert.Equal("0.5", viewModel.InputAndResultText);
+
+            Press(viewModel, "AC", "cmd_angle_gra", "cmd_sin", "1", "0", "0", "=");
+            Assert.Equal("1", viewModel.InputAndResultText);
+        }
+
+
+        // === the history line ===
+
+        [Fact]
+        public void PutsTheEvaluatedFormulaOnTheHistoryLine()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+
+            Assert.Contains("1", viewModel.CalculationText);
+            Assert.EndsWith("=", viewModel.CalculationText);
+        }
+
+
+        // === S to D ===
+
+        [Fact]
+        public void DoesNothingWhileAFormulaIsBeingTyped()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "+", "1");
+
+            string before = viewModel.InputAndResultText;
+            Press(viewModel, "sd");
+
+            Assert.Equal(before, viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void DoesNothingOnAResultWithNoFraction()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_sqrt", "2", "=");
+
+            string before = viewModel.InputAndResultText;
+            Press(viewModel, "sd");
+
+            Assert.Equal(before, viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void CyclesStraightBackWhenThereIsNoMixedForm()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "/", "3", "=");
+
+            string asDecimal = viewModel.InputAndResultText;
+
+            Press(viewModel, "sd");
+            Assert.Contains("frac{1}{3}", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Equal(asDecimal, viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void CyclesThroughAllThreeFormsWhenTheyExist()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "/", "4", "=");
+            Assert.Equal("1.25", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Contains("frac{5}{4}", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.StartsWith("1", viewModel.InputAndResultText);
+            Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Equal("1.25", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void StartsEveryResultBackAtTheDecimalForm()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "/", "4", "=", "sd");
+            Assert.Contains("frac", viewModel.InputAndResultText);
+
+            Press(viewModel, "AC", "5", "/", "4", "=");
+            Assert.Equal("1.25", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void CarriesTheShownFractionIntoTheNextCalculation()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "/", "4", "=", "sd");
+
+            Press(viewModel, "+");
+            Assert.Contains("frac", viewModel.InputAndResultText);
+
+            Press(viewModel, "1", "=");
+            Assert.Equal("2.25", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void LosesThePrecisionASeededResultCannotHoldButAnsCan()
+        {
+            // the seeded digits are what the display showed, so a third of a whole comes back short
+            var seeded = new StandardViewModel();
+            Press(seeded, "1", "/", "3", "=", "*", "3", "=");
+            Assert.Equal("0.999999999999", seeded.InputAndResultText);
+
+            // Ans resolves against the untouched double instead; a fresh calculator, since the run
+            // above has already moved the last answer on
+            var carried = new StandardViewModel();
+            Press(carried, "1", "/", "3", "=", "AC", "cmd_ans", "*", "3", "=");
+            Assert.Equal("1", carried.InputAndResultText);
+        }
     }
 }
