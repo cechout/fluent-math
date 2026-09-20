@@ -442,6 +442,31 @@ namespace Calculator_WinUI.Engines
             _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
         }
 
+        // the two prefix power keys; unlike StartPower they deliberately leave whatever stands to their
+        // left alone, because the base is the thing the key already names
+        public void StartPowerOfTen()
+        {
+            StartPowerWithBase(new MathToken(TokenType.Number, "1"), new MathToken(TokenType.Number, "0"));
+        }
+
+        public void StartPowerOfE()
+        {
+            StartPowerWithBase(new ConstantToken("e"));
+        }
+
+        private void StartPowerWithBase(params MathToken[] baseTokens)
+        {
+            var ctx = CurrentContext;
+            var powerToken = new PowerToken();
+
+            powerToken.BaseTokens.AddRange(baseTokens);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, powerToken);
+            ctx.CursorIndex++;
+
+            _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
+        }
+
         // walks left from a closing bracket to its partner so the whole group can be treated as one
         // operand; returns -1 when the opening bracket was never typed
         private static int FindMatchingBracketOpen(List<MathToken> tokens, int closeIndex)

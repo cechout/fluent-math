@@ -253,7 +253,21 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.StartFraction();
                         break;
 
+                    case "cmd_pow_10":
+                        _inputManager.StartPowerOfTen();
+                        break;
+
+                    case "cmd_pow_e":
+                        _inputManager.StartPowerOfE();
+                        break;
+
+                    // the log key is the common logarithm, the way it is on an FX-991; a chosen base is
+                    // its own key, so an untouched log never opens an empty box for one
                     case "cmd_log":
+                        _inputManager.StartLogarithm(customBase: false);
+                        break;
+
+                    case "cmd_log_b":
                         _inputManager.StartLogarithm(customBase: true);
                         break;
 
