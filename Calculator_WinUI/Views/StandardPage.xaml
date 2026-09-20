@@ -253,11 +253,21 @@
                     <FontIcon FontSize="14" Glyph="&#xE712;" />
 
                     <Button.Flyout>
-                        <Flyout x:Name="ExtraFunctionsFlyout" Placement="Bottom">
+                        <!--
+                            Bottom centres the panel under the key; ShouldConstrainToRootBounds lets it
+                            hang out of the window instead of being squeezed back inside, which at the
+                            minimum window size is the difference between four keys per row and two
+                        -->
+                        <Flyout
+                            x:Name="ExtraFunctionsFlyout"
+                            AreOpenCloseAnimationsEnabled="False"
+                            Placement="Bottom"
+                            ShouldConstrainToRootBounds="False">
                             <Flyout.FlyoutPresenterStyle>
                                 <Style TargetType="FlyoutPresenter">
                                     <Setter Property="Padding" Value="8" />
                                     <Setter Property="MinWidth" Value="0" />
+                                    <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -379,37 +389,12 @@
                                     </Button>
                                 </StackPanel>
 
-                                <!--  angle unit  -->
-                                <!--  (which one is active is shown in the page header, not in here)  -->
-                                <TextBlock
-                                    Margin="2,6,0,0"
-                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                    Style="{ThemeResource CaptionTextBlockStyle}"
-                                    Text="angle unit" />
-
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_angle_deg"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="DEG" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_angle_rad"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="RAD" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_angle_gra"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="GRA" />
-                                    </Button>
-                                </StackPanel>
+                                <!--  revisit: angle unit selector  -->
+                                <!--
+                                    the cmd_angle_deg / rad / gra keys exist and the page header already
+                                    shows the current unit, but the selector has no place of its own yet,
+                                    so DEG is what the app runs on until it gets one
+                                -->
                             </StackPanel>
                         </Flyout>
                     </Button.Flyout>
