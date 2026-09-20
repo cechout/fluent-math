@@ -15,7 +15,8 @@ namespace Calculator_WinUI.Models
         Power,
         Root,
         Logarithm,
-        Postfix
+        Postfix,
+        Scientific
     }
 
 
@@ -236,6 +237,29 @@ namespace Calculator_WinUI.Models
             // at the end of the base became the base, and KaTeX dropped the exponent onto the height
             // of a caret that has none
             return LatexHelper.Tagged("m-pow", $"{{{baseStr}}}^{{{expStr}}}");
+        }
+    }
+
+    // the EXP key of a pocket calculator, rendered as the times ten to the n it stands for
+    //
+    // it is a token of its own rather than a literal multiplication, because the exponent has to bind to
+    // the number in front of it: 1 / 3 EXP 5 is one over three hundred thousand, while the same thing
+    // written out as an ordinary multiplication comes out as a third of a hundred thousand
+    public class ScientificToken : MathToken
+    {
+        public List<MathToken> ExponentTokens { get; } = new List<MathToken>();
+
+        public ScientificToken() : base(TokenType.Scientific) { }
+
+        public override string ToLatex(LatexRenderContext context)
+        {
+            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 0);
+
+            // the times sign goes through the same helper the result line uses, and the whole thing is
+            // tagged as a power rather than given a class of its own, since it is a superscript and
+            // should follow whatever size the other superscripts are set to
+            string times = LatexHelper.TaggedOperator("\\times");
+            return LatexHelper.Tagged("m-pow", $"{times}10^{{{expStr}}}");
         }
     }
 

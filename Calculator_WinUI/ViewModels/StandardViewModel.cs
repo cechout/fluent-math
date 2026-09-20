@@ -164,6 +164,10 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.Move(NavDirection.Right);
                         break;
 
+                    case "cmd_exp":
+                        _inputManager.StartScientific();
+                        break;
+
                     case "cmd_fact":
                         _inputManager.AddPostfix("!");
                         break;

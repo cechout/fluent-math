@@ -232,6 +232,12 @@ namespace Calculator_WinUI.Engines
                         new TokenSlot(logarithm.ParameterTokens, ScopeRole.LogParameter)
                     };
 
+                case ScientificToken scientific:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(scientific.ExponentTokens, ScopeRole.ScientificExponent)
+                    };
+
                 case FunctionToken function:
                     return new List<TokenSlot>
                     {
@@ -517,6 +523,25 @@ namespace Calculator_WinUI.Engines
             {
                 _scopeStack.Push(new ScopeContext(rootToken.RadicandTokens, rootToken, ScopeRole.RootRadicand));
             }
+        }
+
+        // the EXP key; the exponent gets a slot of its own so it can be typed into and walked through
+        // like any other, and so the evaluator can bind it to the number standing in front of it
+        //
+        // the exponent attaches to a typed number and to nothing else, exactly as the evaluator reads
+        // it, so the key is refused anywhere it could only ever produce a syntax error
+        public void StartScientific()
+        {
+            var ctx = CurrentContext;
+            if (ctx.CursorIndex == 0 || ctx.Tokens[ctx.CursorIndex - 1].Type != TokenType.Number) return;
+
+            var scientificToken = new ScientificToken();
+
+            ctx.Tokens.Insert(ctx.CursorIndex, scientificToken);
+            ctx.CursorIndex++;
+
+            _scopeStack.Push(new ScopeContext(scientificToken.ExponentTokens, scientificToken,
+                ScopeRole.ScientificExponent));
         }
 
         // sin, cos, tan, ln; the name is passed straight through to LaTeX as a command
