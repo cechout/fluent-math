@@ -177,19 +177,16 @@ namespace Calculator_WinUI.Models
     // rendered without a cursor
     public static class LatexHelper
     {
-        // an anchor tagged with a css class the display draws and animates; KaTeX only keeps the class
-        // when the render call runs with trust enabled
+        // two halves with two jobs, neither of which draws anything
         //
-        // the rule carries no width of its own, the visible bar is a css border on the same span; that
-        // is what lets the cursor shrink together with the slot it stands in, an em inside a KaTeX rule
-        // follows the size KaTeX picked for the structure rather than the font-size on screen
+        // \vphantom{0} is zero wide and exactly as tall as a digit in the slot it stands in; that is
+        // what keeps a slot holding nothing but the cursor from collapsing, and it is why the caret can
+        // never make a denominator taller than its own content
         //
-        // the height stays here instead of moving to css because KaTeX has to reserve it, otherwise a
-        // slot holding nothing but the cursor collapses; it is kept just above a digit rather than a
-        // full line tall, because it takes part in the layout of whatever slot it stands in: a taller
-        // rule inside a numerator stretches that half of the fraction and visibly pushes the content
-        // away from the bar while the user is typing there
-        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0em}{0.8em}}";
+        // the tagged rule is a zero-size anchor the css paints the visible bar from, out of the flow,
+        // so the caret occupies no space at all and the digits on either side of it never move; the
+        // class only survives when the render call runs with trust enabled
+        public const string CursorLatex = "\\vphantom{0}\\htmlClass{cursor}{\\rule{0em}{0em}}";
 
         // the box a Casio shows for a slot that still has to be filled
         private const string EmptySlotLatex = "\\square";

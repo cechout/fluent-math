@@ -1,6 +1,8 @@
 ﻿using Microsoft.UI.Xaml;
 using System.Globalization;
 using System.Text;
+using Windows.UI;
+using Windows.UI.ViewManagement;
 
 namespace Calculator_WinUI.Models
 {
@@ -46,14 +48,30 @@ namespace Calculator_WinUI.Models
         // operators are sized and spaced on their own, because KaTeX draws one at full size with a fixed
         // space on either side and that reads far heavier than a pocket calculator does
         //
-        // the gap is em of the operator, so it follows OperatorScale rather than the text around it
-        public double OperatorScale { get; set; } = 0.8;
+        // the gap and the raise are em of the operator, so they follow OperatorScale rather than the
+        // text around them
+        //
+        // the raise exists because KaTeX centres + and - on the math axis, and the height of that axis
+        // scales with the font size; shrinking an operator therefore also drops it, and this puts it
+        // back up where it reads level with the digits
+        // the weight carries the sign at a smaller size; KaTeX ships a bold cut of both faces in use,
+        // so 600 and 700 pick a real one rather than letting the browser smear the regular
+        public double OperatorScale { get; set; } = 0.6;
         public double OperatorGap { get; set; } = 0.1;
+        public double OperatorRaise { get; set; } = 0.2; // em, higher lifts the operator further
+        public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
 
         // the input caret, painted by css rather than by KaTeX so it shrinks together with a slot
-        public double CursorWidth { get; set; } = 0.06; // em
-        public double CursorHeight { get; set; } = 0.8; // em, the height MathToken already reserves for it
-        public double CursorShift { get; set; } = -0.1; // em, negative drops the caret below the baseline
+        //
+        // the bar stands on the baseline of whatever slot it is in and reaches the top of the digits
+        // beside it; every value is em, so the whole caret scales with the slot and nothing else
+        public double CursorWidth { get; set; } = 0.06; // em, drawn centred on the gap it marks
+        public double CursorHeight { get; set; } = 0.75; // em, roughly the cap height of a digit
+        public double CursorShift { get; set; } = -0.05; // em above the baseline, negative drops it below
+        public bool UseAccentCursor { get; set; } = true; // the Windows accent rather than the text color
+
+        // filled in by ForInputLine, since the history line has no caret to color
+        public string CursorColor { get; set; } = DarkPrimaryText;
 
 
         // === presets ===
@@ -65,6 +83,7 @@ namespace Calculator_WinUI.Models
             return new MathDisplayStyle
             {
                 TextColor = theme == ElementTheme.Light ? LightPrimaryText : DarkPrimaryText,
+                CursorColor = ResolveAccentColor(theme),
                 FontSizePx = 36
             };
         }
@@ -76,6 +95,18 @@ namespace Calculator_WinUI.Models
                 TextColor = theme == ElementTheme.Light ? LightSecondaryText : DarkSecondaryText,
                 FontSizePx = 18
             };
+        }
+
+
+        // the Windows accent in the variant WinUI picks for its own accent brushes, so the caret stays
+        // readable on either background: a light theme takes the darkened accent, a dark one the
+        // lightened one
+        private static string ResolveAccentColor(ElementTheme theme)
+        {
+            UIColorType variant = theme == ElementTheme.Light ? UIColorType.AccentDark1 : UIColorType.AccentLight2;
+            Color accent = new UISettings().GetColorValue(variant);
+
+            return $"#{accent.R:X2}{accent.G:X2}{accent.B:X2}";
         }
 
 
@@ -100,9 +131,14 @@ namespace Calculator_WinUI.Models
             css.AppendLine($"    --min-fit-scale: {MinFitScale.ToString(invariant)};");
             css.AppendLine($"    --op-scale: {OperatorScale.ToString(invariant)}em;");
             css.AppendLine($"    --op-gap: {OperatorGap.ToString(invariant)}em;");
+            css.AppendLine($"    --op-raise: {OperatorRaise.ToString(invariant)}em;");
+            css.AppendLine($"    --op-weight: {OperatorWeight.ToString(invariant)};");
             css.AppendLine($"    --cursor-width: {CursorWidth.ToString(invariant)}em;");
             css.AppendLine($"    --cursor-height: {CursorHeight.ToString(invariant)}em;");
             css.AppendLine($"    --cursor-shift: {CursorShift.ToString(invariant)}em;");
+
+            // the one place the accent switch is read, so nothing else has to know about the fallback
+            css.AppendLine($"    --cursor-color: {(UseAccentCursor ? CursorColor : TextColor)};");
             css.Append("}");
 
             return css.ToString();

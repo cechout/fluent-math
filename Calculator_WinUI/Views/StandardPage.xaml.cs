@@ -1,10 +1,11 @@
-using Calculator_WinUI.Models;
+﻿using Calculator_WinUI.Models;
 using Calculator_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Windows.UI.ViewManagement;
 
 namespace Calculator_WinUI.Views
 {
@@ -69,20 +70,35 @@ namespace Calculator_WinUI.Views
                 .m-op {
                     font-size: var(--op-scale);
                     padding: 0 var(--op-gap);
+                    position: relative;
+                    bottom: var(--op-raise); /* purely visual, it takes no part in the layout */
                 }
 
-                /* the input cursor, tagged by the LaTeX the engine emits; that LaTeX only reserves the
-                   space, the visible bar is the border below, which is what makes the caret follow the
-                   font size of the slot it stands in */
+                /* the descendants are named as well, because KaTeX puts the glyph in a span of its
+                   own and a weight set there would win over one inherited from the wrapper */
+                .m-op, .m-op * {
+                    font-weight: var(--op-weight);
+                }
+
+                /* the input cursor, tagged by the LaTeX the engine emits
+                   overflow is what makes this exact: the baseline of an inline-block is normally the
+                   baseline of the line box inside it, which moves around with the content and the
+                   line height, but a box whose overflow is not visible has its baseline pinned to its
+                   own bottom margin edge, so the bar sits on the baseline of its slot and on nothing
+                   else, at every nesting depth
+                   the border draws the bar and the negative margin gives the width straight back, so
+                   the caret takes no space and the digits on either side never move */
                 @keyframes cursor-blink {
                     0%, 49% { opacity: 1; }
                     50%, 100% { opacity: 0; }
                 }
                 .cursor {
                     display: inline-block;
+                    overflow: hidden;
                     width: 0;
                     height: var(--cursor-height);
-                    border-left: var(--cursor-width) solid currentColor;
+                    margin-right: calc(-1 * var(--cursor-width));
+                    border-left: var(--cursor-width) solid var(--cursor-color);
                     vertical-align: var(--cursor-shift);
                     animation: cursor-blink 1.1s infinite;
                 }
@@ -145,6 +161,7 @@ namespace Calculator_WinUI.Views
 
                 warmFonts();
 
+
                 // a formula measured before its fonts arrived is measured at the wrong height, so the
                 // fit is taken again once they are in
                 if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitToBox);
@@ -155,6 +172,10 @@ namespace Calculator_WinUI.Views
         // rebuilt on every theme change, so they are fields rather than locals in the load handler
         private MathDisplayStyle _historyStyle;
         private MathDisplayStyle _inputStyle;
+
+        // the source of the accent color the caret uses; held in a field rather than created where it
+        // is needed, because a collected UISettings silently stops raising ColorValuesChanged
+        private readonly UISettings _uiSettings = new UISettings();
 
 
         // === constructor ===
@@ -167,7 +188,9 @@ namespace Calculator_WinUI.Views
             RebuildStyles();
 
             this.Loaded += StandardPage_Loaded;
+            this.Unloaded += StandardPage_Unloaded;
             this.ActualThemeChanged += StandardPage_ActualThemeChanged;
+            _uiSettings.ColorValuesChanged += StandardPage_ColorValuesChanged;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
@@ -208,11 +231,33 @@ namespace Calculator_WinUI.Views
         }
 
 
+        // the settings page can leave and come back, so the subscription on the shared UISettings has
+        // to go with the page that made it
+        private void StandardPage_Unloaded(object sender, RoutedEventArgs e)
+        {
+            _uiSettings.ColorValuesChanged -= StandardPage_ColorValuesChanged;
+        }
+
+
         // === theming ===
+
+        private async void StandardPage_ActualThemeChanged(FrameworkElement sender, object args)
+        {
+            await PushStyles();
+        }
+
+        // the caret follows the Windows accent, which can be changed while the app is running
+        //
+        // the event arrives on a background thread, so everything it touches has to be marshalled back
+        // first; the WebView2 would throw on a wrong-thread call
+        private void StandardPage_ColorValuesChanged(UISettings sender, object args)
+        {
+            DispatcherQueue.TryEnqueue(async () => await PushStyles());
+        }
 
         // the formula lives in a browser, which never hears about the WinUI theme, so the colors are
         // pushed in again from here; re-navigating instead would flash and re-fetch KaTeX from the CDN
-        private async void StandardPage_ActualThemeChanged(FrameworkElement sender, object args)
+        private async Task PushStyles()
         {
             RebuildStyles();
 
