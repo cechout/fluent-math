@@ -70,7 +70,7 @@ namespace Calculator_WinUI.Tests
         {
             // an unbraced base hands the exponent only the last atom in it, which is what used to drop
             // the exponent onto the height of a caret standing at the end of the base
-            Assert.Contains("{\\mathord{1}\\mathord{0}}^{", Latex("pow10", "3"));
+            Assert.Contains("{\\mathord{1}\\mathord{0}}^{", Latex("10", "pow", "3"));
         }
 
         [Fact]

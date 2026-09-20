@@ -21,7 +21,7 @@ namespace Calculator_WinUI.Tests
             "cmd_sinh", "cmd_cosh", "cmd_tanh", "cmd_asinh", "cmd_acosh", "cmd_atanh",
             "cmd_paren_open", "cmd_paren_close",
             "cmd_fact", "cmd_inv", "cmd_percent", "cmd_abs",
-            "cmd_pow_10", "cmd_pow_e", "cmd_exp",
+            "cmd_pow_e", "cmd_exp",
             "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
         };
 

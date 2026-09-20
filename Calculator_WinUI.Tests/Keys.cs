@@ -20,7 +20,7 @@ namespace Calculator_WinUI.Tests
             "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",
             "+", "-", "*", "/", "(", ")",
             "!", "inv", "%", "pi", "e", "ans",
-            "frac", "pow", "pow10", "powe", "sqrt", "root", "log", "logb", "exp",
+            "frac", "pow", "powe", "sqrt", "root", "log", "logb", "exp",
             "left", "right", "up", "down", "back",
             "fn:sin", "fn:cos", "fn:tan", "fn:arcsin", "fn:arccos", "fn:arctan",
             "fn:sinh", "fn:cosh", "fn:tanh", "fn:arsinh", "fn:arcosh", "fn:artanh",
@@ -78,10 +78,6 @@ namespace Calculator_WinUI.Tests
 
                 case "pow":
                     manager.StartPower();
-                    return;
-
-                case "pow10":
-                    manager.StartPowerOfTen();
                     return;
 
                 case "powe":

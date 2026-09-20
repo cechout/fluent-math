@@ -303,10 +303,6 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.StartFraction();
                         break;
 
-                    case "cmd_pow_10":
-                        _inputManager.StartPowerOfTen();
-                        break;
-
                     case "cmd_pow_e":
                         _inputManager.StartPowerOfE();
                         break;

@@ -213,10 +213,10 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void EvaluatesThePrefilledPowerBases()
+        public void EvaluatesThePrefilledPowerBase()
         {
-            Assert.Equal(1000, Value("pow10", "3"));
             Assert.Equal(1, Value("powe", "0"));
+            Assert.Equal(Math.E, Value("powe", "1"), 12);
         }
 
 

@@ -321,20 +321,10 @@
                                     <Button
                                         Click="ExtraFunction_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_pow_10"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="10ⁿ" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_pow_e"
                                         Style="{StaticResource ExtraFunctionButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="eⁿ" />
                                     </Button>
-                                </StackPanel>
-
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
                                     <Button
                                         Click="ExtraFunction_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
@@ -342,6 +332,9 @@
                                         Style="{StaticResource ExtraFunctionButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="logₙ" />
                                     </Button>
+                                </StackPanel>
+
+                                <StackPanel Orientation="Horizontal" Spacing="2.5">
                                     <Button
                                         Click="ExtraFunction_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
