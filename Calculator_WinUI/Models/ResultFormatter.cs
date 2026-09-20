@@ -41,8 +41,8 @@ namespace Calculator_WinUI.Models
             return ToPlainString(value);
         }
 
-        // the same rounding as ToLatex but always as plain digits, used to feed a result back into the
-        // input when the next calculation continues from it
+        // the same rounding as ToLatex but always as plain digits, without the switch to scientific
+        // notation ToLatex makes outside its window
         public static string ToPlainString(double value)
         {
             double rounded = RoundToSignificantDigits(value, SignificantDigits);

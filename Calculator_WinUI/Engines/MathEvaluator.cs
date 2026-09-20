@@ -31,6 +31,11 @@ namespace Calculator_WinUI.Engines
         // set the moment any sub-expression fails; every loop checks it so the parse stops early
         private EvaluationError _error;
 
+        // what an Ans token resolves to; the caller sets it after every successful evaluation, so a
+        // formula continuing from the previous result carries the full double rather than the digits
+        // the display happened to show
+        public double LastAnswer { get; set; }
+
 
         // === constructor ===
 
@@ -198,6 +203,10 @@ namespace Calculator_WinUI.Engines
                 case ConstantToken constant:
                     position++;
                     return constant.NumericValue;
+
+                case AnsToken:
+                    position++;
+                    return LastAnswer;
             }
 
             if (token.Type == TokenType.Number)
@@ -254,7 +263,8 @@ namespace Calculator_WinUI.Engines
                 || token is PowerToken
                 || token is RootToken
                 || token is FunctionToken
-                || token is LogarithmToken;
+                || token is LogarithmToken
+                || token is AnsToken;
         }
 
 

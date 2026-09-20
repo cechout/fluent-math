@@ -385,6 +385,14 @@ namespace Calculator_WinUI.Engines
             ctx.CursorIndex++;
         }
 
+        public void AddAns()
+        {
+            var ctx = CurrentContext;
+
+            ctx.Tokens.Insert(ctx.CursorIndex, new AnsToken());
+            ctx.CursorIndex++;
+        }
+
         // a postfix key needs an operand in front of it, so a lone x! or percent is refused here rather
         // than left for the evaluator to reject after the fact
         //
@@ -781,26 +789,16 @@ namespace Calculator_WinUI.Engines
             _rootContext.CursorIndex = 0;
         }
 
-        // drops everything and leaves a single number behind, which is how a finished result is carried
+        // drops everything and leaves a single Ans behind, which is how a finished result is carried
         // into the calculation that continues from it
-        public void SeedWithValue(string numberText)
+        //
+        // a token rather than the digits of the result: the display only ever shows twelve significant
+        // digits, and seeding those back would quietly round the value at every step of a chain
+        public void SeedWithAns()
         {
             Clear();
 
-            // one token per character, exactly what typing the same number by hand would leave behind;
-            // a leading minus is a sign rather than a digit, so it goes in as the operator the evaluator
-            // already reads that way
-            foreach (char character in numberText)
-            {
-                if (character == '-')
-                {
-                    _rootTokens.Add(new MathToken(TokenType.Operator, "-"));
-                    continue;
-                }
-
-                _rootTokens.Add(new MathToken(TokenType.Number, character.ToString()));
-            }
-
+            _rootTokens.Add(new AnsToken());
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 

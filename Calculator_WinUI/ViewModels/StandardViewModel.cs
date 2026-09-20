@@ -19,9 +19,6 @@ namespace Calculator_WinUI.ViewModels
         private readonly MathInputManager _inputManager = new MathInputManager();
         private readonly MathEvaluator _evaluator = new MathEvaluator();
 
-        // the last successful result, kept so an operator pressed straight after = can continue from it
-        private double _lastAnswer;
-
         // true while the display shows a result instead of the formula being typed; the next keypress
         // decides whether that result is dropped or carried into the next calculation
         private bool _isShowingResult;
@@ -164,6 +161,10 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.Move(NavDirection.Right);
                         break;
 
+                    case "cmd_ans":
+                        _inputManager.AddAns();
+                        break;
+
                     case "cmd_exp":
                         _inputManager.StartScientific();
                         break;
@@ -261,7 +262,7 @@ namespace Calculator_WinUI.ViewModels
                         break;
                 }
             }
-            else if (sign == "+" || sign == "-" || sign == "*" || sign == "/")
+            else if (IsOperator(sign))
             {
                 _inputManager.AddOperator(sign);
             }
@@ -306,13 +307,31 @@ namespace Calculator_WinUI.ViewModels
 
             if (sign.StartsWith("cmd_nav_")) return; // the tree still holds the formula that was evaluated
 
-            if (sign == "+" || sign == "-" || sign == "*" || sign == "/")
+            if (IsOperator(sign) || ContinuesFromResult(sign))
             {
-                _inputManager.SeedWithValue(ResultFormatter.ToPlainString(_lastAnswer));
+                _inputManager.SeedWithAns();
                 return;
             }
 
             _inputManager.Clear();
+        }
+
+        // the keys that read an operand to their left instead of opening a new one; pressing one of
+        // them on a shown result continues from it, the way 5 = followed by x squared becomes Ans
+        // squared on a Casio rather than starting over
+        private static bool ContinuesFromResult(string sign)
+        {
+            return sign == "cmd_fact"
+                || sign == "cmd_inv"
+                || sign == "cmd_percent"
+                || sign == "cmd_pow_2"
+                || sign == "cmd_pow_n"
+                || sign == "cmd_frac";
+        }
+
+        private static bool IsOperator(string sign)
+        {
+            return sign == "+" || sign == "-" || sign == "*" || sign == "/";
         }
 
         // the second keyboard layer is two buttons stacked in the same cell, so switching layers is
@@ -341,7 +360,7 @@ namespace Calculator_WinUI.ViewModels
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (result.IsSuccess)
             {
-                _lastAnswer = result.Value;
+                _evaluator.LastAnswer = result.Value;
                 InputAndResultText = ResultFormatter.ToLatex(result.Value);
                 _isShowingResult = true;
             }

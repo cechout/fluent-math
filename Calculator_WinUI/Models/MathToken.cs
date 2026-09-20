@@ -16,7 +16,8 @@ namespace Calculator_WinUI.Models
         Root,
         Logarithm,
         Postfix,
-        Scientific
+        Scientific,
+        Answer
     }
 
 
@@ -133,6 +134,15 @@ namespace Calculator_WinUI.Models
         }
 
         public override string ToLatex(LatexRenderContext context) { return _latex; }
+    }
+
+    // the previous result, carried as a token rather than as its digits, so the whole double survives
+    // into the next calculation instead of only the twelve significant digits the display showed
+    public class AnsToken : MathToken
+    {
+        public AnsToken() : base(TokenType.Answer, "Ans") { }
+
+        public override string ToLatex(LatexRenderContext context) { return "\\text{Ans}"; }
     }
 
     // x!, the reciprocal and percent; all three stand behind their operand instead of in front of it,
