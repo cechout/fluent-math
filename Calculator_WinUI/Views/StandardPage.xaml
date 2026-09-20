@@ -604,8 +604,7 @@
                     Grid.Column="3"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="+"
+                    Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
                     Style="{StaticResource OperatorButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE8AB;" />
                 </Button>

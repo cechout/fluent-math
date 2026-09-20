@@ -22,6 +22,16 @@ namespace Calculator_WinUI.Models
     }
 
 
+    // which shape a finished result is shown in; the S to D key cycles through them
+    // a value only has the last two when a fraction was found for it at all
+    public enum AnswerForm
+    {
+        Decimal,
+        Improper,
+        Mixed
+    }
+
+
     // the outcome of one evaluation; a failure carries no value, so IsSuccess has to be checked first
     //
     // deliberately not an exception: half-typed input is the normal state here rather than an

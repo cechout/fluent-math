@@ -27,6 +27,21 @@ namespace Calculator_WinUI.Models
         // Math.Round refuses more than 15 decimals, and past that there is nothing left to round anyway
         private const int MaxRoundingDecimals = 15;
 
+        // largest denominator a result may come back as
+        //
+        // this is what keeps an irrational out: with four digits to work with, the best fraction for a
+        // root or a pi is still a good 1e-7 away from it and gets rejected below, while one further
+        // digit of room already lets the square root of two through as 1217471/860882
+        private const long MaxFractionDenominator = 10000;
+
+        // ceiling on the whole part, so a value big enough to be read as a decimal anyway is not turned
+        // into a fraction; it also keeps the expansion below inside a long
+        private const long MaxFractionNumerator = 10000000000;
+
+        // how close the fraction has to sit to count as the same number; the value has already been cut
+        // to twelve significant digits, so anything further out than this is a different number
+        private const double FractionTolerance = 1e-12;
+
 
         // === public formatting ===
 
@@ -39,6 +54,33 @@ namespace Calculator_WinUI.Models
             }
 
             return ToPlainString(value);
+        }
+
+        // the same value in the shape the S to D key currently has selected; a form this value does not
+        // have falls back to the decimal rather than to nothing
+        public static string ToLatex(double value, AnswerForm form, bool displayFractions)
+        {
+            if (form == AnswerForm.Decimal) return ToLatex(value);
+            if (!TryToFraction(value, out long numerator, out long denominator)) return ToLatex(value);
+            if (denominator <= 1) return ToLatex(value);
+
+            string command = displayFractions ? "dfrac" : "frac";
+            if (form == AnswerForm.Improper) return FractionLatex(command, numerator, denominator);
+
+            long whole = numerator / denominator;
+            if (whole == 0) return FractionLatex(command, numerator, denominator);
+
+            // the sign rides on the whole part, so the remainder is always written positive
+            long remainder = Math.Abs(numerator % denominator);
+            return $"{whole.ToString(CultureInfo.InvariantCulture)}{FractionLatex(command, remainder, denominator)}";
+        }
+
+        private static string FractionLatex(string command, long numerator, long denominator)
+        {
+            string top = numerator.ToString(CultureInfo.InvariantCulture);
+            string bottom = denominator.ToString(CultureInfo.InvariantCulture);
+
+            return $"\\{command}{{{top}}}{{{bottom}}}";
         }
 
         // the same rounding as ToLatex but always as plain digits, without the switch to scientific
@@ -59,6 +101,84 @@ namespace Calculator_WinUI.Models
             else { text = "Math ERROR"; }
 
             return $"\\text{{{text}}}";
+        }
+
+
+        // === fractions ===
+
+        // the simplest fraction that still hits the value, found by continued-fraction expansion, which
+        // is what lets 0.333333333333 come back as a third
+        //
+        // this is numeric and nothing else: a result that came out of a root or a pi has no fraction to
+        // find here, and the caller leaves it as a decimal
+        public static bool TryToFraction(double value, out long numerator, out long denominator)
+        {
+            numerator = 0;
+            denominator = 1;
+
+            if (double.IsNaN(value) || double.IsInfinity(value)) return false;
+
+            double rounded = RoundToSignificantDigits(value, SignificantDigits);
+            if (Math.Abs(rounded) >= MaxFractionNumerator) return false;
+
+            long sign = rounded < 0 ? -1 : 1;
+            double remaining = Math.Abs(rounded);
+
+            // the expansion only ever needs the last two convergents, so that is all that is carried
+            long previousNumerator = 1;
+            long currentNumerator = (long)Math.Floor(remaining);
+            long previousDenominator = 0;
+            long currentDenominator = 1;
+
+            for (int step = 0; step < 32; step++)
+            {
+                if (currentNumerator > MaxFractionNumerator) break;
+
+                double fraction = remaining - Math.Floor(remaining);
+                if (fraction < 1e-15) break; // the expansion has landed on a whole number, it is exact
+
+                remaining = 1.0 / fraction;
+
+                // a term past the cap can only ever produce a denominator past it as well, and checking
+                // it here is also what keeps the multiplication below inside a long
+                long term = (long)Math.Floor(remaining);
+                if (term > MaxFractionDenominator) break;
+
+                long nextNumerator = term * currentNumerator + previousNumerator;
+                long nextDenominator = term * currentDenominator + previousDenominator;
+                if (nextDenominator > MaxFractionDenominator) break;
+
+                previousNumerator = currentNumerator;
+                currentNumerator = nextNumerator;
+                previousDenominator = currentDenominator;
+                currentDenominator = nextDenominator;
+            }
+
+            if (currentDenominator <= 0) return false;
+
+            double candidate = (double)currentNumerator / currentDenominator;
+            double allowed = FractionTolerance * Math.Max(1, Math.Abs(rounded));
+            if (Math.Abs(candidate - Math.Abs(rounded)) > allowed) return false;
+
+            numerator = sign * currentNumerator;
+            denominator = currentDenominator;
+            return true;
+        }
+
+        // a whole number is already its own simplest form, so it counts as having no fraction to show
+        public static bool HasFractionForm(double value)
+        {
+            if (!TryToFraction(value, out _, out long denominator)) return false;
+
+            return denominator > 1;
+        }
+
+        // a mixed number needs a whole part to split off, so it only exists above one
+        public static bool HasMixedForm(double value)
+        {
+            if (!TryToFraction(value, out long numerator, out long denominator)) return false;
+
+            return denominator > 1 && Math.Abs(numerator) > denominator;
         }
 
 

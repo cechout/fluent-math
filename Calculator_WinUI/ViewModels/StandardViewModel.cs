@@ -23,6 +23,9 @@ namespace Calculator_WinUI.ViewModels
         // decides whether that result is dropped or carried into the next calculation
         private bool _isShowingResult;
 
+        // which shape the shown result is in; the S to D key cycles it, every = starts over at decimal
+        private AnswerForm _answerForm;
+
 
         // === display properties ===
 
@@ -126,6 +129,7 @@ namespace Calculator_WinUI.ViewModels
         public ICommand CalculateCommand { get; }
         public ICommand ClearCommand { get; }
         public ICommand BackspaceCommand { get; }
+        public ICommand ToggleAnswerFormCommand { get; }
 
 
         // === constructor ===
@@ -136,6 +140,7 @@ namespace Calculator_WinUI.ViewModels
             CalculateCommand = new RelayCommand<object>(_ => CalculateResult());
             ClearCommand = new RelayCommand<object>(_ => ClearAll());
             BackspaceCommand = new RelayCommand<object>(_ => Backspace());
+            ToggleAnswerFormCommand = new RelayCommand<object>(_ => ToggleAnswerForm());
 
             // the starting display comes from the engine rather than a literal, so the cursor is already
             // where it belongs before the first key is pressed
@@ -420,13 +425,54 @@ namespace Calculator_WinUI.ViewModels
             if (result.IsSuccess)
             {
                 _evaluator.LastAnswer = result.Value;
-                InputAndResultText = ResultFormatter.ToLatex(result.Value);
+                _answerForm = AnswerForm.Decimal;
+                PublishResult(result.Value);
                 _isShowingResult = true;
             }
             else
             {
                 InputAndResultText = ResultFormatter.ErrorToLatex(result.Error);
             }
+        }
+
+        private void PublishResult(double value)
+        {
+            InputAndResultText = ResultFormatter.ToLatex(value, _answerForm, UseDisplayFractions);
+        }
+
+        // cycles the shown result between a decimal, an improper fraction and a mixed number, skipping
+        // whichever of the three this value does not have
+        //
+        // the conversion is numeric, so a result that came out of a root or a pi has no fraction at all
+        // and the key does nothing there, the same as pressing it while a formula is being typed
+        private void ToggleAnswerForm()
+        {
+            if (!_isShowingResult) return;
+
+            double value = _evaluator.LastAnswer;
+            AnswerForm next = _answerForm;
+
+            for (int step = 0; step < 3; step++)
+            {
+                next = NextAnswerForm(next);
+
+                if (next == AnswerForm.Decimal) break;
+                if (next == AnswerForm.Improper && ResultFormatter.HasFractionForm(value)) break;
+                if (next == AnswerForm.Mixed && ResultFormatter.HasMixedForm(value)) break;
+            }
+
+            if (next == _answerForm) return;
+
+            _answerForm = next;
+            PublishResult(value);
+        }
+
+        private static AnswerForm NextAnswerForm(AnswerForm form)
+        {
+            if (form == AnswerForm.Decimal) return AnswerForm.Improper;
+            if (form == AnswerForm.Improper) return AnswerForm.Mixed;
+
+            return AnswerForm.Decimal;
         }
 
         private void ClearAll()
