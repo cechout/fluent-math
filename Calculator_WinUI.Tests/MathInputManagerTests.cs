@@ -1,3 +1,4 @@
+using System;
 using Calculator_WinUI.Engines;
 using Calculator_WinUI.Models;
 using Xunit;
@@ -192,6 +193,136 @@ namespace Calculator_WinUI.Tests
             Assert.Equal(1.0 / 29.0, Value(manager));
         }
 
+
+        // === backspace out of the remaining slots ===
+
+        [Fact]
+        public void DeletesTheWholeStructureFromTheFirstSlotWhenBothAreInUse()
+        {
+            // the first slot has nothing to fall back into, and salvaging both halves would run the
+            // numerator straight into the denominator
+            Assert.Empty(Keys.Press("1", "frac", "2", "left", "left", "left", "back").RootTokens);
+            Assert.Empty(Keys.Press("5", "pow", "7", "left", "left", "left", "back").RootTokens);
+        }
+
+        [Fact]
+        public void FallsBackOutOfEveryLastSlot()
+        {
+            // at the start of the last slot with the one before it still holding something, Backspace
+            // steps into that slot instead of deleting anything, so the next digit lands there
+
+            MathInputManager root = Keys.Press("sqrt", "8", "up", "3", "down", "back");
+            Assert.Equal(2, Value(root), 10);
+
+            root.AddNumber("2");
+            Assert.Equal(Math.Pow(8, 1.0 / 32.0), Value(root), 10);
+
+            MathInputManager logarithm = Keys.Press("logb", "2", "right", "8", "left", "back");
+            Assert.Equal(3, Value(logarithm), 10);
+
+            logarithm.AddNumber("0");
+            Assert.Equal(Math.Log(8) / Math.Log(20), Value(logarithm), 10);
+        }
+
+
+        // === operand capture ===
+
+        [Fact]
+        public void TakesAPostfixAlongIntoTheNumerator()
+        {
+            Assert.Equal(60, Value(Keys.Press("5", "!", "frac", "2")));
+        }
+
+        [Fact]
+        public void TakesAScientificExponentAlongIntoTheNumerator()
+        {
+            Assert.Equal(150000, Value(Keys.Press("3", "exp", "5", "right", "frac", "2")));
+        }
+
+        [Fact]
+        public void TakesAWholeNestedStructureAsThePowerBase()
+        {
+            Assert.Equal(0.25, Value(Keys.Press("1", "frac", "2", "right", "pow", "2")), 12);
+        }
+
+
+        // === navigation across the slots that sit above each other ===
+
+        [Fact]
+        public void CrossesUpIntoARootIndex()
+        {
+            Assert.Equal(2, Value(Keys.Press("sqrt", "8", "up", "3")), 10);
+        }
+
+        [Fact]
+        public void CrossesDownIntoALogarithmBase()
+        {
+            Assert.Equal(3, Value(Keys.Press("log", "8", "down", "2")), 10);
+        }
+
+        [Fact]
+        public void CrossesDownIntoAPowerBase()
+        {
+            // arriving from above lands at the start of the base, so the 3 goes in front of the 5
+            Assert.Equal(1225, Value(Keys.Press("5", "pow", "2", "down", "3")));
+        }
+
+        [Fact]
+        public void HasNothingAboveOrBelowAScientificExponent()
+        {
+            MathInputManager manager = Keys.Press("3", "exp", "5", "up", "down", "9");
+
+            // both keys do nothing, so the 9 is still in the exponent
+            Assert.Equal(3e59, Value(manager));
+        }
+
+
+        // === click addresses ===
+
+        [Fact]
+        public void PlacesTheCursorInEverySlotOfAStructure()
+        {
+            MathInputManager fraction = Keys.Press("1", "frac", "2");
+            Assert.True(fraction.SetCursorPosition("0.1@0"));
+            fraction.AddNumber("9");
+            Assert.Equal(1.0 / 92.0, Value(fraction), 12);
+
+            MathInputManager root = Keys.Press("sqrt", "8");
+            Assert.True(root.SetCursorPosition("0.0@0"));
+            root.AddNumber("3");
+            Assert.Equal(2, Value(root), 10);
+
+            MathInputManager scientific = Keys.Press("3", "exp", "5");
+            Assert.True(scientific.SetCursorPosition("1.0@0"));
+            scientific.AddNumber("1");
+            Assert.Equal(3e15, Value(scientific));
+        }
+
+        [Fact]
+        public void RefusesAnAddressThatTheTreeNoLongerHas()
+        {
+            MathInputManager manager = Keys.Press("1", "frac", "2");
+            manager.Clear();
+
+            // a click on a render that has already been replaced must not move anything
+            Assert.False(manager.SetCursorPosition("0.0@0"));
+        }
+
+
+        // === guards ===
+
+        [Fact]
+        public void TakesAnExponentInTheMiddleOfANumber()
+        {
+            // the digits in front of the caret are the mantissa and the rest multiplies on afterwards
+            Assert.Equal(12e5 * 3, Value(Keys.Press("123", "left", "exp", "5")));
+        }
+
+        [Fact]
+        public void AllowsADecimalPointOnceInEverySlot()
+        {
+            Assert.Equal(0.6, Value(Keys.Press("1.5", "frac", "2.5")), 12);
+        }
 
         // === continuing from a result ===
 
