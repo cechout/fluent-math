@@ -11,6 +11,22 @@ namespace Calculator_WinUI.Tests
     // "125" one argument instead of three
     internal static class Keys
     {
+        // exactly the names Send knows, for the fuzz to draw from
+        //
+        // deliberately not Vocabulary.Commands: that is the keypads vocabulary, and feeding a cmd_ name
+        // in here would fall through to the digit branch and spell it out letter by letter
+        public static readonly string[] All =
+        {
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",
+            "+", "-", "*", "/", "(", ")",
+            "!", "inv", "%", "pi", "e", "ans",
+            "frac", "pow", "pow10", "powe", "sqrt", "root", "log", "logb", "exp",
+            "left", "right", "up", "down", "back",
+            "fn:sin", "fn:cos", "fn:tan", "fn:arcsin", "fn:arccos", "fn:arctan",
+            "fn:sinh", "fn:cosh", "fn:tanh", "fn:arsinh", "fn:arcosh", "fn:artanh",
+            "fn:ln", "fn:abs"
+        };
+
         public static MathInputManager Press(params string[] keys)
         {
             var manager = new MathInputManager();
