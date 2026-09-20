@@ -348,6 +348,10 @@ namespace Calculator_WinUI.Engines
             double exponent = EvaluateSlot(power.ExponentTokens);
             if (_error != EvaluationError.None) return 0;
 
+            // zero to the zero and zero to a negative power are both Math ERROR on an FX-991; Math.Pow
+            // answers 1 and an infinity instead, neither of which a calculator should show
+            if (baseValue == 0 && exponent <= 0) return Fail(EvaluationError.Domain);
+
             double result = Math.Pow(baseValue, exponent);
             if (double.IsNaN(result)) return Fail(EvaluationError.Domain); // negative base with a fractional exponent
 

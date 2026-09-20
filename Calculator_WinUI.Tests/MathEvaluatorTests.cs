@@ -311,6 +311,16 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void ReportsDomainForAZeroBaseThatCannotBeRaised()
+        {
+            // the FX-991 answers Math ERROR to both; Math.Pow would hand back 1 and an infinity
+            Assert.Equal(EvaluationError.Domain, Error("0", "pow", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("0", "pow", "-", "1"));
+            Assert.Equal(0, Value("0", "pow", "0.5"));
+            Assert.Equal(1, Value("5", "pow", "0"));
+        }
+
+        [Fact]
         public void ReportsDomainForAFactorialThatHasNone()
         {
             Assert.Equal(EvaluationError.Domain, Error("0.5", "!"));
