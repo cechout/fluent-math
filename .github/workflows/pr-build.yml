@@ -8,9 +8,56 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read
 
 jobs:
+  # build and format are required status checks on main, so this workflow has to report them on every pull
+  # request, including doc-only ones
+  #
+  # paths-ignore cannot do that: a workflow skipped by path filtering never reports its checks at all, they
+  # stay pending and the pull request can never be merged
+  # a job skipped by an if condition does report, as success, so the gate has to sit on the jobs instead
+  # https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      # asks the api for the changed files instead of diffing a checkout, so there is no clone and no
+      # guessing about how deep the history has to be fetched for a merge base
+      #
+      # every uncertain path sets code=true on purpose: a skipped job reports success, so guessing wrong
+      # in the other direction would wave an unbuilt pull request through the required checks
+      - name: check whether anything buildable changed
+        id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! changed=$(gh api "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --paginate --jq '.[].filename'); then
+            echo "could not list the changed files, building anyway"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "$changed"
+
+          if [ -z "$changed" ]; then
+            echo "no files reported, building anyway"
+            echo "code=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if echo "$changed" | grep -qvE '(\.md$|^\.github/ISSUE_TEMPLATE/)'; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # only an explicit code=false skips the build; if the filter job itself failed the output is empty and
+  # this still runs, so a broken filter costs a build rather than waving the pull request through
   build:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: windows-latest
     steps:
       - name: checkout
@@ -34,6 +81,8 @@ jobs:
         run: dotnet build Calculator_WinUI/Calculator_WinUI.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
   format:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
     runs-on: windows-latest
     steps:
       - name: checkout
