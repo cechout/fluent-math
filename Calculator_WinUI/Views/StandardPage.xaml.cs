@@ -425,6 +425,16 @@ namespace Calculator_WinUI.Views
         }
 
 
+        // === extra functions flyout ===
+
+        // the keys in the flyout carry their own Command, so this only closes the flyout behind them;
+        // without it the panel would stay open over the display after every function
+        private void ExtraFunction_Click(object sender, RoutedEventArgs e)
+        {
+            ExtraFunctionsFlyout.Hide();
+        }
+
+
         // === theming ===
 
         private async void StandardPage_ActualThemeChanged(FrameworkElement sender, object args)

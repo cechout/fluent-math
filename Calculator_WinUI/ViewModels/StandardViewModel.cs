@@ -153,8 +153,8 @@ namespace Calculator_WinUI.ViewModels
         // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
         // and anything else, which is treated as a digit or a decimal point
         //
-        // cmd_more is the only key left without an arm; it is meant to open a further layer of the
-        // keypad that does not exist yet, so it falls through the switch and does nothing
+        // the extra functions flyout on the keypad sends the same parameters as the keys around it, so
+        // nothing about it reaches this far
         private void AddToTextBox(string sign)
         {
             // shift only swaps the keyboard layer, it must never disturb the input or a shown result
