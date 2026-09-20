@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Calculator_WinUI.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    the engine is linked in rather than referenced: the app is a WinExe on a Windows target framework
+    and cannot be referenced from a plain net8.0 library, while everything under test here is ordinary
+    C# and runs on any dotnet runner
+    MathDisplayStyle is the one file in Models that touches WinUI, so it is deliberately left out
+  -->
+  <ItemGroup>
+    <Compile Include="..\Calculator_WinUI\Engines\*.cs" />
+    <Compile Include="..\Calculator_WinUI\Models\MathToken.cs" />
+    <Compile Include="..\Calculator_WinUI\Models\NavigationMetadata.cs" />
+    <Compile Include="..\Calculator_WinUI\Models\EvaluationMetadata.cs" />
+    <Compile Include="..\Calculator_WinUI\Models\ResultFormatter.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>
