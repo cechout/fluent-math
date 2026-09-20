@@ -109,8 +109,11 @@ namespace Calculator_WinUI.Views
                    line height, but a box whose overflow is not visible has its baseline pinned to its
                    own bottom margin edge, so the bar sits on the baseline of its slot and on nothing
                    else, at every nesting depth
-                   the border draws the bar and the negative margin gives the width straight back, so
-                   the caret takes no space and the digits on either side never move */
+                   the bar is a background rather than a border, and the two half margins take its
+                   width straight back again, so the caret costs no space and sits centred on the gap
+                   it marks; a border cannot do that, Blink floors a border width to whole pixels
+                   while the cancelling margin stays fractional, which measured as half a pixel of
+                   drift on every neighbour */
                 @keyframes cursor-blink {
                     0%, 49% { opacity: 1; }
                     50%, 100% { opacity: 0; }
@@ -118,10 +121,12 @@ namespace Calculator_WinUI.Views
                 .cursor {
                     display: inline-block;
                     overflow: hidden;
-                    width: 0;
+                    width: var(--cursor-width);
                     height: var(--cursor-height);
-                    margin-right: calc(-1 * var(--cursor-width));
-                    border-left: var(--cursor-width) solid var(--cursor-color);
+                    margin-left: calc(-0.5 * var(--cursor-width));
+                    margin-right: calc(-0.5 * var(--cursor-width));
+                    background: var(--cursor-color);
+                    border-radius: var(--cursor-radius);
                     vertical-align: var(--cursor-shift);
                     animation: cursor-blink 1.1s infinite;
                 }

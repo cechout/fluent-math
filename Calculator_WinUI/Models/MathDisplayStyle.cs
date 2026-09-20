@@ -76,6 +76,7 @@ namespace Calculator_WinUI.Models
         public double CursorWidth { get; set; } = 0.07; // em, drawn centred on the gap it marks
         public double CursorHeight { get; set; } = 0.71; // em, roughly the cap height of a digit
         public double CursorShift { get; set; } = -0.04; // em above the baseline, negative drops it below
+        public double CursorCornerRadius { get; set; } = 0.03; // em, half the width rounds the ends off
         public bool UseAccentCursor { get; set; } = true; // the Windows accent rather than the text color
 
         // filled in by ForInputLine, since the history line has no caret to color
@@ -144,6 +145,7 @@ namespace Calculator_WinUI.Models
             css.AppendLine($"    --cursor-width: {CursorWidth.ToString(invariant)}em;");
             css.AppendLine($"    --cursor-height: {CursorHeight.ToString(invariant)}em;");
             css.AppendLine($"    --cursor-shift: {CursorShift.ToString(invariant)}em;");
+            css.AppendLine($"    --cursor-radius: {CursorCornerRadius.ToString(invariant)}em;");
 
             // the one place the accent switch is read, so nothing else has to know about the fallback
             css.AppendLine($"    --cursor-color: {(UseAccentCursor ? CursorColor : TextColor)};");
