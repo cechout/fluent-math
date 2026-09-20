@@ -15,6 +15,15 @@ namespace Calculator_WinUI.Engines
     //
     // the class knows nothing about buttons or LaTeX beyond GetLatexString; StandardViewModel does the
     // translating in both directions
+    //
+    // the input is a sandbox: nothing typed is ever refused, corrected or rearranged, however broken the
+    // formula looks along the way
+    // a leading times sign, three operators in a row, two decimal points in one number, a lone factorial,
+    // an exponent with no number in front of it: all of it goes in as typed and stands there
+    // the single place a formula is judged is MathEvaluator, on = , and a broken one comes back as a
+    // Syntax ERROR that the user can walk back into and repair
+    // the guards that used to live here read as helpfulness and were not: they silently threw a keypress
+    // away, which is worse than an error message, because nothing on screen says why
     public class MathInputManager
     {
         // === fields ===
@@ -317,64 +326,29 @@ namespace Calculator_WinUI.Engines
         // one token per digit, so the cursor can stand between any two characters of a number the same
         // way it stands between any two tokens; "125" is three tokens and the evaluator is the one place
         // that reads such a run back as a single value
+        //
+        // a second decimal point in the same number is accepted like anything else, see the sandbox note
+        // on the class
         public void AddNumber(string digit)
         {
             var ctx = CurrentContext;
-
-            if (digit == "." && NumberRunHasDecimalPoint(ctx)) return; // one decimal point per number
 
             ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, digit));
             ctx.CursorIndex++;
         }
 
-        // the number tokens on both sides of the cursor read as one number, so a second decimal point
-        // anywhere in that run has to be refused, not only one sitting directly left of the cursor
-        private static bool NumberRunHasDecimalPoint(ScopeContext context)
-        {
-            for (int i = context.CursorIndex - 1; i >= 0; i--)
-            {
-                if (context.Tokens[i].Type != TokenType.Number) break;
-                if (context.Tokens[i].Value == ".") return true;
-            }
-
-            for (int i = context.CursorIndex; i < context.Tokens.Count; i++)
-            {
-                if (context.Tokens[i].Type != TokenType.Number) break;
-                if (context.Tokens[i].Value == ".") return true;
-            }
-
-            return false;
-        }
-
+        // every operator goes in where the cursor is, however many of them are already there and
+        // whatever stands beside them
+        //
+        // it used to refuse one with nothing on its left and to overwrite the one before it, both of
+        // which quietly changed what was typed; a leading minus needs no special case either, since
+        // nothing is refused for it to be an exception to
         public void AddOperator(string op)
         {
             var ctx = CurrentContext;
 
-            MathToken tokenLeftOfCursor;
-            if (ctx.CursorIndex > 0) { tokenLeftOfCursor = ctx.Tokens[ctx.CursorIndex - 1]; }
-            else { tokenLeftOfCursor = null; }
-
-            // an operator needs something on its left to work on; the sole exception is a minus, which
-            // reads as a sign there and is the only way a negative number can be typed at all
-            if (tokenLeftOfCursor == null || tokenLeftOfCursor.Type == TokenType.BracketOpen)
-            {
-                if (op != "-") return;
-
-                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
-                ctx.CursorIndex++;
-                return;
-            }
-
-            if (tokenLeftOfCursor.Type == TokenType.Operator)
-            {
-                // two operators in a row is a correction, not an input; the newer one wins
-                tokenLeftOfCursor.Value = op;
-            }
-            else
-            {
-                ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
-                ctx.CursorIndex++;
-            }
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, op));
+            ctx.CursorIndex++;
         }
 
         public void AddConstant(string name)
@@ -393,15 +367,9 @@ namespace Calculator_WinUI.Engines
             ctx.CursorIndex++;
         }
 
-        // a postfix key needs an operand in front of it, so a lone x! or percent is refused here rather
-        // than left for the evaluator to reject after the fact
-        //
-        // what counts as that operand is the same run FindOperandStart already answers for the fraction
-        // and the power keys, which is why a bracket group or a whole nested structure is enough
         public void AddPostfix(string kind)
         {
             var ctx = CurrentContext;
-            if (FindOperandStart(ctx.Tokens, ctx.CursorIndex) == ctx.CursorIndex) return;
 
             ctx.Tokens.Insert(ctx.CursorIndex, new PostfixToken(kind));
             ctx.CursorIndex++;
@@ -561,13 +529,11 @@ namespace Calculator_WinUI.Engines
         // the EXP key; the exponent gets a slot of its own so it can be typed into and walked through
         // like any other, and so the evaluator can bind it to the number standing in front of it
         //
-        // the exponent attaches to a typed number and to nothing else, exactly as the evaluator reads
-        // it, so the key is refused anywhere it could only ever produce a syntax error
+        // the evaluator only reads one that follows a number, so anywhere else it turns into a syntax
+        // error on = ; the key still goes in, see the sandbox note on the class
         public void StartScientific()
         {
             var ctx = CurrentContext;
-            if (ctx.CursorIndex == 0 || ctx.Tokens[ctx.CursorIndex - 1].Type != TokenType.Number) return;
-
             var scientificToken = new ScientificToken();
 
             ctx.Tokens.Insert(ctx.CursorIndex, scientificToken);

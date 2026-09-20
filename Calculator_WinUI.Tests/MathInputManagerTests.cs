@@ -32,39 +32,52 @@ namespace Calculator_WinUI.Tests
             Assert.Equal(3, Keys.Press("125").RootTokens.Count);
         }
 
+        // the input is a sandbox: every one of these used to be refused at the keypress, which threw the
+        // key away with nothing on screen saying why
+        // now it all goes in as typed and the formula is judged once, on =
+
         [Fact]
-        public void RefusesASecondDecimalPointInTheSameNumber()
+        public void TakesASecondDecimalPointInTheSameNumber()
         {
-            Assert.Equal(3, Keys.Press("1.2.").RootTokens.Count);
+            Assert.Equal(4, Keys.Press("1.2.").RootTokens.Count);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("1.2.3")));
         }
 
         [Fact]
-        public void RefusesALeadingOperatorThatIsNotASign()
+        public void TakesAnOperatorWithNothingOnItsLeft()
         {
-            Assert.Empty(Keys.Press("+").RootTokens);
-            Assert.Single(Keys.Press("-").RootTokens);
+            Assert.Single(Keys.Press("+").RootTokens);
+            Assert.Single(Keys.Press("*").RootTokens);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("*", "5")));
+
+            // a leading minus still reads as a sign, and now it needs no special case to get in
+            Assert.Equal(-5, Value(Keys.Press("-", "5")));
         }
 
         [Fact]
-        public void ReplacesAnOperatorTypedTwice()
+        public void TakesAsManyOperatorsInARowAsAreTyped()
         {
-            MathInputManager manager = Keys.Press("6", "+", "*", "3");
+            // the newer one used to overwrite the older, so a mistyped plus could never be seen again
+            Assert.Equal(4, Keys.Press("6", "+", "*", "3").RootTokens.Count);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("6", "+", "*", "3")));
 
-            Assert.Equal(18, Value(manager));
+            // a run of signs is still a run of signs and evaluates
+            Assert.Equal(5, Value(Keys.Press("-", "-", "5")));
         }
 
         [Fact]
-        public void RefusesAPostfixKeyWithNoOperand()
+        public void TakesAPostfixKeyWithNoOperand()
         {
-            Assert.Empty(Keys.Press("!").RootTokens);
-            Assert.Empty(Keys.Press("inv").RootTokens);
+            Assert.Single(Keys.Press("!").RootTokens);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("!")));
         }
 
         [Fact]
-        public void RefusesTheExponentKeyWithoutANumberInFrontOfIt()
+        public void TakesTheExponentKeyAnywhere()
         {
-            Assert.Empty(Keys.Press("exp").RootTokens);
-            Assert.Single(Keys.Press("pi", "exp").RootTokens);
+            Assert.Single(Keys.Press("exp").RootTokens);
+            Assert.Equal(2, Keys.Press("pi", "exp").RootTokens.Count);
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("pi", "exp", "3")));
         }
 
 
