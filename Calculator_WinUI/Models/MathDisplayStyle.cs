@@ -58,16 +58,16 @@ namespace Calculator_WinUI.Models
         // so 600 and 700 pick a real one rather than letting the browser smear the regular
         public double OperatorScale { get; set; } = 0.6;
         public double OperatorGap { get; set; } = 0.1;
-        public double OperatorRaise { get; set; } = 0.2; // em, higher lifts the operator further
+        public double OperatorRaise { get; set; } = 0.20; // em, higher lifts the operator further
         public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
 
         // the input caret, painted by css rather than by KaTeX so it shrinks together with a slot
         //
         // the bar stands on the baseline of whatever slot it is in and reaches the top of the digits
         // beside it; every value is em, so the whole caret scales with the slot and nothing else
-        public double CursorWidth { get; set; } = 0.06; // em, drawn centred on the gap it marks
-        public double CursorHeight { get; set; } = 0.75; // em, roughly the cap height of a digit
-        public double CursorShift { get; set; } = -0.05; // em above the baseline, negative drops it below
+        public double CursorWidth { get; set; } = 0.07; // em, drawn centred on the gap it marks
+        public double CursorHeight { get; set; } = 0.71; // em, roughly the cap height of a digit
+        public double CursorShift { get; set; } = -0.04; // em above the baseline, negative drops it below
         public bool UseAccentCursor { get; set; } = true; // the Windows accent rather than the text color
 
         // filled in by ForInputLine, since the history line has no caret to color
