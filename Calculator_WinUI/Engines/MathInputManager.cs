@@ -681,8 +681,12 @@ namespace Calculator_WinUI.Engines
 
         // how many slots of a structured token still hold something
         //
-        // the salvage below decides on this rather than on the slot the cursor happens to be in: with a
-        // single slot in use, putting its contents back can never run two separate numbers into one
+        // the salvage below decides on this rather than on the slot the cursor happens to be in, so a
+        // structure with a single slot left in use is dropped and that slot put back where it stood
+        //
+        // which can run two numbers together: deleting the sin out of 2sin(30) leaves 230, because the
+        // 2 and the 30 come to stand side by side
+        // confirmed against the FX-991, which does the same, so it stays
         private static int CountFilledSlots(MathToken token)
         {
             int filled = 0;
@@ -708,15 +712,45 @@ namespace Calculator_WinUI.Engines
             int tokenIndex = parentCtx.Tokens.IndexOf(structureToken);
             if (tokenIndex == -1) return; // safety, a scope always sits in its parents list
 
+            List<MathToken> salvaged = SalvagedTokens(structureToken, out int cursorOffset);
+
+            parentCtx.Tokens.RemoveAt(tokenIndex);
+            parentCtx.Tokens.InsertRange(tokenIndex, salvaged);
+            parentCtx.CursorIndex = tokenIndex + cursorOffset;
+        }
+
+        // what a dissolved structure leaves behind, and where in it the cursor lands
+        //
+        // the default is everything that was typed into its slots, with the cursor after it
+        //
+        // a scientific token also draws a times sign and a ten that were never tokens of their own, so
+        // those go back in as well; without them 3x10^5 would collapse to 35, a different number with
+        // nothing on screen saying so
+        // an untouched one has nothing on screen worth keeping and disappears whole
+        private static List<MathToken> SalvagedTokens(MathToken structureToken, out int cursorOffset)
+        {
             var salvaged = new List<MathToken>();
+
+            if (structureToken is ScientificToken scientific && scientific.ExponentTokens.Count > 0)
+            {
+                salvaged.Add(new MathToken(TokenType.Operator, "*"));
+                salvaged.Add(new MathToken(TokenType.Number, "1"));
+                salvaged.Add(new MathToken(TokenType.Number, "0"));
+
+                // the cursor stays where the structure boundary was, between the ten and the exponent
+                cursorOffset = salvaged.Count;
+                salvaged.AddRange(scientific.ExponentTokens);
+
+                return salvaged;
+            }
+
             foreach (TokenSlot slot in GetSlots(structureToken))
             {
                 salvaged.AddRange(slot.Tokens);
             }
 
-            parentCtx.Tokens.RemoveAt(tokenIndex);
-            parentCtx.Tokens.InsertRange(tokenIndex, salvaged);
-            parentCtx.CursorIndex = tokenIndex + salvaged.Count;
+            cursorOffset = salvaged.Count;
+            return salvaged;
         }
 
         // deletes the structure with everything still in it, for the case where there is nothing left

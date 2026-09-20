@@ -81,6 +81,39 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void PutsTheTimesTenBackWhenAScientificTokenDissolves()
+        {
+            // the times sign and the ten are drawn by the token rather than typed, so dropping them
+            // would turn 3x10^5 into 35, a different number with nothing on screen saying so
+            MathInputManager manager = Keys.Press("3", "exp", "5", "left", "back");
+
+            Assert.Equal(3.0 * 105.0, Value(manager));
+
+            // the caret stays where the structure boundary was, between the ten and the exponent
+            manager.AddNumber("9");
+            Assert.Equal(3.0 * 1095.0, Value(manager));
+        }
+
+        [Fact]
+        public void DropsAnUntouchedScientificTokenWithoutATrace()
+        {
+            MathInputManager manager = Keys.Press("3", "exp", "back");
+
+            Assert.Single(manager.RootTokens);
+            Assert.Equal(3, Value(manager));
+        }
+
+        [Fact]
+        public void RunsTwoNumbersTogetherWhenAFunctionDissolves()
+        {
+            // confirmed against the FX-991: deleting the sin out of 2sin(30) leaves 230, because the 2
+            // and the 30 end up side by side
+            MathInputManager manager = Keys.Press("2", "fn:sin", "30", "left", "left", "back");
+
+            Assert.Equal(230, Value(manager));
+        }
+
+        [Fact]
         public void DeletesAPlainTokenFromTheRight()
         {
             Assert.Equal(12, Value(Keys.Press("123", "back")));
