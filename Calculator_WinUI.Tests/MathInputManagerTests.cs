@@ -93,16 +93,6 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void FallsBackIntoThePreviousSlotWhenBothAreInUse()
-        {
-            // the cursor sits at the start of the denominator, so Backspace steps into the numerator
-            // rather than deleting the fraction; the 9 then lands in front of the 1
-            MathInputManager manager = Keys.Press("1", "frac", "2", "left", "back", "9");
-
-            Assert.Equal(19.0 / 2.0, Value(manager));
-        }
-
-        [Fact]
         public void PutsTheTimesTenBackWhenAScientificTokenDissolves()
         {
             // the times sign and the ten are drawn by the token rather than typed, so dropping them
@@ -262,31 +252,31 @@ namespace Calculator_WinUI.Tests
         // === backspace out of the remaining slots ===
 
         [Fact]
-        public void DeletesTheWholeStructureFromTheFirstSlotWhenBothAreInUse()
+        public void DissolvesTheStructureFromEitherSlot()
         {
-            // the first slot has nothing to fall back into, and salvaging both halves would run the
-            // numerator straight into the denominator
-            Assert.Empty(Keys.Press("1", "frac", "2", "left", "left", "left", "back").RootTokens);
-            Assert.Empty(Keys.Press("5", "pow", "7", "left", "left", "left", "back").RootTokens);
+            // out of the denominator: the two halves come to stand side by side and the caret stays
+            // where the denominator began
+            MathInputManager denominator = Keys.Press("1", "frac", "2", "left", "back");
+            Assert.Equal(12, Value(denominator));
+            denominator.AddNumber("9");
+            Assert.Equal(192, Value(denominator));
+
+            // out of the numerator: the caret stays in front of everything
+            MathInputManager numerator = Keys.Press("1", "frac", "2", "left", "left", "left", "back");
+            Assert.Equal(12, Value(numerator));
+            numerator.AddNumber("9");
+            Assert.Equal(912, Value(numerator));
+
+            // out of an exponent: the base is what stood in front of the caret, so it stays there
+            MathInputManager power = Keys.Press("3", "pow", "5", "left", "back");
+            Assert.Equal(35, Value(power));
         }
 
         [Fact]
-        public void FallsBackOutOfEveryLastSlot()
+        public void DissolvesARootAndALogarithmTheSameWay()
         {
-            // at the start of the last slot with the one before it still holding something, Backspace
-            // steps into that slot instead of deleting anything, so the next digit lands there
-
-            MathInputManager root = Keys.Press("sqrt", "8", "up", "3", "down", "back");
-            Assert.Equal(2, Value(root), 10);
-
-            root.AddNumber("2");
-            Assert.Equal(Math.Pow(8, 1.0 / 32.0), Value(root), 10);
-
-            MathInputManager logarithm = Keys.Press("logb", "2", "right", "8", "left", "back");
-            Assert.Equal(3, Value(logarithm), 10);
-
-            logarithm.AddNumber("0");
-            Assert.Equal(Math.Log(8) / Math.Log(20), Value(logarithm), 10);
+            Assert.Equal(38, Value(Keys.Press("sqrt", "8", "up", "3", "down", "back")));
+            Assert.Equal(28, Value(Keys.Press("logb", "2", "right", "8", "left", "back")));
         }
 
 

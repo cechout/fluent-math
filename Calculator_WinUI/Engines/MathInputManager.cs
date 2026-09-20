@@ -410,24 +410,18 @@ namespace Calculator_WinUI.Engines
             _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
         }
 
-        // the two prefix power keys; unlike StartPower they deliberately leave whatever stands to their
-        // left alone, because the base is the thing the key already names
-        public void StartPowerOfTen()
-        {
-            StartPowerWithBase(new MathToken(TokenType.Number, "1"), new MathToken(TokenType.Number, "0"));
-        }
-
+        // the e to the x key; unlike StartPower it deliberately leaves whatever stands to its left
+        // alone, because the base is the thing the key already names
+        //
+        // there was a matching ten to the n key beside it and it was taken out: it sat next to the
+        // keypads own x10^n, looked almost the same and bound quite differently, which is a trap rather
+        // than a choice
         public void StartPowerOfE()
-        {
-            StartPowerWithBase(new ConstantToken("e"));
-        }
-
-        private void StartPowerWithBase(params MathToken[] baseTokens)
         {
             var ctx = CurrentContext;
             var powerToken = new PowerToken();
 
-            powerToken.BaseTokens.AddRange(baseTokens);
+            powerToken.BaseTokens.Add(new ConstantToken("e"));
 
             ctx.Tokens.Insert(ctx.CursorIndex, powerToken);
             ctx.CursorIndex++;
@@ -602,37 +596,22 @@ namespace Calculator_WinUI.Engines
 
         // === editing ===
 
-        // deleting backwards out of an empty structure has to remove the structure itself, otherwise a
-        // mistyped fraction could never be undone from inside it
+        // every Backspace deletes something
+        //
+        // at the start of a sub-scope there is no character left to take, so the structure itself goes
+        // and everything typed into it stays standing where the structure stood
+        //
+        // that can run two numbers together, and deliberately does: backspacing into the denominator of
+        // 1/2 leaves 12, and deleting the sin out of 2sin(30) leaves 230
+        // it used to step into the slot before instead, which meant a keypress that visibly did nothing
+        // and a second one needed to delete a single character
         public void Backspace()
         {
             var ctx = CurrentContext;
 
-            // at the start of a sub-scope: leave it and delete the token that owned it
             if (ctx.CursorIndex == 0 && ctx.Role != ScopeRole.Root && ctx.ParentToken != null)
             {
-                // as long as only one slot of the token is still in use, the structure can be dropped
-                // without losing anything, so that always wins; this is what stops an emptied exponent
-                // from leaving a box behind that no further Backspace can reach
-                if (CountFilledSlots(ctx.ParentToken) <= 1)
-                {
-                    DissolveStructure(ctx.ParentToken, ctx.Tokens);
-                    return;
-                }
-
-                // more than one slot is in use, so fall back into a previous one that holds something
-                // rather than deleting the lot
-                //
-                // an empty previous slot is skipped on purpose, falling back into nothing would leave
-                // Backspace looking stuck
-                TokenSlot? previousSlot = GetNeighbourSlot(ctx, next: false);
-                if (previousSlot != null && previousSlot.Tokens.Count > 0)
-                {
-                    SwitchToSlot(previousSlot, ctx.ParentToken, atEnd: true);
-                    return;
-                }
-
-                RemoveStructure(ctx.ParentToken);
+                DissolveStructure(ctx.ParentToken, ctx.Tokens);
                 return;
             }
 
@@ -643,25 +622,6 @@ namespace Calculator_WinUI.Engines
             // it all goes away in one piece
             ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
             ctx.CursorIndex--;
-        }
-
-        // how many slots of a structured token still hold something
-        //
-        // the salvage below decides on this rather than on the slot the cursor happens to be in, so a
-        // structure with a single slot left in use is dropped and that slot put back where it stood
-        //
-        // which can run two numbers together: deleting the sin out of 2sin(30) leaves 230, because the
-        // 2 and the 30 come to stand side by side
-        // confirmed against the FX-991, which does the same, so it stays
-        private static int CountFilledSlots(MathToken token)
-        {
-            int filled = 0;
-            foreach (TokenSlot slot in GetSlots(token))
-            {
-                if (slot.Tokens.Count > 0) filled++;
-            }
-
-            return filled;
         }
 
         // drops the structure but keeps what was already typed into it, by putting the contents of its
@@ -727,24 +687,6 @@ namespace Calculator_WinUI.Engines
             }
 
             return salvaged;
-        }
-
-        // deletes the structure with everything still in it, for the case where there is nothing left
-        // to fall back into and salvaging the slots would run two separate numbers into one
-        //
-        // the token is looked up rather than assumed to sit left of the cursor: entering a structure
-        // from the left leaves the parent cursor on the token instead of after it, and the old
-        // assumption made Backspace silently do nothing in exactly that case
-        private void RemoveStructure(MathToken structureToken)
-        {
-            _scopeStack.Pop();
-
-            var parentCtx = CurrentContext;
-            int tokenIndex = parentCtx.Tokens.IndexOf(structureToken);
-            if (tokenIndex == -1) return;
-
-            parentCtx.Tokens.RemoveAt(tokenIndex);
-            parentCtx.CursorIndex = tokenIndex;
         }
 
         // puts the cursor where a click in the display landed, from the address the renderer wrote onto

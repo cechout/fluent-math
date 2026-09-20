@@ -251,36 +251,26 @@ namespace Calculator_WinUI.Tests
         }
 
 
-        // === the two ways to get a power of ten ===
+        // === the exponent key ===
 
-        // they look almost the same on the keypad and are different operations, which is worth holding
-        // still: the keypad key binds the exponent to the number in front of it, the flyout key is a
-        // standalone factor that arrives through implicit multiplication
+        // the one way to get a power of ten; the flyout used to carry a second key for it that looked
+        // almost the same and bound differently, and it was taken out rather than relabelled
         [Fact]
-        public void BindsTheKeypadExponentTighterThanTheFlyoutPowerOfTen()
+        public void BindsTheExponentToTheNumberInFrontOfIt()
         {
-            var keypad = new StandardViewModel();
-            Press(keypad, "1", "/", "3", "cmd_exp", "5", "=");
-            Assert.Equal("0.000003333333333", keypad.InputAndResultText);
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "/", "3", "cmd_exp", "5", "=");
 
-            var flyout = new StandardViewModel();
-            Press(flyout, "1", "/", "3", "cmd_pow_10", "5", "=");
-            Assert.StartsWith("33333.3333333", flyout.InputAndResultText);
+            Assert.Equal("0.000003333333333", viewModel.InputAndResultText);
         }
 
-        // and they behave differently on Backspace, because one is a single slot and the other is a
-        // base and an exponent; see BackspacesOutOfAScientificTokenFromEveryCaretPosition
         [Fact]
-        public void DissolvesOnlyTheKeypadExponentOnBackspace()
+        public void DissolvesTheExponentOnBackspace()
         {
-            var keypad = new StandardViewModel();
-            Press(keypad, "3", "cmd_exp", "5", "cmd_nav_left", "back", "=");
-            Assert.Equal("315", keypad.InputAndResultText);
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "3", "cmd_exp", "5", "cmd_nav_left", "back", "=");
 
-            // the flyout power keeps its structure and the caret falls back into the base instead
-            var flyout = new StandardViewModel();
-            Press(flyout, "3", "cmd_pow_10", "5", "cmd_nav_left", "back", "=");
-            Assert.Equal("300000", flyout.InputAndResultText);
+            Assert.Equal("315", viewModel.InputAndResultText);
         }
 
 
