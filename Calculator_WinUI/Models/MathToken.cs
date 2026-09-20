@@ -18,6 +18,58 @@ namespace Calculator_WinUI.Models
     }
 
 
+    // what a ToLatex call needs to know besides the token itself: which list the cursor is in, and the
+    // address of the list being rendered, so that a click in the display can be resolved back into a
+    // cursor position
+    //
+    // the address is built as the walk descends rather than stored on the tokens, because only the walk
+    // knows which token and which slot it is currently inside; a token never has to know its own place
+    //
+    // a step is written tokenIndex.slotIndex, and the slot index is the position in the list
+    // MathInputManager.GetSlots returns; the two have to stay in the same order, the address means
+    // nothing otherwise
+    public class LatexRenderContext
+    {
+        public ScopeContext? ActiveScope { get; }
+        public bool EmitAddresses { get; } // off for the history line, nothing there is clickable
+
+        private readonly string _path; // address of the list being rendered, empty at the root
+        private readonly int _tokenIndex; // the token in that list whose slots come next
+
+        public LatexRenderContext(ScopeContext? activeScope, bool emitAddresses)
+            : this(activeScope, emitAddresses, "", 0) { }
+
+        private LatexRenderContext(ScopeContext? activeScope, bool emitAddresses, string path, int tokenIndex)
+        {
+            ActiveScope = activeScope;
+            EmitAddresses = emitAddresses;
+            _path = path;
+            _tokenIndex = tokenIndex;
+        }
+
+        // remembers which token of the current list is being rendered, so its slots can name themselves
+        public LatexRenderContext ForToken(int tokenIndex)
+        {
+            return new LatexRenderContext(ActiveScope, EmitAddresses, _path, tokenIndex);
+        }
+
+        // descends into one slot of that token
+        public LatexRenderContext Slot(int slotIndex)
+        {
+            string step = $"{_tokenIndex}.{slotIndex}";
+            string path = _path.Length == 0 ? step : $"{_path}/{step}";
+
+            return new LatexRenderContext(ActiveScope, EmitAddresses, path, 0);
+        }
+
+        // the address of one cursor position in the list being rendered
+        public string Address(int cursorIndex)
+        {
+            return $"{_path}@{cursorIndex}";
+        }
+    }
+
+
     // one node of the input tree; a plain MathToken is a leaf carrying its own text (a number or an
     // operator), the subclasses below add child token lists and become the branches
     //
@@ -28,8 +80,9 @@ namespace Calculator_WinUI.Models
     // of collapsing; when the cursor sits in that slot it takes the place of the box, which is what makes
     // the cursor visible inside a structure that has nothing in it yet
     //
-    // ToLatex takes the scope the cursor is in because the cursor is drawn into the LaTeX itself; the
-    // parameter is handed down untouched until the one list it belongs to renders it
+    // ToLatex takes a render context because the cursor is drawn into the LaTeX itself, and because a
+    // token has to hand its slots their own address; everything else about the context is passed down
+    // untouched until the one list it belongs to renders it
     public class MathToken
     {
         public TokenType Type { get; set; }
@@ -41,7 +94,7 @@ namespace Calculator_WinUI.Models
             Value = value;
         }
 
-        public virtual string ToLatex(ScopeContext? activeScope) { return Value; }
+        public virtual string ToLatex(LatexRenderContext context) { return Value; }
     }
 
 
@@ -74,7 +127,7 @@ namespace Calculator_WinUI.Models
             }
         }
 
-        public override string ToLatex(ScopeContext? activeScope) { return _latex; }
+        public override string ToLatex(LatexRenderContext context) { return _latex; }
     }
 
     // sin, cos, tan, ln; renders as sin(x)
@@ -84,9 +137,9 @@ namespace Calculator_WinUI.Models
 
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName) { }
 
-        public override string ToLatex(ScopeContext? activeScope)
+        public override string ToLatex(LatexRenderContext context)
         {
-            string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, activeScope);
+            string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, context, 0);
             return LatexHelper.Tagged("m-func", $"\\{Value}({innerLatex})");
         }
     }
@@ -100,10 +153,10 @@ namespace Calculator_WinUI.Models
 
         public PowerToken() : base(TokenType.Power) { }
 
-        public override string ToLatex(ScopeContext? activeScope)
+        public override string ToLatex(LatexRenderContext context)
         {
-            string baseStr = LatexHelper.GetSlotLatex(BaseTokens, activeScope);
-            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, activeScope);
+            string baseStr = LatexHelper.GetSlotLatex(BaseTokens, context, 0);
+            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 1);
 
             return LatexHelper.Tagged("m-pow", $"{baseStr}^{{{expStr}}}");
         }
@@ -117,13 +170,13 @@ namespace Calculator_WinUI.Models
 
         public RootToken() : base(TokenType.Root) { }
 
-        public override string ToLatex(ScopeContext? activeScope)
+        public override string ToLatex(LatexRenderContext context)
         {
-            string radStr = LatexHelper.GetSlotLatex(RadicandTokens, activeScope);
+            string radStr = LatexHelper.GetSlotLatex(RadicandTokens, context, 1);
 
             // an empty index is a plain square root rather than an empty slot, so it gets no box; a
             // cursor standing in it still renders, which is what keeps the slot reachable while typing
-            string indexStr = LatexHelper.GetListLatex(IndexTokens, activeScope);
+            string indexStr = LatexHelper.GetListLatex(IndexTokens, context.Slot(0));
             if (indexStr.Length > 0) return LatexHelper.Tagged("m-root", $"\\sqrt[{indexStr}]{{{radStr}}}");
 
             return LatexHelper.Tagged("m-root", $"\\sqrt{{{radStr}}}");
@@ -138,13 +191,13 @@ namespace Calculator_WinUI.Models
 
         public LogarithmToken() : base(TokenType.Logarithm) { }
 
-        public override string ToLatex(ScopeContext? activeScope)
+        public override string ToLatex(LatexRenderContext context)
         {
-            string paramStr = LatexHelper.GetSlotLatex(ParameterTokens, activeScope);
+            string paramStr = LatexHelper.GetSlotLatex(ParameterTokens, context, 1);
 
             // no base written out means the common logarithm, the same default the evaluator applies, so
             // an untouched base slot disappears instead of showing an empty box
-            string baseStr = LatexHelper.GetListLatex(BaseTokens, activeScope);
+            string baseStr = LatexHelper.GetListLatex(BaseTokens, context.Slot(0));
             if (baseStr.Length > 0) return LatexHelper.Tagged("m-log", $"\\log_{{{baseStr}}}({paramStr})");
 
             return LatexHelper.Tagged("m-log", $"\\log({paramStr})");
@@ -159,10 +212,10 @@ namespace Calculator_WinUI.Models
 
         public FractionToken() : base(TokenType.Fraction) { }
 
-        public override string ToLatex(ScopeContext? activeScope)
+        public override string ToLatex(LatexRenderContext context)
         {
-            string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, activeScope);
-            string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, activeScope);
+            string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, context, 0);
+            string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, context, 1);
 
             return LatexHelper.Tagged("m-frac", $"\\frac{{{numStr}}}{{{denStr}}}");
         }
@@ -213,8 +266,9 @@ namespace Calculator_WinUI.Models
             return $"\\mathord{{{Tagged("m-op", symbol)}}}";
         }
 
-        public static string GetListLatex(List<MathToken> tokens, ScopeContext? activeScope)
+        public static string GetListLatex(List<MathToken> tokens, LatexRenderContext context)
         {
+            ScopeContext? activeScope = context.ActiveScope;
             bool isActiveList = activeScope != null && ReferenceEquals(tokens, activeScope.Tokens);
 
             string latex = "";
@@ -223,6 +277,7 @@ namespace Calculator_WinUI.Models
                 if (isActiveList && i == activeScope!.CursorIndex) latex += CursorLatex;
 
                 MathToken currentToken = tokens[i];
+                string tokenLatex;
 
                 // operators are the one kind that does not render as its own value; * and / get proper
                 // math symbols, and the size and spacing of all of them comes from the display
@@ -235,26 +290,44 @@ namespace Calculator_WinUI.Models
                         _ => currentToken.Value
                     };
 
-                    latex += TaggedOperator(symbol);
+                    tokenLatex = TaggedOperator(symbol);
                 }
                 else
                 {
-                    latex += currentToken.ToLatex(activeScope);
+                    tokenLatex = currentToken.ToLatex(context.ForToken(i));
                 }
+
+                latex += Addressed(tokenLatex, context, i);
             }
 
             if (isActiveList && activeScope!.CursorIndex >= tokens.Count) latex += CursorLatex;
             return latex;
         }
 
+        // hands a token to the display carrying the cursor position it begins at, which is what lets a
+        // click on it be turned back into a place in the tree
+        //
+        // which side of the token was hit decides whether the cursor goes before or after it, so one
+        // address per token is enough and the end of a list needs no marker of its own
+        private static string Addressed(string latex, LatexRenderContext context, int cursorIndex)
+        {
+            if (!context.EmitAddresses) return latex;
+
+            return $"\\htmlData{{p={context.Address(cursorIndex)}}}{{{latex}}}";
+        }
+
         // a slot of a structured token, where nothing at all would let the structure collapse; the box
         // only appears when the slot is truly empty, a cursor standing in it counts as content
-        public static string GetSlotLatex(List<MathToken> tokens, ScopeContext? activeScope)
+        public static string GetSlotLatex(List<MathToken> tokens, LatexRenderContext context, int slotIndex)
         {
-            string latex = GetListLatex(tokens, activeScope);
+            LatexRenderContext slotContext = context.Slot(slotIndex);
+
+            string latex = GetListLatex(tokens, slotContext);
             if (latex.Length > 0) return latex;
 
-            return EmptySlotLatex;
+            // the box is all there is to aim at in an empty slot, so it carries the address of the one
+            // position inside it; without that an empty numerator could never be clicked into
+            return Addressed(EmptySlotLatex, slotContext, 0);
         }
     }
 }

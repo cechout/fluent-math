@@ -105,7 +105,7 @@ namespace Calculator_WinUI.ViewModels
 
             // the starting display comes from the engine rather than a literal, so the cursor is already
             // where it belongs before the first key is pressed
-            InputAndResultText = _inputManager.GetLatexString();
+            PublishInput();
         }
 
 
@@ -228,7 +228,25 @@ namespace Calculator_WinUI.ViewModels
 
             // the engine has no change notification of its own, so the display is republished after
             // every single keypress
-            InputAndResultText = _inputManager.GetLatexString();
+            PublishInput();
+        }
+
+        // the input line is the only one that can be clicked, so it is the only one that asks for the
+        // addresses that make a click resolvable back into a cursor position
+        private void PublishInput()
+        {
+            InputAndResultText = _inputManager.GetLatexString(withCursor: true, withAddresses: true);
+        }
+
+        // a click in the display rather than a keypress; the address is written by the renderer and
+        // checked by the input manager, so an unusable one simply changes nothing
+        public void PlaceCursor(string address)
+        {
+            if (!_inputManager.SetCursorPosition(address)) return;
+
+            // clicking into the formula is editing it, the same way an arrow key after = is
+            _isShowingResult = false;
+            PublishInput();
         }
 
         // after = the display holds a result rather than the formula that produced it, so the next key
@@ -288,7 +306,7 @@ namespace Calculator_WinUI.ViewModels
         {
             _isShowingResult = false;
             _inputManager.Clear();
-            InputAndResultText = _inputManager.GetLatexString();
+            PublishInput();
             CalculationText = "";
         }
 
@@ -298,7 +316,7 @@ namespace Calculator_WinUI.ViewModels
             _isShowingResult = false;
 
             _inputManager.Backspace();
-            InputAndResultText = _inputManager.GetLatexString();
+            PublishInput();
         }
 
 

@@ -227,6 +227,51 @@ namespace Calculator_WinUI.Views
 
                 warmFonts();
 
+                // a click anywhere in the formula puts the cursor there
+                //
+                // every token carries the address of the position it begins at, so the token that was
+                // hit plus which half of it was hit is enough to name a position; structures nest, and
+                // the smallest box containing the point is the innermost token, which is the one meant
+                document.addEventListener('click', function (event) {
+                    const targets = document.querySelectorAll('[data-p]');
+                    if (targets.length === 0) return;
+
+                    let inner = null;
+                    let innerArea = Infinity;
+                    let nearest = null;
+                    let nearestGap = Infinity;
+
+                    for (const element of targets) {
+                        const box = element.getBoundingClientRect();
+                        const hit = event.clientX >= box.left && event.clientX <= box.right
+                            && event.clientY >= box.top && event.clientY <= box.bottom;
+
+                        if (hit) {
+                            const area = box.width * box.height;
+                            if (area < innerArea) { inner = element; innerArea = area; }
+                            continue;
+                        }
+
+                        // a click in the empty space beside the formula still has to land somewhere,
+                        // which for a right aligned display is most of the box
+                        const dx = Math.max(box.left - event.clientX, event.clientX - box.right, 0);
+                        const dy = Math.max(box.top - event.clientY, event.clientY - box.bottom, 0);
+                        const gap = dx * dx + dy * dy;
+                        if (gap < nearestGap) { nearest = element; nearestGap = gap; }
+                    }
+
+                    const target = inner || nearest;
+                    if (!target) return;
+
+                    const box = target.getBoundingClientRect();
+                    const address = target.dataset.p;
+                    const at = address.lastIndexOf('@');
+
+                    let index = parseInt(address.substring(at + 1), 10);
+                    if (event.clientX > box.left + box.width / 2) index++;
+
+                    window.chrome.webview.postMessage('cursor:' + address.substring(0, at) + '@' + index);
+                });
 
                 // a formula measured before its fonts arrived is measured at the wrong height, so the
                 // fit is taken again once they are in
@@ -244,6 +289,7 @@ namespace Calculator_WinUI.Views
         private readonly UISettings _uiSettings = new UISettings();
 
         // what the page puts in front of a message to say which kind it is
+        private const string CursorMessage = "cursor:";
         private const string ScrollMessage = "scroll:";
 
 
@@ -314,10 +360,17 @@ namespace Calculator_WinUI.Views
 
         // === messages from the page ===
 
-        // the page reports what its horizontal scroll currently looks like, as a plain string
+        // two kinds arrive, both as plain strings: where a click landed, and what the horizontal
+        // scroll currently looks like
         private void MathWebView2_WebMessageReceived(CoreWebView2 sender, CoreWebView2WebMessageReceivedEventArgs args)
         {
             string message = args.TryGetWebMessageAsString();
+
+            if (message.StartsWith(CursorMessage))
+            {
+                ViewModel.PlaceCursor(message.Substring(CursorMessage.Length));
+                return;
+            }
 
             if (message.StartsWith(ScrollMessage)) ShowScrollState(message.Substring(ScrollMessage.Length));
         }

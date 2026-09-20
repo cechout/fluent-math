@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using Calculator_WinUI.Models;
 
@@ -195,6 +196,10 @@ namespace Calculator_WinUI.Engines
         //
         // everything that walks between slots reads its answer out of this one list, so a further
         // structured token needs one case here instead of a branch in each of the four callers
+        //
+        // the order is also the slot index a click address carries, which MathToken hardcodes per token
+        // when it renders; reordering a token here without reordering it there sends a click into the
+        // wrong half of a structure
         private static List<TokenSlot> GetSlots(MathToken token)
         {
             switch (token)
@@ -660,6 +665,75 @@ namespace Calculator_WinUI.Engines
             parentCtx.CursorIndex = tokenIndex;
         }
 
+        // puts the cursor where a click in the display landed, from the address the renderer wrote onto
+        // the token that was hit: a chain of tokenIndex.slotIndex steps and the position within the last
+        // of them, for example 2.0/5.1@3
+        //
+        // everything here arrives from the browser, so none of it is trusted; a malformed address or an
+        // index that no longer exists leaves the cursor exactly where it was, which is also what happens
+        // when a stale render is clicked after the tree has already changed
+        public bool SetCursorPosition(string address)
+        {
+            if (string.IsNullOrEmpty(address)) return false;
+
+            int separator = address.IndexOf('@');
+            if (separator < 0) return false;
+
+            if (!TryParseIndex(address.Substring(separator + 1), out int cursorIndex)) return false;
+
+            // the walk builds the new stack beside the live one, so a bad step half way down cannot
+            // strand the cursor in a scope nobody asked for
+            var scopes = new List<ScopeContext> { _rootContext };
+            List<MathToken> tokens = _rootTokens;
+
+            string path = address.Substring(0, separator);
+            if (path.Length > 0)
+            {
+                foreach (string step in path.Split('/'))
+                {
+                    string[] parts = step.Split('.');
+                    if (parts.Length != 2) return false;
+
+                    if (!TryParseIndex(parts[0], out int tokenIndex)) return false;
+                    if (!TryParseIndex(parts[1], out int slotIndex)) return false;
+                    if (tokenIndex >= tokens.Count) return false;
+
+                    MathToken owner = tokens[tokenIndex];
+                    List<TokenSlot> slots = GetSlots(owner);
+                    if (slotIndex >= slots.Count) return false;
+
+                    // the scope being left parks its cursor on the token, the same way entering a
+                    // structure from the left does, so Backspace out of it finds the token where it
+                    // expects to
+                    scopes[scopes.Count - 1].CursorIndex = tokenIndex;
+
+                    TokenSlot slot = slots[slotIndex];
+                    scopes.Add(new ScopeContext(slot.Tokens, owner, slot.Role));
+                    tokens = slot.Tokens;
+                }
+            }
+
+            if (cursorIndex > tokens.Count) cursorIndex = tokens.Count;
+
+            _scopeStack.Clear();
+            foreach (ScopeContext scope in scopes)
+            {
+                _scopeStack.Push(scope);
+            }
+
+            CurrentContext.CursorIndex = cursorIndex;
+            return true;
+        }
+
+        // invariant culture on purpose, the address is machine written and a German system would
+        // otherwise read a grouping separator into it
+        private static bool TryParseIndex(string text, out int value)
+        {
+            if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) return false;
+
+            return value >= 0;
+        }
+
         public void Clear()
         {
             _rootTokens.Clear();
@@ -700,8 +774,8 @@ namespace Calculator_WinUI.Engines
         // empty input renders as "0" so the display is never blank
         //
         // the cursor belongs to the line being typed, so the history line asks for the same formula
-        // without it
-        public string GetLatexString(bool withCursor = true)
+        // without it, and without the addresses that make a formula clickable
+        public string GetLatexString(bool withCursor = true, bool withAddresses = false)
         {
             ScopeContext? activeScope = null;
             if (withCursor) activeScope = CurrentContext;
@@ -712,7 +786,7 @@ namespace Calculator_WinUI.Engines
                 return "0";
             }
 
-            return LatexHelper.GetListLatex(_rootTokens, activeScope);
+            return LatexHelper.GetListLatex(_rootTokens, new LatexRenderContext(activeScope, withAddresses));
         }
     }
 }
