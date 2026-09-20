@@ -15,7 +15,8 @@ namespace Calculator_WinUI.Engines
     // the grammar is the usual precedence ladder:
     //   expression := term (plus or minus, term)*
     //   term       := unary (times or divided by or implicit, unary)*
-    //   unary      := sign* atom
+    //   unary      := sign* postfix
+    //   postfix    := atom (factorial or reciprocal or percent)*
     //   atom       := number | constant | bracketed expression | fraction | power | root | function
     //                  | logarithm
     //
@@ -144,7 +145,25 @@ namespace Calculator_WinUI.Engines
                 }
             }
 
-            return ParseAtom(tokens, ref position);
+            return ParsePostfix(tokens, ref position);
+        }
+
+        // a postfix key binds tighter than a sign standing in front of it, so -5! is the negative of
+        // 5 factorial rather than the factorial of -5, which has none
+        private double ParsePostfix(IReadOnlyList<MathToken> tokens, ref int position)
+        {
+            double value = ParseAtom(tokens, ref position);
+
+            while (_error == EvaluationError.None && position < tokens.Count)
+            {
+                MathToken token = tokens[position];
+                if (token.Type != TokenType.Postfix) break;
+
+                position++;
+                value = ApplyPostfix(token.Value, value);
+            }
+
+            return value;
         }
 
         private double ParseAtom(IReadOnlyList<MathToken> tokens, ref int position)
@@ -226,6 +245,46 @@ namespace Calculator_WinUI.Engines
                 || token is RootToken
                 || token is FunctionToken
                 || token is LogarithmToken;
+        }
+
+
+        // === postfix ===
+
+        private double ApplyPostfix(string kind, double value)
+        {
+            switch (kind)
+            {
+                case "!":
+                    return Factorial(value);
+
+                case "inv":
+                    if (value == 0) return Fail(EvaluationError.DivideByZero);
+                    return 1.0 / value;
+
+                // plain division by a hundred, which is the meaning the FX-991 gives the key; the add-on
+                // percent of a business calculator, where 200 + 10% comes out as 220, is deliberately
+                // not what this does
+                case "%":
+                    return value / 100.0;
+            }
+
+            return Fail(EvaluationError.Syntax);
+        }
+
+        // only a whole count that is not negative has one, and 171! is already past the range of a
+        // double, so the ceiling is checked here rather than left to come back as an infinity
+        private double Factorial(double value)
+        {
+            if (value < 0 || value != Math.Floor(value)) return Fail(EvaluationError.Domain);
+            if (value > 170) return Fail(EvaluationError.Overflow);
+
+            double result = 1;
+            for (int factor = 2; factor <= (int)value; factor++)
+            {
+                result *= factor;
+            }
+
+            return result;
         }
 
 

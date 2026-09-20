@@ -164,6 +164,18 @@ namespace Calculator_WinUI.ViewModels
                         _inputManager.Move(NavDirection.Right);
                         break;
 
+                    case "cmd_fact":
+                        _inputManager.AddPostfix("!");
+                        break;
+
+                    case "cmd_inv":
+                        _inputManager.AddPostfix("inv");
+                        break;
+
+                    case "cmd_percent":
+                        _inputManager.AddPostfix("%");
+                        break;
+
                     case "cmd_sin":
                         _inputManager.StartFunction("sin");
                         break;

@@ -14,7 +14,8 @@ namespace Calculator_WinUI.Models
         SimpleFunction,
         Power,
         Root,
-        Logarithm
+        Logarithm,
+        Postfix
     }
 
 
@@ -126,6 +127,40 @@ namespace Calculator_WinUI.Models
                 default:
                     NumericValue = 0;
                     _latex = name;
+                    break;
+            }
+        }
+
+        public override string ToLatex(LatexRenderContext context) { return _latex; }
+    }
+
+    // x!, the reciprocal and percent; all three stand behind their operand instead of in front of it,
+    // which is the whole reason the evaluator has a postfix level at all
+    //
+    // the reciprocal is a bare superscript rather than a named call, so it sits on the operand the same
+    // way a Casio prints it
+    public class PostfixToken : MathToken
+    {
+        private readonly string _latex;
+
+        public PostfixToken(string kind) : base(TokenType.Postfix, kind)
+        {
+            switch (kind)
+            {
+                case "!":
+                    _latex = "!";
+                    break;
+
+                case "inv":
+                    _latex = "{}^{-1}";
+                    break;
+
+                case "%":
+                    _latex = "\\%";
+                    break;
+
+                default:
+                    _latex = kind;
                     break;
             }
         }

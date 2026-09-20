@@ -379,6 +379,20 @@ namespace Calculator_WinUI.Engines
             ctx.CursorIndex++;
         }
 
+        // a postfix key needs an operand in front of it, so a lone x! or percent is refused here rather
+        // than left for the evaluator to reject after the fact
+        //
+        // what counts as that operand is the same run FindOperandStart already answers for the fraction
+        // and the power keys, which is why a bracket group or a whole nested structure is enough
+        public void AddPostfix(string kind)
+        {
+            var ctx = CurrentContext;
+            if (FindOperandStart(ctx.Tokens, ctx.CursorIndex) == ctx.CursorIndex) return;
+
+            ctx.Tokens.Insert(ctx.CursorIndex, new PostfixToken(kind));
+            ctx.CursorIndex++;
+        }
+
         // brackets stay flat tokens in the list rather than a scope of their own, the way they do on a
         // pocket calculator; the evaluator is what pairs them up again
         public void AddBracket(bool open)
