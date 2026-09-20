@@ -88,6 +88,11 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
+        // --- revisit: angle unit selector ---
+        // the three keys below have no button anywhere yet; they were in the extra functions flyout and
+        // came back out because the unit is a mode rather than a function and wants a place of its own
+        // the evaluator and the header indicator are finished and stay, so the selector is markup plus
+        // three CommandParameters whenever that place is decided
         private void SetAngleMode(string sign)
         {
             if (sign == "cmd_angle_rad") { CurrentAngleMode = AngleMode.Radians; }
@@ -373,11 +378,28 @@ namespace Calculator_WinUI.ViewModels
 
             if (IsOperator(sign) || ContinuesFromResult(sign))
             {
-                _inputManager.SeedWithAns();
+                SeedWithShownResult();
                 return;
             }
 
             _inputManager.Clear();
+        }
+
+        // the next calculation continues from exactly what the display is showing, digits or fraction,
+        // rather than from an Ans token; watching the number stay put is what makes it read as the same
+        // calculation carrying on instead of a new one
+        private void SeedWithShownResult()
+        {
+            double value = _evaluator.LastAnswer;
+            bool hasFraction = ResultFormatter.TryToFraction(value, out long numerator, out long denominator);
+
+            if (_answerForm != AnswerForm.Decimal && hasFraction && denominator > 1)
+            {
+                _inputManager.SeedWithFraction(numerator, denominator);
+                return;
+            }
+
+            _inputManager.SeedWithValue(ResultFormatter.ToPlainString(value));
         }
 
         // the keys that read an operand to their left instead of opening a new one; pressing one of

@@ -163,13 +163,45 @@ namespace Calculator_WinUI.Tests
         // === continuing from a result ===
 
         [Fact]
-        public void SeedsTheNextCalculationWithASingleAns()
+        public void SeedsTheNextCalculationWithTheDigitsOfTheResult()
         {
             MathInputManager manager = Keys.Press("1", "+", "2");
-            manager.SeedWithAns();
+            manager.SeedWithValue("42");
+
+            // one token per digit, so the seeded result stays editable the same way a typed one is
+            Assert.Equal(2, manager.RootTokens.Count);
+            Assert.Equal(42, Value(manager));
+        }
+
+        [Fact]
+        public void SeedsALeadingMinusAsASign()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithValue("-7");
+
+            Assert.Equal(-7, Value(manager));
+        }
+
+        [Fact]
+        public void SeedsAShownFractionAsAFraction()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithFraction(5, 4);
 
             Assert.Single(manager.RootTokens);
-            Assert.IsType<AnsToken>(manager.RootTokens[0]);
+            Assert.IsType<FractionToken>(manager.RootTokens[0]);
+            Assert.Equal(1.25, Value(manager));
+        }
+
+        [Fact]
+        public void KeepsTypingAfterASeededResult()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithValue("2");
+            manager.AddOperator("+");
+            manager.AddNumber("3");
+
+            Assert.Equal(5, Value(manager));
         }
 
         [Fact]

@@ -814,17 +814,52 @@ namespace Calculator_WinUI.Engines
             _rootContext.CursorIndex = 0;
         }
 
-        // drops everything and leaves a single Ans behind, which is how a finished result is carried
-        // into the calculation that continues from it
+        // drops everything and leaves the finished result behind as ordinary tokens, which is how it is
+        // carried into the calculation that continues from it
         //
-        // a token rather than the digits of the result: the display only ever shows twelve significant
-        // digits, and seeding those back would quietly round the value at every step of a chain
-        public void SeedWithAns()
+        // the digits rather than an Ans token: the display is still showing that number, and swapping it
+        // for a word reads as the formula having been thrown away; it also keeps the result editable
+        // digit by digit
+        // the cost is that only the twelve significant digits on screen survive into the next step,
+        // which is what the Ans key in the flyout is there for
+        public void SeedWithValue(string numberText)
         {
             Clear();
 
-            _rootTokens.Add(new AnsToken());
+            FillWithDigits(_rootTokens, numberText);
             _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // the same for a result the S to D key is showing as a fraction, so the display keeps the shape
+        // it had; always the improper form, a mixed number put back as tokens would read as the whole
+        // part multiplied by the remainder
+        public void SeedWithFraction(long numerator, long denominator)
+        {
+            Clear();
+
+            var fraction = new FractionToken();
+            FillWithDigits(fraction.NumeratorTokens, numerator.ToString(CultureInfo.InvariantCulture));
+            FillWithDigits(fraction.DenominatorTokens, denominator.ToString(CultureInfo.InvariantCulture));
+
+            _rootTokens.Add(fraction);
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // one token per character, exactly what typing the same number by hand would leave behind; a
+        // leading minus is a sign rather than a digit, so it goes in as the operator the evaluator
+        // already reads that way
+        private static void FillWithDigits(List<MathToken> tokens, string numberText)
+        {
+            foreach (char character in numberText)
+            {
+                if (character == '-')
+                {
+                    tokens.Add(new MathToken(TokenType.Operator, "-"));
+                    continue;
+                }
+
+                tokens.Add(new MathToken(TokenType.Number, character.ToString()));
+            }
         }
 
 
