@@ -268,14 +268,26 @@ namespace Calculator_WinUI.Models
             return $"\\htmlClass{{{cssClass}}}{{{latex}}}";
         }
 
-        // an operator under the class the display sizes and spaces it with
+        // every token goes to the display as an ordinary atom, which is what puts the whole of the
+        // spacing between tokens under our control
         //
-        // \mathord is what makes that spacing controllable at all: KaTeX pads a binary operator with a
-        // fixed medium space on either side, and demoting it to an ordinary atom is the only way to get
-        // that space back before the css puts a chosen amount of it in again
+        // KaTeX spaces adjacent atoms by their class pair: a binary operator carries a fixed medium
+        // space on either side, and an ordinary atom before an operator name such as sin or cos gets
+        // a thin space between them, neither of which any stylesheet can reach
+        //
+        // measured on 1 + cos: without this the plus sat 2.15px from what precedes it and 8.16px from
+        // what follows, and the difference vanished as soon as anything untyped stood between them,
+        // which is exactly what a caret is; with every token an ord the pair is always ord to ord,
+        // the spacing is always zero, and a caret between two tokens can no longer change anything
+        public static string Atomic(string latex)
+        {
+            return $"\\mathord{{{latex}}}";
+        }
+
+        // an operator under the class the display sizes and spaces it with
         public static string TaggedOperator(string symbol)
         {
-            return $"\\mathord{{{Tagged("m-op", symbol)}}}";
+            return Atomic(Tagged("m-op", symbol));
         }
 
         public static string GetListLatex(List<MathToken> tokens, LatexRenderContext context)
@@ -302,14 +314,14 @@ namespace Calculator_WinUI.Models
                         _ => currentToken.Value
                     };
 
-                    tokenLatex = TaggedOperator(symbol);
+                    tokenLatex = Tagged("m-op", symbol);
                 }
                 else
                 {
                     tokenLatex = currentToken.ToLatex(context.ForToken(i));
                 }
 
-                latex += Addressed(tokenLatex, context, i);
+                latex += Addressed(Atomic(tokenLatex), context, i);
             }
 
             if (isActiveList && activeScope!.CursorIndex >= tokens.Count) latex += CursorLatex;
