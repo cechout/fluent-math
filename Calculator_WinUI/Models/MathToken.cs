@@ -77,8 +77,8 @@ namespace Calculator_WinUI.Models
     // exactly one override here and no change anywhere else
     //
     // an empty child list falls back to an empty-slot box so a half-typed structure still draws instead
-    // of collapsing; when the cursor sits in that slot it takes the place of the box, which is what makes
-    // the cursor visible inside a structure that has nothing in it yet
+    // of collapsing; a cursor standing in that slot does not replace the box, it sits beside it, because
+    // the box is the only thing holding the slot open
     //
     // ToLatex takes a render context because the cursor is drawn into the LaTeX itself, and because a
     // token has to hand its slots their own address; everything else about the context is passed down
@@ -230,19 +230,22 @@ namespace Calculator_WinUI.Models
     // rendered without a cursor
     public static class LatexHelper
     {
-        // an anchor that draws nothing: zero wide, so the caret displaces no digit, and as tall as
-        // roughly a digit, so a slot holding nothing but the cursor keeps its height instead of
-        // collapsing onto the fraction bar
+        // an anchor of no size at all, in either direction; the visible bar is a css border on the
+        // tagged span, and the class only survives when the render call runs with trust enabled
         //
-        // the visible bar is a css border on the tagged span; the class only survives when the render
-        // call runs with trust enabled
+        // giving it any extent in the LaTeX has gone wrong twice, because KaTeX measures the slot the
+        // cursor stands in and lays the structure around it out from that measurement
         //
-        // \vphantom{0} would read as the more obvious way to reserve that height, and it is a trap:
-        // KaTeX builds it as an rlap, whose inner box is absolutely positioned inside a zero-width
-        // parent and therefore sticks a digits width out to the right; an absolutely positioned
-        // descendant counts towards the scrollable area of the display, so the horizontal scrollbar
-        // then shows permanently with nothing to scroll to
-        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0em}{0.7em}}";
+        // a height made a denominator report itself taller than its own digits, so KaTeX pushed the
+        // denominator further down and the whole fraction climbed as the display recentred it
+        //
+        // \vphantom{0} reads as the natural way to reserve a height and is worse: KaTeX builds it as
+        // an rlap, whose inner box is absolutely positioned inside a zero-width parent and hangs a
+        // digits width out to the right, which counts towards the scrollable area and left the
+        // horizontal scrollbar showing permanently with nothing to scroll to
+        //
+        // an empty slot keeps its height from its box instead, see GetSlotLatex
+        public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0em}{0em}}";
 
         // the box a Casio shows for a slot that still has to be filled
         private const string EmptySlotLatex = "\\square";
@@ -326,11 +329,15 @@ namespace Calculator_WinUI.Models
             LatexRenderContext slotContext = context.Slot(slotIndex);
 
             string latex = GetListLatex(tokens, slotContext);
-            if (latex.Length > 0) return latex;
+            if (tokens.Count > 0) return latex;
 
-            // the box is all there is to aim at in an empty slot, so it carries the address of the one
-            // position inside it; without that an empty numerator could never be clicked into
-            return Addressed(EmptySlotLatex, slotContext, 0);
+            // a cursor standing in the slot does not count as content, so the box stays underneath it
+            // rather than being replaced by it; that is what holds the slot open, and it is why the
+            // caret itself can be given no size at all, see CursorLatex
+            //
+            // the box is also all there is to aim at in an empty slot, so it carries the address of
+            // the one position inside it; without that an empty numerator could never be clicked into
+            return latex + Addressed(EmptySlotLatex, slotContext, 0);
         }
     }
 }
