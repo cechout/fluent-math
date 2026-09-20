@@ -167,6 +167,16 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void CarriesAPostfixThroughAnImplicitMultiplication()
+        {
+            // the implicit branch has to go through the postfix level too, otherwise the factorial is
+            // left lying in the token list and the whole formula comes back as a syntax error
+            Assert.Equal(12, Value("2", "(", "3", ")", "!"));
+            Assert.Equal(6, Value("(", "1", "+", "2", ")", "(", "2", ")", "!"));
+            Assert.Equal(1, Value("2", "(", "2", ")", "inv"));
+        }
+
+        [Fact]
         public void ChainsTwoPostfixKeys()
         {
             Assert.Equal(0.5, Value("2", "!", "inv"));

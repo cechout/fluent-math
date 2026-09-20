@@ -120,9 +120,14 @@ namespace Calculator_WinUI.Engines
 
                 // no operator but something that can start an atom: implicit multiplication, so that
                 // 3(4+5) and 2sin(30) work the way they do on paper
+                //
+                // through the postfix level rather than straight to the atom, the same way the explicit
+                // times and divided by above reach it; going to the atom left the factorial in 2(3)!
+                // lying in the list with nothing to consume it, and the formula came back as a syntax
+                // error instead of 12
                 if (StartsAtom(token))
                 {
-                    value *= ParseAtom(tokens, ref position);
+                    value *= ParsePostfix(tokens, ref position);
                     continue;
                 }
 
