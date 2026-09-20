@@ -43,6 +43,14 @@ namespace Calculator_WinUI.Models
         public double FunctionScale { get; set; } = 1.0;
 
         public double FractionBarThickness { get; set; } = 0.04; // em, the KaTeX default
+
+        // the one lever on how big the content of a fraction is, and it is a step rather than a factor
+        //
+        // KaTeX shrinks a numerator and a denominator itself, to script size, and writes the clearances
+        // around the bar to match; false keeps that, true asks for a display style fraction instead,
+        // where both halves stay at full text size and the bar takes the wide display clearances, which
+        // is a far taller fraction
+        public bool UseDisplayFractions { get; set; } = false;
         public bool UseSansSerif { get; set; } = true; // upright sans digits, the way a Casio display draws them
 
         // operators are sized and spaced on their own, because KaTeX draws one at full size with a fixed

@@ -775,7 +775,8 @@ namespace Calculator_WinUI.Engines
         //
         // the cursor belongs to the line being typed, so the history line asks for the same formula
         // without it, and without the addresses that make a formula clickable
-        public string GetLatexString(bool withCursor = true, bool withAddresses = false)
+        public string GetLatexString(bool withCursor = true, bool withAddresses = false,
+            bool displayFractions = false)
         {
             ScopeContext? activeScope = null;
             if (withCursor) activeScope = CurrentContext;
@@ -786,7 +787,8 @@ namespace Calculator_WinUI.Engines
                 return "0";
             }
 
-            return LatexHelper.GetListLatex(_rootTokens, new LatexRenderContext(activeScope, withAddresses));
+            var context = new LatexRenderContext(activeScope, withAddresses, displayFractions);
+            return LatexHelper.GetListLatex(_rootTokens, context);
         }
     }
 }

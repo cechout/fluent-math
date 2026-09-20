@@ -231,11 +231,15 @@ namespace Calculator_WinUI.ViewModels
             PublishInput();
         }
 
+        // set from the page out of MathDisplayStyle, since the engine has no idea a display exists
+        public bool UseDisplayFractions { get; set; }
+
         // the input line is the only one that can be clicked, so it is the only one that asks for the
         // addresses that make a click resolvable back into a cursor position
         private void PublishInput()
         {
-            InputAndResultText = _inputManager.GetLatexString(withCursor: true, withAddresses: true);
+            InputAndResultText = _inputManager.GetLatexString(withCursor: true, withAddresses: true,
+                displayFractions: UseDisplayFractions);
         }
 
         // a click in the display rather than a keypress; the address is written by the renderer and
@@ -287,7 +291,8 @@ namespace Calculator_WinUI.ViewModels
         // Math ERROR can be corrected instead of retyped from scratch
         private void CalculateResult()
         {
-            CalculationText = _inputManager.GetLatexString(withCursor: false) + "=";
+            CalculationText = _inputManager.GetLatexString(withCursor: false,
+                displayFractions: UseDisplayFractions) + "=";
 
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (result.IsSuccess)

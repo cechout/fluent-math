@@ -452,6 +452,10 @@ namespace Calculator_WinUI.Views
         {
             _historyStyle = MathDisplayStyle.ForHistoryLine(this.ActualTheme);
             _inputStyle = MathDisplayStyle.ForInputLine(this.ActualTheme);
+
+            // the one knob that cannot travel as css, because display style is a decision KaTeX makes
+            // while parsing rather than something a stylesheet can reach afterwards
+            ViewModel.UseDisplayFractions = _inputStyle.UseDisplayFractions;
         }
 
         // a template literal rather than a quoted string, so the css can arrive on several lines

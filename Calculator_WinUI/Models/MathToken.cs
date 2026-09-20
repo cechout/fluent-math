@@ -32,17 +32,20 @@ namespace Calculator_WinUI.Models
     {
         public ScopeContext? ActiveScope { get; }
         public bool EmitAddresses { get; } // off for the history line, nothing there is clickable
+        public bool DisplayFractions { get; } // MathDisplayStyle.UseDisplayFractions, passed through
 
         private readonly string _path; // address of the list being rendered, empty at the root
         private readonly int _tokenIndex; // the token in that list whose slots come next
 
-        public LatexRenderContext(ScopeContext? activeScope, bool emitAddresses)
-            : this(activeScope, emitAddresses, "", 0) { }
+        public LatexRenderContext(ScopeContext? activeScope, bool emitAddresses, bool displayFractions)
+            : this(activeScope, emitAddresses, displayFractions, "", 0) { }
 
-        private LatexRenderContext(ScopeContext? activeScope, bool emitAddresses, string path, int tokenIndex)
+        private LatexRenderContext(ScopeContext? activeScope, bool emitAddresses, bool displayFractions,
+            string path, int tokenIndex)
         {
             ActiveScope = activeScope;
             EmitAddresses = emitAddresses;
+            DisplayFractions = displayFractions;
             _path = path;
             _tokenIndex = tokenIndex;
         }
@@ -50,7 +53,7 @@ namespace Calculator_WinUI.Models
         // remembers which token of the current list is being rendered, so its slots can name themselves
         public LatexRenderContext ForToken(int tokenIndex)
         {
-            return new LatexRenderContext(ActiveScope, EmitAddresses, _path, tokenIndex);
+            return new LatexRenderContext(ActiveScope, EmitAddresses, DisplayFractions, _path, tokenIndex);
         }
 
         // descends into one slot of that token
@@ -59,7 +62,7 @@ namespace Calculator_WinUI.Models
             string step = $"{_tokenIndex}.{slotIndex}";
             string path = _path.Length == 0 ? step : $"{_path}/{step}";
 
-            return new LatexRenderContext(ActiveScope, EmitAddresses, path, 0);
+            return new LatexRenderContext(ActiveScope, EmitAddresses, DisplayFractions, path, 0);
         }
 
         // the address of one cursor position in the list being rendered
@@ -217,7 +220,10 @@ namespace Calculator_WinUI.Models
             string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, context, 0);
             string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, context, 1);
 
-            return LatexHelper.Tagged("m-frac", $"\\frac{{{numStr}}}{{{denStr}}}");
+            // dfrac keeps both halves at full text size and takes the wide display clearances with it
+            string command = context.DisplayFractions ? "dfrac" : "frac";
+
+            return LatexHelper.Tagged("m-frac", $"\\{command}{{{numStr}}}{{{denStr}}}");
         }
     }
 
