@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Calculator_WinUI.Models
@@ -94,13 +95,81 @@ namespace Calculator_WinUI.Models
         }
 
         // the wording is the one a Casio uses, short enough to still fit the display at full size
+        public static string ErrorToText(EvaluationError error)
+        {
+            if (error == EvaluationError.Syntax) return "Syntax ERROR";
+
+            return "Math ERROR";
+        }
+
         public static string ErrorToLatex(EvaluationError error)
         {
-            string text;
-            if (error == EvaluationError.Syntax) { text = "Syntax ERROR"; }
-            else { text = "Math ERROR"; }
+            return $"\\text{{{ErrorToText(error)}}}";
+        }
 
-            return $"\\text{{{text}}}";
+
+        // === the same values as tokens ===
+
+        // what the native display draws, mirroring ToLatex arm for arm rather than parsing what that
+        // produces, so the two shapes cannot drift apart; a change to either belongs in both
+        public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions)
+        {
+            if (form != AnswerForm.Decimal
+                && TryToFraction(value, out long numerator, out long denominator)
+                && denominator > 1)
+            {
+                long whole = form == AnswerForm.Mixed ? numerator / denominator : 0;
+                if (whole == 0) return new List<MathToken> { FractionTokens(numerator, denominator) };
+
+                // the sign rides on the whole part, so the remainder is always written positive
+                List<MathToken> mixed = DigitTokens(whole.ToString(CultureInfo.InvariantCulture));
+                mixed.Add(FractionTokens(Math.Abs(numerator % denominator), denominator));
+
+                return mixed;
+            }
+
+            return ToTokens(value);
+        }
+
+        public static List<MathToken> ToTokens(double value)
+        {
+            double absolute = Math.Abs(value);
+            if (value != 0 && (absolute >= ScientificUpperBound || absolute < ScientificLowerBound))
+            {
+                (string mantissa, int exponent) = SplitScientific(value);
+
+                List<MathToken> tokens = DigitTokens(mantissa);
+                ScientificToken scientific = new ScientificToken();
+                scientific.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
+                tokens.Add(scientific);
+
+                return tokens;
+            }
+
+            return DigitTokens(ToPlainString(value));
+        }
+
+        private static FractionToken FractionTokens(long numerator, long denominator)
+        {
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.AddRange(DigitTokens(numerator.ToString(CultureInfo.InvariantCulture)));
+            fraction.DenominatorTokens.AddRange(DigitTokens(denominator.ToString(CultureInfo.InvariantCulture)));
+
+            return fraction;
+        }
+
+        // a leading minus goes in as part of the number rather than as an operator token: these tokens are
+        // only ever drawn and never evaluated, and an operator would take the spacing that belongs between
+        // two operands
+        private static List<MathToken> DigitTokens(string text)
+        {
+            List<MathToken> tokens = new List<MathToken>();
+            foreach (char character in text)
+            {
+                tokens.Add(new MathToken(TokenType.Number, character == '-' ? "−" : character.ToString()));
+            }
+
+            return tokens;
         }
 
 
@@ -186,6 +255,16 @@ namespace Calculator_WinUI.Models
 
         private static string ToScientificLatex(double value)
         {
+            (string mantissaText, int exponent) = SplitScientific(value);
+
+            // the times sign goes through the same helper the input line uses, so a result is not spaced
+            // differently from the formula that produced it
+            return $"{mantissaText}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
+        }
+
+        // shared by both output shapes, so a rounding carry is handled in one place rather than two
+        private static (string Mantissa, int Exponent) SplitScientific(double value)
+        {
             int exponent = (int)Math.Floor(Math.Log10(Math.Abs(value)));
             double mantissa = RoundToSignificantDigits(value / Math.Pow(10, exponent), SignificantDigits);
 
@@ -196,10 +275,7 @@ namespace Calculator_WinUI.Models
                 exponent++;
             }
 
-            // the times sign goes through the same helper the input line uses, so a result is not spaced
-            // differently from the formula that produced it
-            string mantissaText = mantissa.ToString(PlainNumberFormat, CultureInfo.InvariantCulture);
-            return $"{mantissaText}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
+            return (mantissa.ToString(PlainNumberFormat, CultureInfo.InvariantCulture), exponent);
         }
 
         private static double RoundToSignificantDigits(double value, int digits)

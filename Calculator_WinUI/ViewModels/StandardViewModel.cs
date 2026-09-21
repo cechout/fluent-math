@@ -60,6 +60,34 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
+        // what the input line draws, and where the caret stands in it
+        //
+        // while a formula is being typed these are the live tree and the live cursor rather than a copy:
+        // the display is rebuilt on every keystroke anyway, and the caret is matched by list identity,
+        // which is the only thing that tells one empty slot from another
+        //
+        // a result replaces the tokens and drops the caret; a failed evaluation replaces both with a line
+        // of text, because an error message is not a formula
+        private IReadOnlyList<MathToken> _inputTokens = new List<MathToken>();
+        public IReadOnlyList<MathToken> InputTokens => _inputTokens;
+
+        public IReadOnlyList<MathToken> CaretTokens { get; private set; }
+        public int CaretIndex { get; private set; }
+        public string InputErrorText { get; private set; }
+
+        private void PublishInputDisplay(IReadOnlyList<MathToken> tokens,
+            IReadOnlyList<MathToken> caretTokens, int caretIndex, string errorText)
+        {
+            _inputTokens = tokens;
+            CaretTokens = caretTokens;
+            CaretIndex = caretIndex;
+            InputErrorText = errorText;
+
+            // always raised, never guarded on a change: while typing the list is the same object every
+            // time and only its contents move
+            OnPropertyChanged(nameof(InputTokens));
+        }
+
         private string _calculationText = "";
         public string CalculationText
         {
@@ -362,6 +390,18 @@ namespace Calculator_WinUI.ViewModels
         {
             InputAndResultText = _inputManager.GetLatexString(withCursor: true, withAddresses: true,
                 displayFractions: UseDisplayFractions);
+
+            // an empty formula shows a zero rather than nothing, so the display is never blank; the caret
+            // then stands behind that zero the same way it stands behind a typed digit
+            if (_inputManager.RootTokens.Count == 0)
+            {
+                List<MathToken> zero = new List<MathToken> { new MathToken(TokenType.Number, "0") };
+                PublishInputDisplay(zero, zero, 1, null);
+                return;
+            }
+
+            PublishInputDisplay(_inputManager.RootTokens,
+                _inputManager.ActiveTokens, _inputManager.ActiveCursorIndex, null);
         }
 
         // a click in the display rather than a keypress; the address is written by the renderer and
@@ -464,12 +504,14 @@ namespace Calculator_WinUI.ViewModels
             else
             {
                 InputAndResultText = ResultFormatter.ErrorToLatex(result.Error);
+                PublishInputDisplay(new List<MathToken>(), null, 0, ResultFormatter.ErrorToText(result.Error));
             }
         }
 
         private void PublishResult(double value)
         {
             InputAndResultText = ResultFormatter.ToLatex(value, _answerForm, UseDisplayFractions);
+            PublishInputDisplay(ResultFormatter.ToTokens(value, _answerForm, UseDisplayFractions), null, 0, null);
         }
 
         // cycles the shown result between a decimal, an improper fraction and a mixed number, skipping

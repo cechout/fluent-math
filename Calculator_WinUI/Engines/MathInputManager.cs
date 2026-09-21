@@ -820,6 +820,13 @@ namespace Calculator_WinUI.Engines
         // read-only view of the tree for the evaluator; this class stays the only thing that mutates it
         public IReadOnlyList<MathToken> RootTokens => _rootTokens;
 
+        // where the caret stands, for a display that draws it itself
+        //
+        // the list is handed out by reference on purpose: that identity is what tells one empty slot from
+        // another, and two of them compare equal by contents
+        public IReadOnlyList<MathToken> ActiveTokens => CurrentContext.Tokens;
+        public int ActiveCursorIndex => CurrentContext.CursorIndex;
+
         // empty input renders as "0" so the display is never blank
         //
         // the cursor belongs to the line being typed, so the history line asks for the same formula
