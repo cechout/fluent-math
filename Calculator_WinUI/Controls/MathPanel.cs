@@ -28,6 +28,11 @@ namespace Calculator_WinUI.Controls
 
         private MathBox _root;
         private IReadOnlyList<MathToken> _tokens = new List<MathToken>();
+        private CaretTarget _caret;
+        private string _text;
+
+        // where the caret ended up, for a scroller that has to keep it in view; null when there is none
+        public Rect? CaretBounds { get; private set; }
 
         private readonly struct PlacedElement
         {
@@ -86,9 +91,20 @@ namespace Calculator_WinUI.Controls
         //
         // the whole tree is thrown away and made again rather than diffed, because a formula is a handful
         // of elements and a keystroke can change any of them
-        public void Show(IReadOnlyList<MathToken> tokens)
+        public void Show(IReadOnlyList<MathToken> tokens, CaretTarget caret = default)
         {
+            _text = null;
             _tokens = tokens ?? new List<MathToken>();
+            _caret = caret;
+            Rebuild();
+        }
+
+        // a line of text rather than a formula, which is what an error message is
+        public void ShowText(string text)
+        {
+            _text = text;
+            _tokens = new List<MathToken>();
+            _caret = default;
             Rebuild();
         }
 
@@ -97,8 +113,21 @@ namespace Calculator_WinUI.Controls
             Children.Clear();
             _placed.Clear();
 
-            MathLayoutEngine engine = new MathLayoutEngine(_measurer, LayoutStyle);
-            _root = engine.BuildRow(_tokens);
+            CaretBounds = null;
+
+            if (_text != null)
+            {
+                TextMetrics metrics = _measurer.Measure(_text, LayoutStyle.FontSizePx);
+                _root = new RowBox(new List<MathBox>
+                {
+                    new TextRunBox(_text, LayoutStyle.FontSizePx, metrics, new List<MathToken>())
+                });
+            }
+            else
+            {
+                MathLayoutEngine engine = new MathLayoutEngine(_measurer, LayoutStyle, _caret);
+                _root = engine.BuildRow(_tokens);
+            }
 
             // placed against its own top edge, so every bound below is already in the space this panel
             // arranges in
@@ -198,12 +227,15 @@ namespace Calculator_WinUI.Controls
             double bottom = caret.Baseline - caret.FontSize * LayoutStyle.CursorShift;
             double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
 
+            Rect caretRect = new Rect(caret.X - width / 2, bottom - height, width, height);
+            CaretBounds = caretRect;
+
             Add(new Rectangle
             {
                 Fill = CaretInk ?? Ink,
                 RadiusX = radius,
                 RadiusY = radius
-            }, new Rect(caret.X - width / 2, bottom - height, width, height));
+            }, caretRect);
         }
 
         private void RealizeRun(TextRunBox run)

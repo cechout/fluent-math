@@ -7,7 +7,6 @@
     xmlns:local="using:Calculator_WinUI.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:Calculator_WinUI.Controls"
-    xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     mc:Ignorable="d">
 
     <Page.Resources>
@@ -82,16 +81,9 @@
 
         <!--  calculator display  -->
         <!--
-            both lines are KaTeX in a WebView2 rather than a TextBlock, because
-            XAML cannot draw a stacked fraction or a real root sign
-            Top is the previous calculation, bottom is the current input; content is pushed in from
-            the code-behind, there is no binding on a WebView2
-        -->
-        <!--
-            the history line is drawn by a MathPanel out of ordinary XAML elements, the input line is
-            still KaTeX in a WebView2; that one paints ApplicationPageBackgroundThemeBrush behind its
-            page and no backdrop ever reaches it, see
-            https://github.com/microsoft/microsoft-ui-xaml/issues/6527
+            both lines are drawn by a MathPanel out of ordinary XAML elements
+            top is the previous calculation, bottom is what is being typed; content is pushed in from
+            the code-behind, since neither line can be bound to
         -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
@@ -105,22 +97,21 @@
                 Margin="4,0,4,0"
                 Ink="{ThemeResource TextFillColorSecondaryBrush}" />
 
-            <!--
-                the input line scrolls inside the page, the scrollbar only mirrors that
-                A WebView2 brings its own Chromium scrollbar, which follows no Fluent theme, so
-                that one is hidden and this WinUI one shows the same state; it stays collapsed
-                until the formula is really wider than the display
-            -->
-            <Grid Grid.Row="1" Margin="4,0,4,8">
-                <WebView2 x:Name="MathWebView2" DefaultBackgroundColor="Transparent" />
+            <!--  the input line scrolls sideways once the formula is wider than the display  -->
+            <ScrollViewer
+                x:Name="InputScroller"
+                Grid.Row="1"
+                Margin="4,0,4,8"
+                HorizontalScrollBarVisibility="Auto"
+                HorizontalScrollMode="Auto"
+                VerticalScrollBarVisibility="Disabled"
+                VerticalScrollMode="Disabled">
 
-                <primitives:ScrollBar
-                    x:Name="InputScrollBar"
-                    VerticalAlignment="Bottom"
-                    IndicatorMode="MouseIndicator"
-                    Orientation="Horizontal"
-                    Visibility="Collapsed" />
-            </Grid>
+                <controls:MathPanel
+                    x:Name="MathDisplay2"
+                    CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    Ink="{ThemeResource TextFillColorPrimaryBrush}" />
+            </ScrollViewer>
         </Grid>
 
 
