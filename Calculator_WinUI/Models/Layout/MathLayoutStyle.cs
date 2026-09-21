@@ -113,6 +113,13 @@ namespace Calculator_WinUI.Models.Layout
         public double RadicalRuleThickness { get; set; } = 0.05; // em, the bar over the radicand
         public double RadicalVerticalGap { get; set; } = 0.04;    // em between that bar and the radicand
 
+        // how far the bar reaches past the end of the radicand
+        //
+        // it is what a radical looks like in print, and it is load bearing besides: without it the end of
+        // the radicand and the position behind the whole root are the same pixel, and crossing that place
+        // costs a press of an arrow key that changes nothing on screen
+        public double RadicalTrailingPad { get; set; } = 0.08;
+
         // where the index sits, as a fraction of the height of the sign it stands on
         public double RadicalIndexRaise { get; set; } = 0.45;
 

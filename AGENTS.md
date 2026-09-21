@@ -123,7 +123,9 @@ dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
 
 The formula layout is covered too, under `Models/Layout/`: it is arithmetic over boxes and its text
 metrics arrive through an interface, so a test hands it numbers it chose itself and asserts the result
-rather than looking at a screenshot.
+rather than looking at a screenshot. Two files hold the layout and the input engine against each other,
+which is where the bugs neither of them can see alone turn up: a click has to land the caret on the
+point it was aimed at, and a press of an arrow key has to move the caret somewhere the eye can follow.
 
 What is still not covered is the drawing: no test here opens a window, and nothing checks that a box
 ends up on screen where the layout said it would. The bar for a change is that the tests stay green,

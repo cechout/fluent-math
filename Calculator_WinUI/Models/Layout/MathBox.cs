@@ -214,7 +214,7 @@ namespace Calculator_WinUI.Models.Layout
         private readonly double _indexRaise;
 
         public RootBox(MathBox index, MathBox radicand, double hookWidth, double ruleThickness,
-            double verticalGap, double indexRaise)
+            double verticalGap, double indexRaise, double trailingPad)
         {
             Index = index;
             Radicand = radicand;
@@ -223,7 +223,9 @@ namespace Calculator_WinUI.Models.Layout
 
             SignAscent = radicand.Ascent + verticalGap + ruleThickness;
 
-            Width = IndexWidth + hookWidth + radicand.Width;
+            // the bar runs the full width of the box, so the pad at the end is what makes it reach past
+            // the radicand rather than stopping dead on its last glyph
+            Width = IndexWidth + hookWidth + radicand.Width + trailingPad;
             Descent = radicand.Descent;
 
             // the index may stand higher than the sign it sits on, and then it is what sets the height

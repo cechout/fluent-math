@@ -286,7 +286,8 @@ namespace Calculator_WinUI.Models.Layout
                 size * _style.RadicalHookWidth,
                 size * _style.RadicalRuleThickness,
                 size * _style.RadicalVerticalGap,
-                _style.RadicalIndexRaise);
+                _style.RadicalIndexRaise,
+                size * _style.RadicalTrailingPad);
         }
 
         private RowBox BuildLogarithm(LogarithmToken token, double fontSize, int scriptLevel, string path, int tokenIndex)

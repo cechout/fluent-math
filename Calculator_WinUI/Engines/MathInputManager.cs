@@ -60,7 +60,17 @@ namespace Calculator_WinUI.Engines
 
         // moving inside the current scope always wins; only once the cursor is already at a scope edge,
         // or the direction is Up/Down, does the scopes own role decide where it goes next
+        //
+        // one press has to move the caret somewhere the eye can follow, which is what the call below the
+        // move is for: it keeps the cursor off a position that is drawn where the one beside it is drawn
         public void Move(NavDirection direction)
+        {
+            MoveOnce(direction);
+
+            EnterTokensThatBeginWithTheirFirstSlot();
+        }
+
+        private void MoveOnce(NavDirection direction)
         {
             var ctx = CurrentContext;
 
@@ -127,6 +137,34 @@ namespace Calculator_WinUI.Engines
             return true;
         }
 
+        // a power draws nothing in front of its base, so the position in front of the token and the first
+        // position inside the base are one place on screen; every other structured token draws something
+        // there, a bar with the numerator centred over it, a radical sign, or a name
+        //
+        // `MathLayoutEngine.BuildPower` is what makes that true, and the two have to move together
+        private static bool BeginsWithItsFirstSlot(MathToken token)
+        {
+            return token is PowerToken;
+        }
+
+        // the cursor never stands in front of such a token, it stands in the slot instead
+        //
+        // standing on both costs a press of an arrow key that changes nothing the eye can see, in either
+        // direction. The inner one is the one that is kept, because what is typed there joins the number
+        // that is on screen rather than landing beside a structure the display draws no boundary for
+        private void EnterTokensThatBeginWithTheirFirstSlot()
+        {
+            while (true)
+            {
+                var ctx = CurrentContext;
+                if (ctx.CursorIndex >= ctx.Tokens.Count) return;
+
+                MathToken token = ctx.Tokens[ctx.CursorIndex];
+                if (!BeginsWithItsFirstSlot(token)) return;
+                if (!TryEnterTokenFromLeft(token)) return;
+            }
+        }
+
         // Left and Right first walk to the neighbouring slot of the same token and only leave the token
         // once there is no neighbour left, which is what makes a root index, a logarithm base or the far
         // half of a fraction reachable with the arrow keys alone
@@ -138,6 +176,10 @@ namespace Calculator_WinUI.Engines
 
                 _scopeStack.Pop();
                 PositionCursorAtParentToken(context.ParentToken, before: true);
+
+                // that position is the place the cursor just left when the token begins with the slot it
+                // came out of, so the move carries straight on out of it rather than stopping there
+                if (BeginsWithItsFirstSlot(context.ParentToken)) MoveOnce(NavDirection.Left);
                 return;
             }
 
@@ -730,6 +772,11 @@ namespace Calculator_WinUI.Engines
             }
 
             CurrentContext.CursorIndex = cursorIndex;
+
+            // an address in front of a token that begins with its own first slot names a place the caret
+            // is never drawn on its own, so it is resolved to the one inside the slot
+            EnterTokensThatBeginWithTheirFirstSlot();
+
             return true;
         }
 
