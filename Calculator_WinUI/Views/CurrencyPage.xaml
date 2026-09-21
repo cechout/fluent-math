@@ -30,7 +30,8 @@
             </Grid.ColumnDefinitions>
 
 
-            <!--  header  -->
+            <!--  page header  -->
+            <!--  (the left margin clears the navigation views hamburger button)  -->
             <Grid
                 Grid.Row="0"
                 Grid.ColumnSpan="4"
@@ -48,6 +49,7 @@
                         Style="{ThemeResource SubtitleTextBlockStyle}"
                         Text="Currency" />
 
+                    <!--  planned: compact mode toggle  -->
                     <!--<Button
                         Width="32"
                         Height="32"
@@ -57,6 +59,7 @@
                     </Button>-->
                 </StackPanel>
 
+                <!--  planned: history flyout  -->
                 <!--<Button
                     Width="32"
                     Height="32"
@@ -115,6 +118,8 @@
                 </DropDownButton.Flyout>
             </DropDownButton>
 
+            <!--  amount being typed  -->
+            <!--  (scrolls sideways because a long number must not resize the layout)  -->
             <ScrollViewer
                 Grid.Row="2"
                 Grid.Column="0"
@@ -135,6 +140,7 @@
 
 
             <!--  currency 2 selection  -->
+            <!--  (same picker as currency 1)  -->
             <DropDownButton
                 Grid.Row="3"
                 Grid.Column="0"
@@ -181,6 +187,7 @@
                 </DropDownButton.Flyout>
             </DropDownButton>
 
+            <!--  converted result  -->
             <ScrollViewer
                 Grid.Row="4"
                 Grid.Column="0"
@@ -198,6 +205,8 @@
                     Text="{x:Bind ViewModel.ResultText, Mode=OneWay}" />
             </ScrollViewer>
 
+            <!--  rate line  -->
+            <!--  (e.g. "1 EUR = 1.0842 USD"; updates on every picker change)  -->
             <Border
                 Grid.Row="5"
                 Grid.Column="0"

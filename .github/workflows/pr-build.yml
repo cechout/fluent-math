@@ -113,6 +113,28 @@ jobs:
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           Write-Host "Publish payload: $([math]::Round($total / 1MB, 2)) MB"
 
+  # gated the same way as the two above for consistency, although it is not a required status check on
+  # main yet; adding it to the ruleset is a repository settings change
+  test:
+    needs: changes
+    if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
+    runs-on: windows-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v7
+
+      - name: setup dotnet
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "8.0.x"
+          cache: true
+          cache-dependency-path: Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
+
+      # the test project links the engine and ViewModel sources rather than referencing the app, so it
+      # is plain net8.0 and needs neither a platform nor a runtime identifier here
+      - name: engine tests
+        run: dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj -c Release
+
   format:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
@@ -137,3 +159,8 @@ jobs:
       # runner default core.autocrlf=true hands out a crlf tree and every line fails
       - name: dotnet format whitespace check
         run: dotnet format whitespace Calculator_WinUI/Calculator_WinUI.csproj --verify-no-changes --verbosity diagnostic
+
+      # the test sources are held to the same editorconfig; the engine files it links are already
+      # covered by the run above, checking them twice costs nothing
+      - name: dotnet format whitespace check, tests
+        run: dotnet format whitespace Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj --verify-no-changes --verbosity diagnostic

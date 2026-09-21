@@ -1,16 +1,27 @@
 using Calculator_WinUI.Views;
-using Microsoft.UI.Xaml;
 using Microsoft.UI;
-using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using WinUIEx;
 
 namespace Calculator_WinUI
 {
+    // shell of the app: navigation sidebar plus the content Frame every page is hosted in
+    //
+    // also owns the theme, because switching it has to touch two things a Page cannot reach:
+    // the XAML content tree and the native title bar buttons on the AppWindow
     public sealed partial class MainWindow : Window
     {
+        // === fields ===
+
         public static MainWindow Instance { get; private set; }
-        public string CurrentTheme { get; private set; } = "Default"; // save current theme for settings page combo box
+
+        // last theme tag that was applied; SettingsPage reads it back to preselect its combo box
+        public string CurrentTheme { get; private set; } = "Default";
+
+
+        // === constructor ===
 
         public MainWindow()
         {
@@ -21,26 +32,28 @@ namespace Calculator_WinUI
             MainFrame.Navigate(typeof(StandardPage));
             NavView.SelectedItem = NavView.MenuItems[0];
 
-            // AppWindow configuration
-            // theme 
+            // draw our own title bar into the client area; the caption buttons keep transparent
+            // backgrounds so the Mica backdrop stays visible behind them
             AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
             AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
 
             if (AppWindow.TitleBar.ExtendsContentIntoTitleBar)
             {
                 AppWindow.TitleBar.PreferredHeightOption = TitleBarHeightOption.Standard;
-                AppWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
-                AppWindow.TitleBar.ButtonInactiveBackgroundColor = Microsoft.UI.Colors.Transparent;
-
+                AppWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+                AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             }
-            // size
+
+            // start size, plus a floor that keeps the keypad from being squeezed out of the window
             this.SetWindowSize(330, 480);
-            var manager = WinUIEx.WindowManager.Get(this);
+            var manager = WindowManager.Get(this);
             manager.MinWidth = 300;
             manager.MinHeight = 450;
         }
 
-        // click navigation
+
+        // === navigation ===
+
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {
             string itemTag = args.InvokedItemContainer.Tag.ToString();
@@ -59,12 +72,15 @@ namespace Calculator_WinUI
             }
         }
 
-        // this method changes both the xaml content theme and the native title bar theme
+
+        // === theming ===
+
+        // applies a theme to both halves of the window; the XAML content follows RequestedTheme on the
+        // root element, the native caption buttons only follow AppWindow.TitleBar.PreferredTheme
         public void ApplyTheme(string themeTag)
         {
-            CurrentTheme = themeTag; // save current theme for settings page combo box
+            CurrentTheme = themeTag;
 
-            // switch the theme of the app content
             if (this.Content is FrameworkElement rootElement)
             {
                 rootElement.RequestedTheme = themeTag switch
@@ -75,12 +91,11 @@ namespace Calculator_WinUI
                 };
             }
 
-            // let windows handle the native title bar buttons automatically
             AppWindow.TitleBar.PreferredTheme = themeTag switch
             {
-                "Light" => Microsoft.UI.Windowing.TitleBarTheme.Light,
-                "Dark" => Microsoft.UI.Windowing.TitleBarTheme.Dark,
-                _ => Microsoft.UI.Windowing.TitleBarTheme.UseDefaultAppMode
+                "Light" => TitleBarTheme.Light,
+                "Dark" => TitleBarTheme.Dark,
+                _ => TitleBarTheme.UseDefaultAppMode
             };
         }
     }

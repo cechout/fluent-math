@@ -3,12 +3,14 @@ using System.Windows.Input;
 
 namespace Calculator_WinUI.ViewModels
 {
-    /// <summary>
-    /// this class is used to create commands for buttons in the view, it implements the ICommand interface
-    /// </summary>
+    // minimal ICommand used by every button binding
+    //
+    // no button in the app is ever disabled, so CanExecute is hardwired to true and CanExecuteChanged
+    // is never raised; the event only exists because ICommand requires it
     public class RelayCommand<T> : ICommand
     {
         private readonly Action<T> _execute;
+
         public event EventHandler CanExecuteChanged;
 
         public RelayCommand(Action<T> execute)

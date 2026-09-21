@@ -1,22 +1,12 @@
-using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
-using Microsoft.UI.Xaml.Controls.Primitives;
-using Microsoft.UI.Xaml.Data;
-using Microsoft.UI.Xaml.Input;
-using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Navigation;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 
 namespace Calculator_WinUI.Views
 {
     public sealed partial class SettingsPage : Page
     {
+        // ComboBox.SelectionChanged already fires from inside InitializeComponent, before the page is
+        // in any usable state; without this guard the first navigation to the page would reapply the
+        // theme as a side effect of building the control
         private bool _isLoading = true;
 
         public SettingsPage()
@@ -27,7 +17,9 @@ namespace Calculator_WinUI.Views
             _isLoading = false;
         }
 
-        // theme combo box
+
+        // === theme ===
+
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isLoading) return;
@@ -41,16 +33,16 @@ namespace Calculator_WinUI.Views
                 }
             }
         }
+
+        // the theme is not persisted anywhere, MainWindow holds the only copy of it for this session
         private void RestoreThemeSelection()
         {
-            // we read the currently active theme from our main window memory
             string currentTheme = "Default";
             if (MainWindow.Instance != null)
             {
                 currentTheme = MainWindow.Instance.CurrentTheme;
             }
 
-            // we search through all the items in the combo box and compare their tag
             foreach (ComboBoxItem item in ThemeComboBox.Items)
             {
                 if (item.Tag?.ToString() == currentTheme)

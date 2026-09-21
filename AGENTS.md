@@ -64,11 +64,15 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ```text
 Calculator_WinUI/
 ├── Assets/       the app icon and the package logos
-├── Models/       calculation and currency logic: Calculate, ConvertCurrency, GetCurrencyData,
-│                 CurrencyHelper
+├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
+├── Models/       the token model and the currency logic: MathToken, NavigationMetadata,
+│                 EvaluationMetadata, ResultFormatter, MathDisplayStyle, ConvertCurrency,
+│                 GetCurrencyData, CurrencyHelper
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   StandardViewModel, CurrencyViewModel, RelayCommand
 └── Views/        StandardPage, CurrencyPage, SettingsPage
+
+Calculator_WinUI.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
@@ -105,9 +109,19 @@ silently never run.
 
 ## Test
 
-There is no test project. The bar for a change is that the build stays green and that the screen it
-touches was opened in a running app and looked at. Report what you did not verify instead of implying it
-passed.
+`Calculator_WinUI.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
+routing in `StandardViewModel`. It targets plain `net8.0` and links the sources it tests rather than
+referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
+plain library, so the suite runs on any dotnet runner.
+
+```powershell
+dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
+```
+
+Nothing the user sees is covered by it: the formula is drawn by KaTeX inside a `WebView2`, and no test
+here opens a window. The bar for a change is that the tests stay green, that the build stays green, and
+that the screen it touches was opened in a running app and looked at. Report what you did not verify
+instead of implying it passed.
 
 ## Commit & Push
 
