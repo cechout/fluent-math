@@ -470,4 +470,78 @@ namespace Calculator_WinUI.Models
             return latex + Addressed(EmptySlotLatex, slotContext, 0);
         }
     }
+
+
+    // a detached deep copy of a token list
+    //
+    // the display needs one the moment = is pressed: the tree carries on being edited afterwards, since
+    // = deliberately leaves it alone so a Math ERROR can be corrected, and the history line therefore
+    // cannot simply hold a reference to it; MathInputManager clears its root list in place
+    //
+    // it sits beside the token classes rather than as a virtual on each of them, so the whole of the
+    // copying is one thing to read and a token type added later fails loudly here instead of losing a
+    // slot quietly
+    public static class MathTokenCloner
+    {
+        public static List<MathToken> CloneList(IReadOnlyList<MathToken> tokens)
+        {
+            List<MathToken> copy = new List<MathToken>(tokens.Count);
+            foreach (MathToken token in tokens) copy.Add(Clone(token));
+
+            return copy;
+        }
+
+        public static MathToken Clone(MathToken token)
+        {
+            switch (token)
+            {
+                case FractionToken fraction:
+                    FractionToken fractionCopy = new FractionToken();
+                    fractionCopy.NumeratorTokens.AddRange(CloneList(fraction.NumeratorTokens));
+                    fractionCopy.DenominatorTokens.AddRange(CloneList(fraction.DenominatorTokens));
+                    return fractionCopy;
+
+                case PowerToken power:
+                    PowerToken powerCopy = new PowerToken();
+                    powerCopy.BaseTokens.AddRange(CloneList(power.BaseTokens));
+                    powerCopy.ExponentTokens.AddRange(CloneList(power.ExponentTokens));
+                    return powerCopy;
+
+                case ScientificToken scientific:
+                    ScientificToken scientificCopy = new ScientificToken();
+                    scientificCopy.ExponentTokens.AddRange(CloneList(scientific.ExponentTokens));
+                    return scientificCopy;
+
+                case RootToken root:
+                    RootToken rootCopy = new RootToken();
+                    rootCopy.IndexTokens.AddRange(CloneList(root.IndexTokens));
+                    rootCopy.RadicandTokens.AddRange(CloneList(root.RadicandTokens));
+                    return rootCopy;
+
+                case LogarithmToken logarithm:
+                    LogarithmToken logarithmCopy = new LogarithmToken();
+                    logarithmCopy.BaseTokens.AddRange(CloneList(logarithm.BaseTokens));
+                    logarithmCopy.ParameterTokens.AddRange(CloneList(logarithm.ParameterTokens));
+                    return logarithmCopy;
+
+                case FunctionToken function:
+                    FunctionToken functionCopy = new FunctionToken(function.Value);
+                    functionCopy.ParameterTokens.AddRange(CloneList(function.ParameterTokens));
+                    return functionCopy;
+
+                // the leaves rebuild themselves from their own name, which is what fills the private
+                // fields a constant, a postfix and a function keep beside Value
+                case ConstantToken constant: return new ConstantToken(constant.Value);
+                case PostfixToken postfix: return new PostfixToken(postfix.Value);
+                case AnsToken: return new AnsToken();
+            }
+
+            if (token.GetType() != typeof(MathToken))
+            {
+                throw new NotSupportedException($"no clone for {token.GetType().Name}");
+            }
+
+            return new MathToken(token.Type, token.Value);
+        }
+    }
 }

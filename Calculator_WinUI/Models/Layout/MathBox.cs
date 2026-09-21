@@ -238,10 +238,12 @@ namespace Calculator_WinUI.Models.Layout
     public sealed class DelimiterBox : MathBox
     {
         public DelimiterKind Kind { get; }
+        public double Thickness { get; }
 
-        public DelimiterBox(DelimiterKind kind, double width, double ascent, double descent)
+        public DelimiterBox(DelimiterKind kind, double width, double ascent, double descent, double thickness)
         {
             Kind = kind;
+            Thickness = thickness;
             Width = width;
             Ascent = ascent;
             Descent = descent;

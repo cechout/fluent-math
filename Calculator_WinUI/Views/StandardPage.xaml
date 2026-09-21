@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Calculator_WinUI.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Calculator_WinUI.Controls"
     xmlns:primitives="using:Microsoft.UI.Xaml.Controls.Primitives"
     mc:Ignorable="d">
 
@@ -86,15 +87,11 @@
             Top is the previous calculation, bottom is the current input; content is pushed in from
             the code-behind, there is no binding on a WebView2
         -->
-        <!--  workaround: a WebView2 cannot be transparent over a system backdrop  -->
         <!--
-            problem: DefaultBackgroundColor="Transparent" does not make the control transparent,
-            it makes it paint ApplicationPageBackgroundThemeBrush instead, which is #202020 in
-            dark and #F3F3F3 in light; confirmed platform bug, still open:
+            the history line is drawn by a MathPanel out of ordinary XAML elements, the input line is
+            still KaTeX in a WebView2; that one paints ApplicationPageBackgroundThemeBrush behind its
+            page and no backdrop ever reaches it, see
             https://github.com/microsoft/microsoft-ui-xaml/issues/6527
-            fix: none on our side, so the page under it is put on the bare Mica tint, which is
-            the same #202020 and #F3F3F3, and the two lines stop reading as a rectangle on it
-            the attribute stays because it is still what keeps the control off plain white
         -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
@@ -102,11 +99,11 @@
                 <RowDefinition Height="3*" MinHeight="40" />
             </Grid.RowDefinitions>
 
-            <WebView2
-                x:Name="MathWebView1"
+            <controls:MathPanel
+                x:Name="MathDisplay1"
                 Grid.Row="0"
                 Margin="4,0,4,0"
-                DefaultBackgroundColor="Transparent" />
+                Ink="{ThemeResource TextFillColorSecondaryBrush}" />
 
             <!--
                 the input line scrolls inside the page, the scrollbar only mirrors that

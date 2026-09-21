@@ -1,5 +1,6 @@
 ﻿using Calculator_WinUI.Engines;
 using Calculator_WinUI.Models;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
@@ -40,6 +41,22 @@ namespace Calculator_WinUI.ViewModels
                     _inputAndResultText = value;
                     OnPropertyChanged();
                 }
+            }
+        }
+
+        // the same snapshot as CalculationText, as tokens
+        //
+        // it has to be a copy: = deliberately leaves the tree alone so a Math ERROR can be corrected, and
+        // MathInputManager clears its root list in place, so a reference would come back empty the moment
+        // the next calculation starts
+        private IReadOnlyList<MathToken> _calculationTokens = new List<MathToken>();
+        public IReadOnlyList<MathToken> CalculationTokens
+        {
+            get => _calculationTokens;
+            set
+            {
+                _calculationTokens = value;
+                OnPropertyChanged();
             }
         }
 
@@ -434,6 +451,8 @@ namespace Calculator_WinUI.ViewModels
             CalculationText = _inputManager.GetLatexString(withCursor: false,
                 displayFractions: UseDisplayFractions) + "=";
 
+            CalculationTokens = MathTokenCloner.CloneList(_inputManager.RootTokens);
+
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (result.IsSuccess)
             {
@@ -494,6 +513,7 @@ namespace Calculator_WinUI.ViewModels
             _inputManager.Clear();
             PublishInput();
             CalculationText = "";
+            CalculationTokens = new List<MathToken>();
         }
 
         private void Backspace()

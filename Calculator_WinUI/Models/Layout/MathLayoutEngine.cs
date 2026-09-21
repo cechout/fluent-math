@@ -284,9 +284,11 @@ namespace Calculator_WinUI.Models.Layout
             double ascent = content.Ascent + padding;
             double descent = content.Descent + padding;
 
-            parts.Add(new DelimiterBox(open, width, ascent, descent));
+            double thickness = fontSize * _style.DelimiterThickness;
+
+            parts.Add(new DelimiterBox(open, width, ascent, descent, thickness));
             parts.Add(content);
-            parts.Add(new DelimiterBox(close, width, ascent, descent));
+            parts.Add(new DelimiterBox(close, width, ascent, descent, thickness));
         }
 
         private TextRunBox TextRun(string text, double fontSize, MathToken token)

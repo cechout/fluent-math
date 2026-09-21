@@ -125,6 +125,30 @@ namespace Calculator_WinUI.Models
 
         // === output ===
 
+        // the numbers the native renderer lays out with
+        //
+        // only the knobs that existed while the display was KaTeX travel here; everything MathLayoutStyle
+        // adds on top of them, the script ratios, the math axis, the radical and the delimiters, has no
+        // counterpart on this side and keeps its own default
+        public Layout.MathLayoutStyle ToLayoutStyle()
+        {
+            return new Layout.MathLayoutStyle
+            {
+                FontSizePx = FontSizePx,
+                FractionScale = FractionScale,
+                PowerScale = PowerScale,
+                RootScale = RootScale,
+                LogarithmScale = LogarithmScale,
+                FunctionScale = FunctionScale,
+                FractionBarThickness = FractionBarThickness,
+                UseDisplayFractions = UseDisplayFractions,
+                OperatorScale = OperatorScale,
+                OperatorGap = OperatorGap,
+                OperatorRaise = OperatorRaise,
+                OperatorWeight = OperatorWeight
+            };
+        }
+
         // the css the page stamps into the template at load and pushes again after a theme change
         public string ToCssBlock()
         {

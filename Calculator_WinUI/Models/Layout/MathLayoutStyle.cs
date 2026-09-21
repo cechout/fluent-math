@@ -93,6 +93,7 @@ namespace Calculator_WinUI.Models.Layout
         // keeps around the content
         public double DelimiterWidth { get; set; } = 0.3;
         public double DelimiterPadding { get; set; } = 0.05;
+        public double DelimiterThickness { get; set; } = 0.06; // em of the stroke it is drawn with
 
 
         // === empty slots ===

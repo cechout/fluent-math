@@ -319,7 +319,6 @@ namespace Calculator_WinUI.Views
 
         private async void StandardPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await MathWebView1.EnsureCoreWebView2Async();
             await MathWebView2.EnsureCoreWebView2Async();
 
             // the page sits in the tree by now, so ActualTheme finally answers with the theme in force
@@ -332,22 +331,10 @@ namespace Calculator_WinUI.Views
             // the JS function does not exist until the page finished loading, so the starting value can
             // only be pushed from here
             //
-            // the history line is pushed too although it has nothing to show yet; without it its first
-            // render would be the one = triggers, and that single call would still be waiting for KaTeX
-            // to arrive from the CDN, which is visible as the line settling a moment after the result
-            MathWebView1.NavigationCompleted += async (s, args) =>
-            {
-                await UpdateWebViewMath(MathWebView1, ViewModel.CalculationText, _historyStyle);
-            };
-
             MathWebView2.NavigationCompleted += async (s, args) =>
             {
                 await UpdateWebViewMath(MathWebView2, ViewModel.InputAndResultText, _inputStyle);
             };
-
-            // top line: the previous calculation, smaller and dimmed
-            string html1 = _kaTeXHtmlTemplate.Replace("[STYLE]", _historyStyle.ToCssBlock());
-            MathWebView1.NavigateToString(html1);
 
             // bottom line: what is being typed right now
             string html2 = _kaTeXHtmlTemplate.Replace("[STYLE]", _inputStyle.ToCssBlock());
@@ -457,9 +444,8 @@ namespace Calculator_WinUI.Views
         {
             RebuildStyles();
 
-            if (MathWebView1.CoreWebView2 == null || MathWebView2.CoreWebView2 == null) return;
+            if (MathWebView2.CoreWebView2 == null) return;
 
-            await ApplyWebViewStyle(MathWebView1, _historyStyle);
             await ApplyWebViewStyle(MathWebView2, _inputStyle);
         }
 
@@ -467,6 +453,11 @@ namespace Calculator_WinUI.Views
         {
             _historyStyle = MathDisplayStyle.ForHistoryLine(this.ActualTheme);
             _inputStyle = MathDisplayStyle.ForInputLine(this.ActualTheme);
+
+            // the panel needs the same knobs as numbers rather than as a css block, and redraws with them
+            // the moment they change; its color comes from the ThemeResource in the markup instead
+            MathDisplay1.LayoutStyle = _historyStyle.ToLayoutStyle();
+            MathDisplay1.Show(ViewModel.CalculationTokens);
 
             // the one knob that cannot travel as css, because display style is a decision KaTeX makes
             // while parsing rather than something a stylesheet can reach afterwards
@@ -482,17 +473,19 @@ namespace Calculator_WinUI.Views
 
         // === rendering ===
 
-        // a WebView2 cannot be bound to, so the two display lines are updated by hand from the property
-        // change instead of through x:Bind
+        // neither display line can be bound to, so both are updated by hand from the property change
+        // instead of through x:Bind
         private async void ViewModel_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (MathWebView1.CoreWebView2 == null || MathWebView2.CoreWebView2 == null) return;
-
-            if (e.PropertyName == nameof(ViewModel.CalculationText))
+            if (e.PropertyName == nameof(ViewModel.CalculationTokens))
             {
-                await UpdateWebViewMath(MathWebView1, ViewModel.CalculationText, _historyStyle);
+                MathDisplay1.Show(ViewModel.CalculationTokens);
+                return;
             }
-            else if (e.PropertyName == nameof(ViewModel.InputAndResultText))
+
+            if (MathWebView2.CoreWebView2 == null) return;
+
+            if (e.PropertyName == nameof(ViewModel.InputAndResultText))
             {
                 await UpdateWebViewMath(MathWebView2, ViewModel.InputAndResultText, _inputStyle);
             }
