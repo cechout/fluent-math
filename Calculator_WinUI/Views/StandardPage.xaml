@@ -86,6 +86,16 @@
             Top is the previous calculation, bottom is the current input; content is pushed in from
             the code-behind, there is no binding on a WebView2
         -->
+        <!--  workaround: a WebView2 cannot be transparent over a system backdrop  -->
+        <!--
+            problem: DefaultBackgroundColor="Transparent" does not make the control transparent,
+            it makes it paint ApplicationPageBackgroundThemeBrush instead, which is #202020 in
+            dark and #F3F3F3 in light; confirmed platform bug, still open:
+            https://github.com/microsoft/microsoft-ui-xaml/issues/6527
+            fix: none on our side, so the page under it is put on the bare Mica tint, which is
+            the same #202020 and #F3F3F3, and the two lines stop reading as a rectangle on it
+            the attribute stays because it is still what keeps the control off plain white
+        -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="2*" />
@@ -214,7 +224,6 @@
                     VerticalAlignment="Stretch"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_nav_up"
-                    CornerRadius="0,0,0,0"
                     Style="{StaticResource OperatorButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE70E;" />
                 </Button>

@@ -21,18 +21,6 @@
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
 
-                    <!--  === navigation view ===  -->
-                    <!--
-                        the content area of a navigation view paints LayerFillColorDefaultBrush over
-                        the backdrop, which lifts the base from #202020 to #282828 and in light from
-                        #F3F3F3 to #F9F9F9; light then has six levels left to white and no alpha fill
-                        can read against it, so the layer is switched off and the pages sit on the
-                        bare backdrop the values below are calibrated against
-                        the second brush is the 1px line the view draws above its content
-                    -->
-                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
-
                     <!--  === fill colors ===  -->
                     <!--  number pad  -->
                     <SolidColorBrush x:Key="NumPadNormal" Color="#1FFFFFFF" />
@@ -61,11 +49,6 @@
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
-
-                    <!--  === navigation view ===  -->
-                    <!--  (same two overrides as the dark set, the reason is written out there)  -->
-                    <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
-                    <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
 
                     <!--  === fill colors ===  -->
                     <!--  number pad  -->
@@ -109,6 +92,7 @@
 
                 <Setter Property="BorderBrush" Value="{ThemeResource NumPadBorder}" />
                 <Setter Property="BorderThickness" Value="1,1,1,1" />
+                <Setter Property="CornerRadius" Value="4" />
 
                 <Setter Property="Template">
                     <Setter.Value>
@@ -118,7 +102,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
+                                CornerRadius="{TemplateBinding CornerRadius}">
                                 <ContentPresenter
                                     x:Name="ContentPresenter"
                                     HorizontalAlignment="Center"
@@ -175,6 +159,7 @@
 
                 <Setter Property="BorderBrush" Value="{ThemeResource OpBorder}" />
                 <Setter Property="BorderThickness" Value="1,1,1,1" />
+                <Setter Property="CornerRadius" Value="4" />
 
                 <Setter Property="Template">
                     <Setter.Value>
@@ -184,7 +169,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
+                                CornerRadius="{TemplateBinding CornerRadius}">
                                 <ContentPresenter
                                     x:Name="ContentPresenter"
                                     HorizontalAlignment="Center"

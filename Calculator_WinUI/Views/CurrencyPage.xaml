@@ -96,7 +96,7 @@
                             <Setter Property="MaxWidth" Value="250" />
                             <Setter Property="MaxHeight" Value="450" />
                             <Setter Property="Padding" Value="0" />
-                            <Setter Property="CornerRadius" Value="8" />
+                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
 
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
@@ -165,7 +165,7 @@
                             <Setter Property="MaxWidth" Value="250" />
                             <Setter Property="MaxHeight" Value="450" />
                             <Setter Property="Padding" Value="0" />
-                            <Setter Property="CornerRadius" Value="8" />
+                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
 
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
