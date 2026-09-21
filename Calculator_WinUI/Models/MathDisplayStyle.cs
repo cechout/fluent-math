@@ -135,6 +135,7 @@ namespace Calculator_WinUI.Models
             return new Layout.MathLayoutStyle
             {
                 FontSizePx = FontSizePx,
+                MinFitScale = MinFitScale,
                 FractionScale = FractionScale,
                 PowerScale = PowerScale,
                 RootScale = RootScale,

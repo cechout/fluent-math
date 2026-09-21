@@ -150,7 +150,7 @@ namespace Calculator_WinUI.Views
         // in sight while it is being typed at the far end of it
         private void RevealCaret()
         {
-            if (MathDisplay2.CaretBounds is not Rect caret) return;
+            if (MathDisplay2.CaretViewport is not Rect caret) return;
 
             MathDisplay2.UpdateLayout();
 

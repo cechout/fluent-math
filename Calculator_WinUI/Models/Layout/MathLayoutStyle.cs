@@ -15,6 +15,12 @@ namespace Calculator_WinUI.Models.Layout
 
         public double FontSizePx { get; set; } = 36; // base size, every scale below is relative to it
 
+        // how far a formula taller than its box may be shrunk before it is clipped after all
+        //
+        // it is load bearing rather than a nicety: a stacked fraction at the default size needs roughly
+        // twice the height the input line has
+        public double MinFitScale { get; set; } = 0.45;
+
 
         // === script levels ===
 

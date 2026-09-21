@@ -31,8 +31,12 @@ namespace Calculator_WinUI.Controls
         private CaretTarget _caret;
         private string _text;
 
-        // where the caret ended up, for a scroller that has to keep it in view; null when there is none
-        public Rect? CaretBounds { get; private set; }
+        // where the caret ended up in the space the scroller works in, so it can be kept in view; null
+        // when there is none
+        public Rect? CaretViewport { get; private set; }
+
+        private Rect? _caretLocal;
+        private double _fitScale = 1;
 
         private readonly struct PlacedElement
         {
@@ -113,7 +117,8 @@ namespace Calculator_WinUI.Controls
             Children.Clear();
             _placed.Clear();
 
-            CaretBounds = null;
+            _caretLocal = null;
+            CaretViewport = null;
 
             if (_text != null)
             {
@@ -149,16 +154,30 @@ namespace Calculator_WinUI.Controls
 
             if (_root == null) return new Size(0, 0);
 
-            return new Size(_root.Width, _root.Height);
+            _fitScale = MathFit.ScaleFor(_root.Height, availableSize.Height, LayoutStyle.MinFitScale);
+
+            // the children stay in their own coordinates and the whole panel is scaled instead, which is
+            // why the size reported here is the scaled one: the scroller around it has to see the size it
+            // will actually occupy
+            RenderTransform = _fitScale < 1
+                ? new ScaleTransform { ScaleX = _fitScale, ScaleY = _fitScale }
+                : null;
+
+            return new Size(_root.Width * _fitScale, _root.Height * _fitScale);
         }
 
         protected override Size ArrangeOverride(Size finalSize)
         {
             if (_root == null) return finalSize;
 
+            // the children are placed in their own unscaled coordinates, so the box they are fitted into
+            // has to be read back out of the scale the panel carries
+            double width = finalSize.Width / _fitScale;
+            double height = finalSize.Height / _fitScale;
+
             // a calculator display fills from the right and sits in the middle of its box
-            double offsetX = Math.Max(0, finalSize.Width - _root.Width);
-            double offsetY = Math.Max(0, (finalSize.Height - _root.Height) / 2);
+            double offsetX = Math.Max(0, width - _root.Width);
+            double offsetY = Math.Max(0, (height - _root.Height) / 2);
 
             foreach (PlacedElement placed in _placed)
             {
@@ -168,6 +187,14 @@ namespace Calculator_WinUI.Controls
                     placed.Bounds.Width,
                     placed.Bounds.Height));
             }
+
+            CaretViewport = _caretLocal is Rect caret
+                ? new Rect(
+                    (caret.X + offsetX) * _fitScale,
+                    (caret.Y + offsetY) * _fitScale,
+                    caret.Width * _fitScale,
+                    caret.Height * _fitScale)
+                : null;
 
             return finalSize;
         }
@@ -228,7 +255,7 @@ namespace Calculator_WinUI.Controls
             double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
 
             Rect caretRect = new Rect(caret.X - width / 2, bottom - height, width, height);
-            CaretBounds = caretRect;
+            _caretLocal = caretRect;
 
             Add(new Rectangle
             {
