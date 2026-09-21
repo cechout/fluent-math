@@ -8,14 +8,13 @@ namespace Calculator_WinUI.Models
 {
     // every tunable of the formula display in one place
     //
-    // the display is KaTeX inside a WebView2, so a knob here is really a css custom property; ToCssBlock
-    // is the only place that knows the property names, which makes a further knob one property plus one
-    // line there
+    // the two display lines differ in size and color and in nothing else, so both read out of here; the
+    // numbers the layout works with are handed down through ToLayoutStyle, which is where a knob has to
+    // arrive to reach the screen
     //
-    // the scales below always size a whole structured token, never a single slot of one: KaTeX writes
-    // the internal offsets of a fraction or a superscript as inline em values, so scaling the wrapper
-    // moves content and alignment together, while scaling only a numerator would leave those offsets
-    // sized for the old em and push the content further away from the bar
+    // the scales below always size a whole structured token, never a single slot of one: a slot scaled on
+    // its own keeps the offsets of the size around it and drifts away from the bar or the base it belongs
+    // to
     public class MathDisplayStyle
     {
         // === theme colors ===

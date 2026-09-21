@@ -13,9 +13,9 @@ namespace Calculator_WinUI.Views
 {
     // the calculator display; everything else on the page is buttons bound straight to the ViewModel
     //
-    // XAML has no way to draw a stacked fraction or a real root sign, so the formula is rendered by KaTeX
-    // in a WebView2 instead of by a TextBlock; the ViewModel already produces LaTeX, this page only pushes
-    // it into the browser
+    // both display lines are a MathPanel, which draws the formula out of ordinary XAML elements; neither
+    // can be bound to, so this page pushes the tokens into them from the property change and otherwise
+    // stays out of the way
     public sealed partial class StandardPage : Page
     {
         public StandardViewModel ViewModel { get; }
