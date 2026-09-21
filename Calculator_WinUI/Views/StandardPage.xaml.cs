@@ -7,7 +7,6 @@ using Microsoft.UI.Xaml.Input;
 using System;
 using System.ComponentModel;
 using Windows.Foundation;
-using Windows.UI.ViewManagement;
 
 namespace Calculator_WinUI.Views
 {
@@ -24,11 +23,6 @@ namespace Calculator_WinUI.Views
         private MathDisplayStyle _historyStyle;
         private MathDisplayStyle _inputStyle;
 
-        // the source of the accent color the caret uses; held in a field rather than created where it
-        // is needed, because a collected UISettings silently stops raising ColorValuesChanged
-        private readonly UISettings _uiSettings = new UISettings();
-
-
 
         // === constructor ===
 
@@ -40,9 +34,7 @@ namespace Calculator_WinUI.Views
             RebuildStyles();
 
             this.Loaded += StandardPage_Loaded;
-            this.Unloaded += StandardPage_Unloaded;
             this.ActualThemeChanged += StandardPage_ActualThemeChanged;
-            _uiSettings.ColorValuesChanged += StandardPage_ColorValuesChanged;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
@@ -71,14 +63,6 @@ namespace Calculator_WinUI.Views
         }
 
 
-        // the settings page can leave and come back, so the subscription on the shared UISettings has
-        // to go with the page that made it
-        private void StandardPage_Unloaded(object sender, RoutedEventArgs e)
-        {
-            _uiSettings.ColorValuesChanged -= StandardPage_ColorValuesChanged;
-        }
-
-
 
 
         // === extra functions flyout ===
@@ -98,15 +82,6 @@ namespace Calculator_WinUI.Views
             PushStyles();
         }
 
-        // the caret follows the Windows accent, which can be changed while the app is running
-        //
-        // the event arrives on a background thread, so everything it touches has to be marshalled back
-        // first
-        private void StandardPage_ColorValuesChanged(UISettings sender, object args)
-        {
-            DispatcherQueue.TryEnqueue(PushStyles);
-        }
-
         // both display lines take their numbers rather than a css block, so a theme change is a rebuild
         // of the styles and a redraw
         private void PushStyles()
@@ -116,8 +91,8 @@ namespace Calculator_WinUI.Views
 
         private void RebuildStyles()
         {
-            _historyStyle = MathDisplayStyle.ForHistoryLine(this.ActualTheme);
-            _inputStyle = MathDisplayStyle.ForInputLine(this.ActualTheme);
+            _historyStyle = MathDisplayStyle.ForHistoryLine();
+            _inputStyle = MathDisplayStyle.ForInputLine();
 
             // the panels take the knobs as numbers and redraw with them; their colors come from the
             // ThemeResources in the markup, which re-resolve themselves on a theme change

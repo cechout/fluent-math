@@ -1,41 +1,19 @@
-﻿using Microsoft.UI.Xaml;
-using System.Globalization;
-using System.Text;
-using Windows.UI;
-using Windows.UI.ViewManagement;
-
-namespace Calculator_WinUI.Models
+﻿namespace Calculator_WinUI.Models
 {
     // every tunable of the formula display in one place
     //
-    // the two display lines differ in size and color and in nothing else, so both read out of here; the
-    // numbers the layout works with are handed down through ToLayoutStyle, which is where a knob has to
-    // arrive to reach the screen
+    // the two display lines differ in base size and in nothing else, so both read out of here; their
+    // colors are ThemeResources on the panels, and every number below reaches the screen through
+    // ToLayoutStyle, which is where a knob has to arrive to do anything at all
     //
     // the scales below always size a whole structured token, never a single slot of one: a slot scaled on
     // its own keeps the offsets of the size around it and drifts away from the bar or the base it belongs
     // to
     public class MathDisplayStyle
     {
-        // === theme colors ===
-
-        // the WinUI text brushes written out with their own alpha instead of the tone they used to
-        // compose to: the display sits on the Mica backdrop now, so the text tracks whatever shows
-        // through, the same way the keypad does
-        //
-        // they are literals at all because resolving a ThemeResource from code needs the explicit theme
-        // dictionary, and assigning one as a local value severs the markup expression
-        private const string DarkPrimaryText = "#FFFFFF"; // input line, dark theme, TextFillColorPrimary is opaque there
-        private const string DarkSecondaryText = "rgba(255, 255, 255, 0.773)"; // history line, dark theme, TextFillColorSecondary #C5FFFFFF
-        private const string LightPrimaryText = "rgba(0, 0, 0, 0.894)"; // input line, light theme, TextFillColorPrimary #E4000000
-        private const string LightSecondaryText = "rgba(0, 0, 0, 0.62)"; // history line, light theme, TextFillColorSecondary #9E000000
-
-
         // === display knobs ===
 
-        public string TextColor { get; set; } = DarkPrimaryText;
         public double FontSizePx { get; set; } = 36; // base size of the formula, every scale below is relative to it
-        public double LineHeight { get; set; } = 1.2; // lower tightens the line box, but KaTeX starts clipping tall structures
         public double MinFitScale { get; set; } = 0.45; // how far a formula too tall for the box may be shrunk before it is clipped after all
 
         // size of a whole structured token, in em of the text around it; 1.0 keeps what KaTeX picks itself
@@ -80,45 +58,22 @@ namespace Calculator_WinUI.Models
         public double CursorHeight { get; set; } = 0.71; // em, roughly the cap height of a digit
         public double CursorShift { get; set; } = -0.04; // em above the baseline, negative drops it below
         public double CursorCornerRadius { get; set; } = 0.03; // em, half the width rounds the ends off
-        public bool UseAccentCursor { get; set; } = true; // the Windows accent rather than the text color
 
-        // filled in by ForInputLine, since the history line has no caret to color
-        public string CursorColor { get; set; } = DarkPrimaryText;
 
 
         // === presets ===
 
-        // the two display lines differ in color and base size only, so both of them read out of here
-
-        public static MathDisplayStyle ForInputLine(ElementTheme theme)
+        // the two display lines differ in base size and in nothing else any more; their colors are
+        // ThemeResources on the panels themselves, which is what lets them follow a theme change without
+        // anything here hearing about it
+        public static MathDisplayStyle ForInputLine()
         {
-            return new MathDisplayStyle
-            {
-                TextColor = theme == ElementTheme.Light ? LightPrimaryText : DarkPrimaryText,
-                CursorColor = ResolveAccentColor(theme),
-                FontSizePx = 36
-            };
+            return new MathDisplayStyle { FontSizePx = 36 };
         }
 
-        public static MathDisplayStyle ForHistoryLine(ElementTheme theme)
+        public static MathDisplayStyle ForHistoryLine()
         {
-            return new MathDisplayStyle
-            {
-                TextColor = theme == ElementTheme.Light ? LightSecondaryText : DarkSecondaryText,
-                FontSizePx = 18
-            };
-        }
-
-
-        // the Windows accent in the variant WinUI picks for its own accent brushes, so the caret stays
-        // readable on either background: a light theme takes the darkened accent, a dark one the
-        // lightened one
-        private static string ResolveAccentColor(ElementTheme theme)
-        {
-            UIColorType variant = theme == ElementTheme.Light ? UIColorType.AccentDark1 : UIColorType.AccentLight2;
-            Color accent = new UISettings().GetColorValue(variant);
-
-            return $"#{accent.R:X2}{accent.G:X2}{accent.B:X2}";
+            return new MathDisplayStyle { FontSizePx = 18 };
         }
 
 
@@ -145,51 +100,13 @@ namespace Calculator_WinUI.Models
                 OperatorScale = OperatorScale,
                 OperatorGap = OperatorGap,
                 OperatorRaise = OperatorRaise,
-                OperatorWeight = OperatorWeight
+                OperatorWeight = OperatorWeight,
+                CursorWidth = CursorWidth,
+                CursorHeight = CursorHeight,
+                CursorShift = CursorShift,
+                CursorCornerRadius = CursorCornerRadius
             };
         }
 
-        // the css the page stamps into the template at load and pushes again after a theme change
-        public string ToCssBlock()
-        {
-            CultureInfo invariant = CultureInfo.InvariantCulture;
-            var css = new StringBuilder();
-
-            css.AppendLine(":root {");
-            css.AppendLine($"    --math-color: {TextColor};");
-            css.AppendLine($"    --math-size: {FontSizePx.ToString(invariant)}px;");
-            css.AppendLine($"    --math-line-height: {LineHeight.ToString(invariant)};");
-            css.AppendLine($"    --frac-scale: {FractionScale.ToString(invariant)}em;");
-            css.AppendLine($"    --pow-scale: {PowerScale.ToString(invariant)}em;");
-            css.AppendLine($"    --root-scale: {RootScale.ToString(invariant)}em;");
-            css.AppendLine($"    --log-scale: {LogarithmScale.ToString(invariant)}em;");
-            css.AppendLine($"    --func-scale: {FunctionScale.ToString(invariant)}em;");
-            css.AppendLine($"    --frac-bar: {FractionBarThickness.ToString(invariant)}em;");
-            css.AppendLine($"    --min-fit-scale: {MinFitScale.ToString(invariant)};");
-            css.AppendLine($"    --op-scale: {OperatorScale.ToString(invariant)}em;");
-            css.AppendLine($"    --op-gap: {OperatorGap.ToString(invariant)}em;");
-            css.AppendLine($"    --op-raise: {OperatorRaise.ToString(invariant)}em;");
-            css.AppendLine($"    --op-weight: {OperatorWeight.ToString(invariant)};");
-            css.AppendLine($"    --cursor-width: {CursorWidth.ToString(invariant)}em;");
-            css.AppendLine($"    --cursor-height: {CursorHeight.ToString(invariant)}em;");
-            css.AppendLine($"    --cursor-shift: {CursorShift.ToString(invariant)}em;");
-            css.AppendLine($"    --cursor-radius: {CursorCornerRadius.ToString(invariant)}em;");
-
-            // the one place the accent switch is read, so nothing else has to know about the fallback
-            css.AppendLine($"    --cursor-color: {(UseAccentCursor ? CursorColor : TextColor)};");
-            css.Append("}");
-
-            return css.ToString();
-        }
-
-        // sans-serif is asked for in the formula rather than through a css font-family, because KaTeX
-        // lays a formula out from the metrics of the font it believes it is using; \mathsf tells it,
-        // while an override behind its back would leave radicals and brackets beside their content
-        public string WrapLatex(string latex)
-        {
-            if (!UseSansSerif) return latex;
-
-            return $"\\mathsf{{{latex}}}";
-        }
     }
 }
