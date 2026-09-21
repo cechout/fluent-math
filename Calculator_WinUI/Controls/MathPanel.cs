@@ -130,10 +130,12 @@ namespace Calculator_WinUI.Controls
                     new TextRunBox(_text, LayoutStyle.FontSizePx, metrics, new List<MathToken>())
                 });
             }
-            else
+            CaretPlacement? caret = null;
+            if (_text == null)
             {
                 MathLayoutEngine engine = new MathLayoutEngine(_measurer, LayoutStyle, _caret);
                 _root = engine.BuildRow(_tokens);
+                caret = engine.Caret;
             }
 
             // placed against its own top edge, so every bound below is already in the space this panel
@@ -141,6 +143,11 @@ namespace Calculator_WinUI.Controls
             _root.Place(0, _root.Ascent);
 
             Realize(_root);
+
+            // last, so the bar is drawn over its neighbours rather than under them; it is allowed to
+            // overlap the digit beside it and never to move it
+            RealizeCaret(caret);
+
             InvalidateMeasure();
         }
 
@@ -255,27 +262,34 @@ namespace Calculator_WinUI.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
-                case CaretBox caret:
-                    RealizeCaret(caret);
-                    break;
-
                 case PlaceholderBox placeholder:
+                    // the box is as tall as the text that would fill the slot, the square is not, so it
+                    // sits in the middle of it
+                    double middle = (placeholder.Top + placeholder.Bottom) / 2;
+
                     Add(new Rectangle { Stroke = Ink, StrokeThickness = placeholder.Thickness },
-                        BoundsOf(placeholder));
+                        new Rect(placeholder.X, middle - placeholder.Side / 2,
+                            placeholder.Side, placeholder.Side));
                     break;
             }
         }
 
-        // the box itself has no width, so the bar is straddled over the point it marks: half of it either
-        // side, which is how a text caret sits in the gap between two glyphs rather than beside one
-        private void RealizeCaret(CaretBox caret)
+        // the caret is no part of the layout at all; it hangs off a box that was placed without it and
+        // is straddled over the point it marks, half of it either side, the way a text caret sits in the
+        // gap between two glyphs rather than beside one
+        private void RealizeCaret(CaretPlacement? placement)
         {
-            double width = caret.FontSize * LayoutStyle.CursorWidth;
-            double height = caret.FontSize * LayoutStyle.CursorHeight;
-            double bottom = caret.Baseline - caret.FontSize * LayoutStyle.CursorShift;
-            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
+            if (placement is not CaretPlacement caret) return;
 
-            Rect caretRect = new Rect(caret.X - width / 2, bottom - height, width, height);
+            double size = caret.FontSize;
+            double width = size * LayoutStyle.CursorWidth;
+            double height = size * LayoutStyle.CursorHeight;
+            double bottom = caret.Box.Baseline - size * LayoutStyle.CursorShift;
+            double radius = size * LayoutStyle.CursorCornerRadius;
+
+            Rect caretRect = new Rect(
+                caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);
+
             _caretLocal = caretRect;
 
             Add(new Rectangle

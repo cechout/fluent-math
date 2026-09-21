@@ -432,6 +432,51 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void AnEmptySlotIsExactlyAsTallAsOneHoldingADigit()
+        {
+            // a fresh fraction used to be half the height of a filled one, because the placeholder box
+            // was as tall as its own square rather than as the text that would replace it; the two halves
+            // then sat visibly closer together than they would a keystroke later
+            FractionToken empty = new FractionToken();
+
+            FractionToken filled = new FractionToken();
+            filled.NumeratorTokens.Add(Digit("1"));
+            filled.DenominatorTokens.Add(Digit("2"));
+
+            FractionBox emptyBox = (FractionBox)Row(empty).Children.Single();
+            FractionBox filledBox = (FractionBox)Row(filled).Children.Single();
+
+            Assert.Equal(filledBox.Numerator.Ascent, emptyBox.Numerator.Ascent);
+            Assert.Equal(filledBox.Numerator.Descent, emptyBox.Numerator.Descent);
+            Assert.Equal(filledBox.Ascent, emptyBox.Ascent);
+            Assert.Equal(filledBox.Descent, emptyBox.Descent);
+        }
+
+        [Fact]
+        public void EveryKindOfEmptySlotKeepsTheHeightOfItsText()
+        {
+            // it goes through BuildSlot for all of them, so a root, a logarithm and a function have to
+            // agree with a fraction
+            RootToken root = new RootToken();
+            FunctionToken function = new FunctionToken("sin");
+            LogarithmToken logarithm = new LogarithmToken();
+
+            RootBox rootBox = (RootBox)Row(root).Children.Single();
+            RowBox functionBox = (RowBox)Row(function).Children.Single();
+            RowBox logarithmBox = (RowBox)Row(logarithm).Children.Single();
+
+            double ascent = FontSize * 0.75;
+            double descent = FontSize * 0.25;
+
+            Assert.Equal(ascent, rootBox.Radicand.Ascent);
+            Assert.Equal(descent, rootBox.Radicand.Descent);
+            Assert.Equal(ascent, functionBox.Children[2].Ascent);
+            Assert.Equal(descent, functionBox.Children[2].Descent);
+            Assert.Equal(ascent, logarithmBox.Children[2].Ascent);
+            Assert.Equal(descent, logarithmBox.Children[2].Descent);
+        }
+
+        [Fact]
         public void EveryStructuredTokenFallsBackToAPlaceholderRatherThanCollapsing()
         {
             RowBox row = Row(new FractionToken(), new PowerToken(), new RootToken(), new FunctionToken("sin"));

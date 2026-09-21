@@ -87,7 +87,7 @@ namespace Calculator_WinUI.Models.Layout
 
         public double RadicalHookWidth { get; set; } = 0.55;     // em, the part in front of the radicand
         public double RadicalRuleThickness { get; set; } = 0.05; // em, the bar over the radicand
-        public double RadicalVerticalGap { get; set; } = 0.1;    // em between that bar and the radicand
+        public double RadicalVerticalGap { get; set; } = 0.04;    // em between that bar and the radicand
 
         // where the index sits, as a fraction of the height of the sign it stands on
         public double RadicalIndexRaise { get; set; } = 0.6;

@@ -18,6 +18,12 @@ namespace Calculator_WinUI.Models.Layout
         private readonly MathLayoutStyle _style;
         private readonly CaretTarget _caret;
 
+        // where the caret ended up, filled in while the boxes are built and read once they are placed
+        //
+        // it deliberately is not a box: a caret that takes part in the layout moves its neighbours as it
+        // travels, whatever its width, and that is the one mistake this display has to keep not making
+        public CaretPlacement? Caret { get; private set; }
+
         // the glyph an empty row takes its height from; a digit rather than a letter, because digits are
         // what the display is mostly made of
         private const string StrutText = "0";
@@ -52,40 +58,55 @@ namespace Calculator_WinUI.Models.Layout
         public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel,
             string path = "")
         {
-            // the caret belongs to exactly one list, the one being written into, and it is that list by
-            // identity rather than by contents
-            bool carriesCaret = _caret.Tokens != null && ReferenceEquals(tokens, _caret.Tokens);
+            bool carriesCaret = CaretIsIn(tokens);
 
             List<MathBox> children = new List<MathBox>();
             int index = 0;
 
             while (index < tokens.Count)
             {
-                if (carriesCaret && index == _caret.Index) children.Add(Caret(fontSize));
+                int start = index;
+                MathBox box;
 
                 if (tokens[index].Type == TokenType.Number)
                 {
-                    AddNumberRun(children, tokens, ref index, fontSize, carriesCaret, path);
-                    continue;
+                    box = BuildNumberRun(tokens, ref index, fontSize, path);
+                }
+                else
+                {
+                    box = BuildToken(tokens[index], fontSize, scriptLevel, path, index);
+                    box.CursorAddress = Address(path, index);
+                    index++;
                 }
 
-                MathBox box = BuildToken(tokens[index], fontSize, scriptLevel, path, index);
-                box.CursorAddress = Address(path, index);
                 children.Add(box);
-                index++;
+
+                // the caret hangs off the box it stands in front of, or inside the run it stands in
+                if (carriesCaret && _caret.Index >= start && _caret.Index < index)
+                {
+                    double offset = box is TextRunBox run ? OffsetInRun(run, _caret.Index - start, fontSize) : 0;
+                    Caret = new CaretPlacement(box, offset, fontSize);
+                }
             }
 
-            if (carriesCaret && _caret.Index >= tokens.Count) children.Add(Caret(fontSize));
-
+            RowBox row;
             if (children.Count == 0)
             {
-                RowBox empty = RowBox.Empty(_measurer.Measure(StrutText, fontSize));
-                empty.EndAddress = Address(path, 0);
-
-                return empty;
+                row = RowBox.Empty(_measurer.Measure(StrutText, fontSize));
+                row.EndAddress = Address(path, 0);
+            }
+            else
+            {
+                row = new RowBox(children) { EndAddress = Address(path, tokens.Count) };
             }
 
-            return new RowBox(children) { EndAddress = Address(path, tokens.Count) };
+            // past the last token there is no box to hang off, so it hangs off the row itself
+            if (carriesCaret && _caret.Index >= tokens.Count)
+            {
+                Caret = new CaretPlacement(row, row.Width, fontSize);
+            }
+
+            return row;
         }
 
         private MathBox BuildToken(MathToken token, double fontSize, int scriptLevel,
@@ -112,8 +133,8 @@ namespace Calculator_WinUI.Models.Layout
 
         // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
         // own, because a bracket has to scale with what it encloses as soon as it can
-        private void AddNumberRun(List<MathBox> children, IReadOnlyList<MathToken> tokens, ref int index,
-            double fontSize, bool carriesCaret, string path)
+        private TextRunBox BuildNumberRun(IReadOnlyList<MathToken> tokens, ref int index, double fontSize,
+            string path)
         {
             int start = index;
             StringBuilder text = new StringBuilder();
@@ -127,32 +148,24 @@ namespace Calculator_WinUI.Models.Layout
             }
 
             string run = text.ToString();
-            TextMetrics whole = _measurer.Measure(run, fontSize);
 
-            if (!carriesCaret || _caret.Index <= start || _caret.Index >= index)
-            {
-                children.Add(Addressed(new TextRunBox(run, fontSize, whole, covered), path, start));
-                return;
-            }
+            return Addressed(new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered),
+                path, start);
+        }
 
-            // the caret can stand between two digits of the same number, and only then is the run split
-            //
-            // the second half is sized as the whole minus the first rather than measured on its own, so
-            // the two always add up to the width the run has without a caret in it and nothing beside it
-            // shifts as the caret travels through
-            int split = _caret.Index - start;
-            string left = string.Concat(covered.Take(split).Select(token => token.Value));
-            double leftWidth = _measurer.Measure(left, fontSize).Width;
+        // how far into a run the caret stands, when it stands between two digits of the same number
+        //
+        // the run itself is measured and drawn whole; only the caret is placed inside it. Splitting the
+        // run instead would hand the text stack two pieces to set, each with the side bearings of its own
+        // first glyph, and the digits either side of the caret would shift as it passed between them
+        private double OffsetInRun(TextRunBox run, int tokenOffset, double fontSize)
+        {
+            if (tokenOffset <= 0) return 0;
+            if (tokenOffset >= run.Tokens.Count) return run.Width;
 
-            children.Add(Addressed(new TextRunBox(left, fontSize,
-                new TextMetrics(leftWidth, whole.Ascent, whole.Descent), covered.Take(split).ToList()),
-                path, start));
+            string prefix = string.Concat(run.Tokens.Take(tokenOffset).Select(token => token.Value));
 
-            children.Add(Caret(fontSize));
-
-            children.Add(Addressed(new TextRunBox(run.Substring(left.Length), fontSize,
-                new TextMetrics(whole.Width - leftWidth, whole.Ascent, whole.Descent),
-                covered.Skip(split).ToList()), path, _caret.Index));
+            return _measurer.Measure(prefix, fontSize).Width;
         }
 
         // a run stands in front of several cursor positions at once, one per digit it covers, so a click
@@ -171,9 +184,11 @@ namespace Calculator_WinUI.Models.Layout
             return run;
         }
 
-        private CaretBox Caret(double fontSize)
+        // the caret belongs to exactly one list, and it is that list by identity rather than by contents;
+        // two empty slots are equal by value and only the reference tells them apart
+        private bool CaretIsIn(IReadOnlyList<MathToken> tokens)
         {
-            return new CaretBox(fontSize, _measurer.Measure(StrutText, fontSize));
+            return _caret.Tokens != null && ReferenceEquals(tokens, _caret.Tokens);
         }
 
         private TextRunBox BuildOperator(MathToken token, double fontSize)
@@ -255,10 +270,11 @@ namespace Calculator_WinUI.Models.Layout
             double size = fontSize * _style.RootScale;
 
             // an empty index stays invisible rather than drawing a placeholder, so a square root looks
-            // like one; it only appears once the caret walks into it
-            MathBox index = token.IndexTokens.Count == 0
+            // like one; it appears the moment the caret walks into it, which is the only way a slot that
+            // shows nothing can be reached at all
+            MathBox index = token.IndexTokens.Count == 0 && !CaretIsIn(token.IndexTokens)
                 ? null
-                : BuildRow(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2, SlotPath(path, tokenIndex, 0));
+                : BuildSlot(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2, SlotPath(path, tokenIndex, 0));
 
             return new RootBox(
                 index,
@@ -274,10 +290,11 @@ namespace Calculator_WinUI.Models.Layout
             double size = fontSize * _style.LogarithmScale;
             List<MathBox> parts = new List<MathBox> { TextRun("log", size, token) };
 
-            // an empty base stays invisible, the same way an empty root index does
-            if (token.BaseTokens.Count > 0)
+            // an empty base stays invisible, the same way an empty root index does, and comes back the
+            // same way too
+            if (token.BaseTokens.Count > 0 || CaretIsIn(token.BaseTokens))
             {
-                MathBox logBase = BuildRow(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
+                MathBox logBase = BuildSlot(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
                 logBase.Raise = -size * _style.SubscriptShift;
                 parts.Add(logBase);
             }
@@ -342,19 +359,18 @@ namespace Calculator_WinUI.Models.Layout
         {
             if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel, path);
 
+            // the box is the same whether the caret stands in it or not, which is what keeps the slot
+            // from changing size as the caret walks in and out of it
             PlaceholderBox placeholder = new PlaceholderBox(
-                fontSize * _style.PlaceholderSize, fontSize * _style.PlaceholderThickness);
+                fontSize * _style.PlaceholderSize,
+                fontSize * _style.PlaceholderThickness,
+                _measurer.Measure(StrutText, fontSize));
 
             placeholder.CursorAddress = Address(path, 0);
-            if (_caret.Tokens == null || !ReferenceEquals(tokens, _caret.Tokens)) return placeholder;
 
-            // an empty slot keeps its box while the caret stands in it rather than letting the caret
-            // replace it, or the slot would vanish the moment the caret moved on and there would be
-            // nothing left to walk back into
-            return new RowBox(new List<MathBox> { Caret(fontSize), placeholder })
-            {
-                EndAddress = Address(path, 0)
-            };
+            if (CaretIsIn(tokens)) Caret = new CaretPlacement(placeholder, 0, fontSize);
+
+            return placeholder;
         }
 
         // a delimiter takes its height from what it encloses, which is why it is a box of its own rather
