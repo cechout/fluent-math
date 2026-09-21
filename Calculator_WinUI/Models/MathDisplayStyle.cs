@@ -20,12 +20,16 @@ namespace Calculator_WinUI.Models
     {
         // === theme colors ===
 
-        // the WinUI text brushes written out as literals; resolving a ThemeResource from code needs the
-        // explicit theme dictionary, and assigning one as a local value severs the markup expression
-        private const string DarkPrimaryText = "#FFFFFF"; // input line, dark theme
-        private const string DarkSecondaryText = "#C8C8C8"; // history line, dark theme
-        private const string LightPrimaryText = "#1B1B1B"; // input line, light theme
-        private const string LightSecondaryText = "#5E5E5E"; // history line, light theme
+        // the WinUI text brushes written out with their own alpha instead of the tone they used to
+        // compose to: the display sits on the Mica backdrop now, so the text tracks whatever shows
+        // through, the same way the keypad does
+        //
+        // they are literals at all because resolving a ThemeResource from code needs the explicit theme
+        // dictionary, and assigning one as a local value severs the markup expression
+        private const string DarkPrimaryText = "#FFFFFF"; // input line, dark theme, TextFillColorPrimary is opaque there
+        private const string DarkSecondaryText = "rgba(255, 255, 255, 0.773)"; // history line, dark theme, TextFillColorSecondary #C5FFFFFF
+        private const string LightPrimaryText = "rgba(0, 0, 0, 0.894)"; // input line, light theme, TextFillColorPrimary #E4000000
+        private const string LightSecondaryText = "rgba(0, 0, 0, 0.62)"; // history line, light theme, TextFillColorSecondary #9E000000
 
 
         // === display knobs ===

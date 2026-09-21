@@ -25,7 +25,7 @@
             Title="Simple Calculator"
             Grid.Row="0"
             Background="Transparent"
-            BorderBrush="White"
+            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
             BorderThickness="0,0,0,1"
             IsBackButtonVisible="False"
             IsPaneToggleButtonVisible="False">
@@ -67,8 +67,7 @@
                 </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <!--  (negative top margin swallows the separator line the navigation view draws above its content)  -->
-            <Frame x:Name="MainFrame" Margin="0,-2,0,0" />
+            <Frame x:Name="MainFrame" />
         </NavigationView>
     </Grid>
 

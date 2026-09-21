@@ -21,762 +21,760 @@
         </Style>
     </Page.Resources>
 
-    <Border Background="{ThemeResource SolidBackgroundFillColorBaseBrush}">
-        <Grid Margin="4,4,4,4">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="6*" />
-            </Grid.RowDefinitions>
+    <Grid Margin="4,4,4,4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="2*" />
+            <RowDefinition Height="6*" />
+        </Grid.RowDefinitions>
 
 
-            <!--  page header  -->
-            <!--  (the left margin clears the navigation views hamburger button)  -->
-            <Grid
-                Grid.Row="0"
-                Height="38"
-                Margin="45,0,0,0"
-                Background="Transparent">
-                <StackPanel
-                    HorizontalAlignment="Left"
-                    Orientation="Horizontal"
-                    Spacing="8">
+        <!--  page header  -->
+        <!--  (the left margin clears the navigation views hamburger button)  -->
+        <Grid
+            Grid.Row="0"
+            Height="38"
+            Margin="45,0,0,0"
+            Background="Transparent">
+            <StackPanel
+                HorizontalAlignment="Left"
+                Orientation="Horizontal"
+                Spacing="8">
 
-                    <TextBlock
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Style="{ThemeResource SubtitleTextBlockStyle}"
-                        Text="Standard" />
-
-                    <!--  planned: compact mode toggle  -->
-                    <!--<Button
-                        Width="32"
-                        Height="32"
-                        Padding="0"
-                        Style="{ThemeResource SubtleButtonStyle}">
-                        <FontIcon FontSize="16" Glyph="&#xE81C;" />
-                    </Button>-->
-                </StackPanel>
-
-                <!--  angle unit indicator  -->
-                <!--  (the unit itself is picked in the extra functions flyout on the keypad)  -->
                 <TextBlock
-                    Margin="0,0,4,0"
-                    HorizontalAlignment="Right"
+                    HorizontalAlignment="Left"
                     VerticalAlignment="Center"
-                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                    Style="{ThemeResource CaptionTextBlockStyle}"
-                    Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    Text="Standard" />
 
-                <!--  planned: history flyout  -->
+                <!--  planned: compact mode toggle  -->
                 <!--<Button
                     Width="32"
                     Height="32"
                     Padding="0"
-                    HorizontalAlignment="Right"
                     Style="{ThemeResource SubtleButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xE8A7;" />
+                    <FontIcon FontSize="16" Glyph="&#xE81C;" />
                 </Button>-->
-            </Grid>
+            </StackPanel>
+
+            <!--  angle unit indicator  -->
+            <!--  (the unit itself is picked in the extra functions flyout on the keypad)  -->
+            <TextBlock
+                Margin="0,0,4,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Style="{ThemeResource CaptionTextBlockStyle}"
+                Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
+
+            <!--  planned: history flyout  -->
+            <!--<Button
+                Width="32"
+                Height="32"
+                Padding="0"
+                HorizontalAlignment="Right"
+                Style="{ThemeResource SubtleButtonStyle}">
+                <FontIcon FontSize="16" Glyph="&#xE8A7;" />
+            </Button>-->
+        </Grid>
 
 
-            <!--  calculator display  -->
+        <!--  calculator display  -->
+        <!--
+            both lines are KaTeX in a WebView2 rather than a TextBlock, because
+            XAML cannot draw a stacked fraction or a real root sign
+            Top is the previous calculation, bottom is the current input; content is pushed in from
+            the code-behind, there is no binding on a WebView2
+        -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" />
+                <RowDefinition Height="3*" MinHeight="40" />
+            </Grid.RowDefinitions>
+
+            <WebView2
+                x:Name="MathWebView1"
+                Grid.Row="0"
+                Margin="4,0,4,0"
+                DefaultBackgroundColor="Transparent" />
+
             <!--
-                both lines are KaTeX in a WebView2 rather than a TextBlock, because
-                XAML cannot draw a stacked fraction or a real root sign
-                Top is the previous calculation, bottom is the current input; content is pushed in from
-                the code-behind, there is no binding on a WebView2
+                the input line scrolls inside the page, the scrollbar only mirrors that
+                A WebView2 brings its own Chromium scrollbar, which follows no Fluent theme, so
+                that one is hidden and this WinUI one shows the same state; it stays collapsed
+                until the formula is really wider than the display
             -->
-            <Grid Grid.Row="1">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="2*" />
-                    <RowDefinition Height="3*" MinHeight="40" />
-                </Grid.RowDefinitions>
+            <Grid Grid.Row="1" Margin="4,0,4,8">
+                <WebView2 x:Name="MathWebView2" DefaultBackgroundColor="Transparent" />
 
-                <WebView2
-                    x:Name="MathWebView1"
-                    Grid.Row="0"
-                    Margin="4,0,4,0"
-                    DefaultBackgroundColor="Transparent" />
-
-                <!--
-                    the input line scrolls inside the page, the scrollbar only mirrors that
-                    A WebView2 brings its own Chromium scrollbar, which follows no Fluent theme, so
-                    that one is hidden and this WinUI one shows the same state; it stays collapsed
-                    until the formula is really wider than the display
-                -->
-                <Grid Grid.Row="1" Margin="4,0,4,8">
-                    <WebView2 x:Name="MathWebView2" DefaultBackgroundColor="Transparent" />
-
-                    <primitives:ScrollBar
-                        x:Name="InputScrollBar"
-                        VerticalAlignment="Bottom"
-                        IndicatorMode="MouseIndicator"
-                        Orientation="Horizontal"
-                        Visibility="Collapsed" />
-                </Grid>
+                <primitives:ScrollBar
+                    x:Name="InputScrollBar"
+                    VerticalAlignment="Bottom"
+                    IndicatorMode="MouseIndicator"
+                    Orientation="Horizontal"
+                    Visibility="Collapsed" />
             </Grid>
+        </Grid>
 
 
-            <!--  keypad  -->
-            <!--
-                every key binds to the same InputCommand and identifies itself through its
-                CommandParameter, so the page carries no input logic at all
-                A shiftable key is two buttons in the same cell whose Visibility is driven by
-                NormalVisibility / ShiftVisibility, one of which is always collapsed
-            -->
+        <!--  keypad  -->
+        <!--
+            every key binds to the same InputCommand and identifies itself through its
+            CommandParameter, so the page carries no input logic at all
+            A shiftable key is two buttons in the same cell whose Visibility is driven by
+            NormalVisibility / ShiftVisibility, one of which is always collapsed
+        -->
+        <Grid
+            Grid.Row="2"
+            ColumnSpacing="2.5"
+            RowSpacing="2.5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <!--  parked keys: no grid position and collapsed, kept for when the layout gains room  -->
+            <Button
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_pi"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="Collapsed">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="π" />
+            </Button>
+            <Button
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_fact"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="Collapsed">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x!" />
+            </Button>
+
+            <!--  row 0  -->
+            <Button
+                Grid.Row="0"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_shift"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <FontIcon FontSize="14" Glyph="&#xE752;" />
+            </Button>
+            <Button
+                Grid.Row="0"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_shift"
+                Style="{ThemeResource AccentButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <FontIcon FontSize="14" Glyph="&#xE752;" />
+            </Button>
+            <Button
+                Grid.Row="0"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_nav_left"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE76B;" />
+            </Button>
             <Grid
-                Grid.Row="2"
-                ColumnSpacing="2.5"
+                Grid.Row="0"
+                Grid.Column="2"
+                VerticalAlignment="Stretch"
                 RowSpacing="2.5">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
-                    <RowDefinition Height="*" />
+                    <RowDefinition />
+                    <RowDefinition />
                 </Grid.RowDefinitions>
-
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <!--  parked keys: no grid position and collapsed, kept for when the layout gains room  -->
-                <Button
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_pi"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="Collapsed">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="π" />
-                </Button>
-                <Button
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_fact"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="Collapsed">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x!" />
-                </Button>
-
-                <!--  row 0  -->
                 <Button
                     Grid.Row="0"
-                    Grid.Column="0"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_shift"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <FontIcon FontSize="14" Glyph="&#xE752;" />
-                </Button>
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_shift"
-                    Style="{ThemeResource AccentButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <FontIcon FontSize="14" Glyph="&#xE752;" />
-                </Button>
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_left"
+                    CommandParameter="cmd_nav_up"
+                    CornerRadius="0,0,0,0"
                     Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE76B;" />
-                </Button>
-                <Grid
-                    Grid.Row="0"
-                    Grid.Column="2"
-                    VerticalAlignment="Stretch"
-                    RowSpacing="2.5">
-                    <Grid.RowDefinitions>
-                        <RowDefinition />
-                        <RowDefinition />
-                    </Grid.RowDefinitions>
-                    <Button
-                        Grid.Row="0"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        Command="{x:Bind ViewModel.InputCommand}"
-                        CommandParameter="cmd_nav_up"
-                        CornerRadius="0,0,0,0"
-                        Style="{StaticResource OperatorButtonStyle}">
-                        <FontIcon FontSize="14" Glyph="&#xE70E;" />
-                    </Button>
-                    <Button
-                        Grid.Row="1"
-                        HorizontalAlignment="Stretch"
-                        VerticalAlignment="Stretch"
-                        Command="{x:Bind ViewModel.InputCommand}"
-                        CommandParameter="cmd_nav_down"
-                        Style="{StaticResource OperatorButtonStyle}">
-                        <FontIcon FontSize="14" Glyph="&#xE70D;" />
-                    </Button>
-                </Grid>
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_right"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE76C;" />
-                </Button>
-                <!--  extra functions  -->
-                <!--
-                    the keys inside carry the same InputCommand as the keypad, the Click handler only
-                    closes the flyout behind them so it reads as a menu
-                -->
-                <Button
-                    Grid.Row="0"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE712;" />
-
-                    <Button.Flyout>
-                        <!--
-                            Bottom centres the panel under the key; ShouldConstrainToRootBounds lets it
-                            hang out of the window instead of being squeezed back inside, which at the
-                            minimum window size is the difference between four keys per row and two
-                        -->
-                        <Flyout
-                            x:Name="ExtraFunctionsFlyout"
-                            AreOpenCloseAnimationsEnabled="False"
-                            Placement="Bottom"
-                            ShouldConstrainToRootBounds="False">
-                            <Flyout.FlyoutPresenterStyle>
-                                <Style TargetType="FlyoutPresenter">
-                                    <Setter Property="Padding" Value="8" />
-                                    <Setter Property="MinWidth" Value="0" />
-                                    <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
-                                </Style>
-                            </Flyout.FlyoutPresenterStyle>
-
-                            <StackPanel Spacing="2.5">
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_pi"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="π" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_ans"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="Ans" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_inv"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x⁻¹" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_fact"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x!" />
-                                    </Button>
-                                </StackPanel>
-
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_percent"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="%" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_abs"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="|x|" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_pow_e"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="eⁿ" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_log_b"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="logₙ" />
-                                    </Button>
-                                </StackPanel>
-
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_sinh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_cosh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_tanh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh" />
-                                    </Button>
-                                </StackPanel>
-
-                                <StackPanel Orientation="Horizontal" Spacing="2.5">
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_asinh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh⁻¹" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_acosh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh⁻¹" />
-                                    </Button>
-                                    <Button
-                                        Click="ExtraFunction_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_atanh"
-                                        Style="{StaticResource ExtraFunctionButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh⁻¹" />
-                                    </Button>
-                                </StackPanel>
-
-                                <!--  revisit: angle unit selector  -->
-                                <!--
-                                    the cmd_angle_deg / rad / gra keys exist and the page header already
-                                    shows the current unit, but the selector has no place of its own yet,
-                                    so DEG is what the app runs on until it gets one
-                                -->
-                            </StackPanel>
-                        </Flyout>
-                    </Button.Flyout>
-                </Button>
-
-                <!--  row 1  -->
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_frac"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x/y" />
+                    <FontIcon FontSize="14" Glyph="&#xE70E;" />
                 </Button>
                 <Button
                     Grid.Row="1"
-                    Grid.Column="1"
                     HorizontalAlignment="Stretch"
                     VerticalAlignment="Stretch"
                     Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_sqrt"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="²√" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_root_n"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ⁿ√" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_pow_2"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x²" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_pow_n"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="xⁿ" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_ln"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ln" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_log"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="log" />
-                </Button>
-                <Button
-                    Grid.Row="1"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_e"
+                    CommandParameter="cmd_nav_down"
                     Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="e" />
-                </Button>
-
-                <!--  row 2  -->
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_sin"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_asin"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin⁻¹" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_cos"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_acos"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos⁻¹" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_tan"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_atan"
-                    Style="{StaticResource OperatorButtonStyle}"
-                    Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan⁻¹" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_paren_open"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="(" />
-                </Button>
-                <Button
-                    Grid.Row="2"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_paren_close"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text=")" />
-                </Button>
-
-                <!--  row 3  -->
-                <Button
-                    Grid.Row="3"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="7"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="7" />
-                </Button>
-                <Button
-                    Grid.Row="3"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="8"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="8" />
-                </Button>
-                <Button
-                    Grid.Row="3"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="9"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="9" />
-                </Button>
-                <Button
-                    Grid.Row="3"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.BackspaceCommand}"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xE750;" />
-                </Button>
-                <Button
-                    Grid.Row="3"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.ClearCommand}"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="AC" />
-                </Button>
-
-                <!--  row 4  -->
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="4"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="4" />
-                </Button>
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="5"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="5" />
-                </Button>
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="6"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="6" />
-                </Button>
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="*"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE947;" />
-                </Button>
-                <Button
-                    Grid.Row="4"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="/"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE94A;" />
-                </Button>
-
-                <!--  row 5  -->
-                <Button
-                    Grid.Row="5"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="1"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="1" />
-                </Button>
-                <Button
-                    Grid.Row="5"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="2"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="2" />
-                </Button>
-                <Button
-                    Grid.Row="5"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="3"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="3" />
-                </Button>
-                <Button
-                    Grid.Row="5"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="+"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE948;" />
-                </Button>
-                <Button
-                    Grid.Row="5"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="-"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE949;" />
-                </Button>
-
-                <!--  row 6  -->
-                <Button
-                    Grid.Row="6"
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="."
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="." />
-                </Button>
-                <Button
-                    Grid.Row="6"
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="0"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="0" />
-                </Button>
-                <Button
-                    Grid.Row="6"
-                    Grid.Column="2"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_exp"
-                    Style="{StaticResource NumberPadButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="*10ⁿ" />
-                </Button>
-                <Button
-                    Grid.Row="6"
-                    Grid.Column="3"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE8AB;" />
-                </Button>
-                <Button
-                    Grid.Row="6"
-                    Grid.Column="4"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.CalculateCommand}"
-                    Style="{ThemeResource AccentButtonStyle}">
-                    <FontIcon
-                        FontSize="14"
-                        FontWeight="Bold"
-                        Glyph="&#xE94E;" />
+                    <FontIcon FontSize="14" Glyph="&#xE70D;" />
                 </Button>
             </Grid>
+            <Button
+                Grid.Row="0"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_nav_right"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE76C;" />
+            </Button>
+            <!--  extra functions  -->
+            <!--
+                the keys inside carry the same InputCommand as the keypad, the Click handler only
+                closes the flyout behind them so it reads as a menu
+            -->
+            <Button
+                Grid.Row="0"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE712;" />
 
+                <Button.Flyout>
+                    <!--
+                        Bottom centres the panel under the key; ShouldConstrainToRootBounds lets it
+                        hang out of the window instead of being squeezed back inside, which at the
+                        minimum window size is the difference between four keys per row and two
+                    -->
+                    <Flyout
+                        x:Name="ExtraFunctionsFlyout"
+                        AreOpenCloseAnimationsEnabled="False"
+                        Placement="Bottom"
+                        ShouldConstrainToRootBounds="False">
+                        <Flyout.FlyoutPresenterStyle>
+                            <Style TargetType="FlyoutPresenter">
+                                <Setter Property="Padding" Value="8" />
+                                <Setter Property="MinWidth" Value="0" />
+                                <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                            </Style>
+                        </Flyout.FlyoutPresenterStyle>
+
+                        <StackPanel Spacing="2.5">
+                            <StackPanel Orientation="Horizontal" Spacing="2.5">
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_pi"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="π" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_ans"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="Ans" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_inv"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x⁻¹" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_fact"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x!" />
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="2.5">
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_percent"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="%" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_abs"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="|x|" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_pow_e"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="eⁿ" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_log_b"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="logₙ" />
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="2.5">
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_sinh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_cosh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_tanh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh" />
+                                </Button>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="2.5">
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_asinh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh⁻¹" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_acosh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh⁻¹" />
+                                </Button>
+                                <Button
+                                    Click="ExtraFunction_Click"
+                                    Command="{x:Bind ViewModel.InputCommand}"
+                                    CommandParameter="cmd_atanh"
+                                    Style="{StaticResource ExtraFunctionButtonStyle}">
+                                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh⁻¹" />
+                                </Button>
+                            </StackPanel>
+
+                            <!--  revisit: angle unit selector  -->
+                            <!--
+                                the cmd_angle_deg / rad / gra keys exist and the page header already
+                                shows the current unit, but the selector has no place of its own yet,
+                                so DEG is what the app runs on until it gets one
+                            -->
+                        </StackPanel>
+                    </Flyout>
+                </Button.Flyout>
+            </Button>
+
+            <!--  row 1  -->
+            <Button
+                Grid.Row="1"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_frac"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x/y" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_sqrt"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="²√" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_root_n"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ⁿ√" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_pow_2"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x²" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_pow_n"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="xⁿ" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_ln"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ln" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_log"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="log" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_e"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="e" />
+            </Button>
+
+            <!--  row 2  -->
+            <Button
+                Grid.Row="2"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_sin"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_asin"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin⁻¹" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_cos"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_acos"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos⁻¹" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_tan"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_atan"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan⁻¹" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_paren_open"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="(" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_paren_close"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text=")" />
+            </Button>
+
+            <!--  row 3  -->
+            <Button
+                Grid.Row="3"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="7"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="7" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="8"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="8" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="9"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="9" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.BackspaceCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="16" Glyph="&#xE750;" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.ClearCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="AC" />
+            </Button>
+
+            <!--  row 4  -->
+            <Button
+                Grid.Row="4"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="4"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="4" />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="5"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="5" />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="6"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="6" />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="*"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE947;" />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="/"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE94A;" />
+            </Button>
+
+            <!--  row 5  -->
+            <Button
+                Grid.Row="5"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="1"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="1" />
+            </Button>
+            <Button
+                Grid.Row="5"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="2"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="2" />
+            </Button>
+            <Button
+                Grid.Row="5"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="3"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="3" />
+            </Button>
+            <Button
+                Grid.Row="5"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="+"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE948;" />
+            </Button>
+            <Button
+                Grid.Row="5"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="-"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE949;" />
+            </Button>
+
+            <!--  row 6  -->
+            <Button
+                Grid.Row="6"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="."
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="." />
+            </Button>
+            <Button
+                Grid.Row="6"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="0"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="0" />
+            </Button>
+            <Button
+                Grid.Row="6"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_exp"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="*10ⁿ" />
+            </Button>
+            <Button
+                Grid.Row="6"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE8AB;" />
+            </Button>
+            <Button
+                Grid.Row="6"
+                Grid.Column="4"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.CalculateCommand}"
+                Style="{ThemeResource AccentButtonStyle}">
+                <FontIcon
+                    FontSize="14"
+                    FontWeight="Bold"
+                    Glyph="&#xE94E;" />
+            </Button>
         </Grid>
-    </Border>
+
+    </Grid>
 </Page>
