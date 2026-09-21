@@ -251,6 +251,28 @@ namespace Calculator_WinUI.Models.Layout
     }
 
 
+    // where the caret stands
+    //
+    // it has no width at all, and the visible bar is drawn on top of the point it marks rather than being
+    // this box; anything a caret contributes to the layout moves its neighbours as it travels, which is
+    // the one mistake the KaTeX display made three times over
+    //
+    // the two reaches are those of the text around it, so a slot holding nothing but a caret is still as
+    // tall as one holding a digit
+    public sealed class CaretBox : MathBox
+    {
+        public double FontSize { get; }
+
+        public CaretBox(double fontSize, TextMetrics strut)
+        {
+            FontSize = fontSize;
+
+            Ascent = strut.Ascent;
+            Descent = strut.Descent;
+        }
+    }
+
+
     // what an empty slot draws, so it can be seen and a caret can stand in it
     public sealed class PlaceholderBox : MathBox
     {

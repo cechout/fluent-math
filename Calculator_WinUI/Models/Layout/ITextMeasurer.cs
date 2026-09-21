@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Calculator_WinUI.Models.Layout
 {
     // what one run of text occupies, split at the baseline rather than given as a single height
@@ -16,6 +18,23 @@ namespace Calculator_WinUI.Models.Layout
             Width = width;
             Ascent = ascent;
             Descent = descent;
+        }
+    }
+
+
+    // where the caret stands: the token list being written into, and the index inside it
+    //
+    // the list is matched by identity rather than by contents, which is what tells one empty slot from
+    // another
+    public readonly struct CaretTarget
+    {
+        public IReadOnlyList<MathToken> Tokens { get; }
+        public int Index { get; }
+
+        public CaretTarget(IReadOnlyList<MathToken> tokens, int index)
+        {
+            Tokens = tokens;
+            Index = index;
         }
     }
 

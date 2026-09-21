@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Calculator_WinUI.Models.Layout
@@ -14,6 +15,7 @@ namespace Calculator_WinUI.Models.Layout
 
         private readonly ITextMeasurer _measurer;
         private readonly MathLayoutStyle _style;
+        private readonly CaretTarget _caret;
 
         // the glyph an empty row takes its height from; a digit rather than a letter, because digits are
         // what the display is mostly made of
@@ -26,10 +28,12 @@ namespace Calculator_WinUI.Models.Layout
 
         // === construction ===
 
-        public MathLayoutEngine(ITextMeasurer measurer, MathLayoutStyle style)
+        // the caret is left out for the history line, which has none
+        public MathLayoutEngine(ITextMeasurer measurer, MathLayoutStyle style, CaretTarget caret = default)
         {
             _measurer = measurer;
             _style = style;
+            _caret = caret;
         }
 
 
@@ -44,22 +48,28 @@ namespace Calculator_WinUI.Models.Layout
         // in is set smaller than the row around it and has to know how much further it may still shrink
         public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel)
         {
+            // the caret belongs to exactly one list, the one being written into, and it is that list by
+            // identity rather than by contents
+            bool carriesCaret = _caret.Tokens != null && ReferenceEquals(tokens, _caret.Tokens);
+
             List<MathBox> children = new List<MathBox>();
             int index = 0;
 
             while (index < tokens.Count)
             {
-                MathToken token = tokens[index];
+                if (carriesCaret && index == _caret.Index) children.Add(Caret(fontSize));
 
-                if (token.Type == TokenType.Number)
+                if (tokens[index].Type == TokenType.Number)
                 {
-                    children.Add(BuildNumberRun(tokens, ref index, fontSize));
+                    AddNumberRun(children, tokens, ref index, fontSize, carriesCaret);
                     continue;
                 }
 
-                children.Add(BuildToken(token, fontSize, scriptLevel));
+                children.Add(BuildToken(tokens[index], fontSize, scriptLevel));
                 index++;
             }
+
+            if (carriesCaret && _caret.Index >= tokens.Count) children.Add(Caret(fontSize));
 
             if (children.Count == 0) return RowBox.Empty(_measurer.Measure(StrutText, fontSize));
 
@@ -89,8 +99,10 @@ namespace Calculator_WinUI.Models.Layout
 
         // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
         // own, because a bracket has to scale with what it encloses as soon as it can
-        private TextRunBox BuildNumberRun(IReadOnlyList<MathToken> tokens, ref int index, double fontSize)
+        private void AddNumberRun(List<MathBox> children, IReadOnlyList<MathToken> tokens, ref int index,
+            double fontSize, bool carriesCaret)
         {
+            int start = index;
             StringBuilder text = new StringBuilder();
             List<MathToken> covered = new List<MathToken>();
 
@@ -102,7 +114,36 @@ namespace Calculator_WinUI.Models.Layout
             }
 
             string run = text.ToString();
-            return new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered);
+            TextMetrics whole = _measurer.Measure(run, fontSize);
+
+            if (!carriesCaret || _caret.Index <= start || _caret.Index >= index)
+            {
+                children.Add(new TextRunBox(run, fontSize, whole, covered));
+                return;
+            }
+
+            // the caret can stand between two digits of the same number, and only then is the run split
+            //
+            // the second half is sized as the whole minus the first rather than measured on its own, so
+            // the two always add up to the width the run has without a caret in it and nothing beside it
+            // shifts as the caret travels through
+            int split = _caret.Index - start;
+            string left = string.Concat(covered.Take(split).Select(token => token.Value));
+            double leftWidth = _measurer.Measure(left, fontSize).Width;
+
+            children.Add(new TextRunBox(left, fontSize,
+                new TextMetrics(leftWidth, whole.Ascent, whole.Descent), covered.Take(split).ToList()));
+
+            children.Add(Caret(fontSize));
+
+            children.Add(new TextRunBox(run.Substring(left.Length), fontSize,
+                new TextMetrics(whole.Width - leftWidth, whole.Ascent, whole.Descent),
+                covered.Skip(split).ToList()));
+        }
+
+        private CaretBox Caret(double fontSize)
+        {
+            return new CaretBox(fontSize, _measurer.Measure(StrutText, fontSize));
         }
 
         private TextRunBox BuildOperator(MathToken token, double fontSize)
@@ -270,8 +311,15 @@ namespace Calculator_WinUI.Models.Layout
         {
             if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel);
 
-            return new PlaceholderBox(
+            PlaceholderBox placeholder = new PlaceholderBox(
                 fontSize * _style.PlaceholderSize, fontSize * _style.PlaceholderThickness);
+
+            if (_caret.Tokens == null || !ReferenceEquals(tokens, _caret.Tokens)) return placeholder;
+
+            // an empty slot keeps its box while the caret stands in it rather than letting the caret
+            // replace it, or the slot would vanish the moment the caret moved on and there would be
+            // nothing left to walk back into
+            return new RowBox(new List<MathBox> { Caret(fontSize), placeholder });
         }
 
         // a delimiter takes its height from what it encloses, which is why it is a box of its own rather

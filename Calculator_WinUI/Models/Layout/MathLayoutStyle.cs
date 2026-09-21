@@ -96,6 +96,16 @@ namespace Calculator_WinUI.Models.Layout
         public double DelimiterThickness { get; set; } = 0.06; // em of the stroke it is drawn with
 
 
+        // === the caret ===
+
+        // it stands on the baseline of whatever slot it is in and reaches the top of the digits beside
+        // it; every value is em, so the caret scales with the slot and with nothing else
+        public double CursorWidth { get; set; } = 0.07;
+        public double CursorHeight { get; set; } = 0.71;
+        public double CursorShift { get; set; } = -0.04; // em above the baseline, negative drops it below
+        public double CursorCornerRadius { get; set; } = 0.03;
+
+
         // === empty slots ===
 
         // an empty slot draws a box rather than collapsing, so it can be seen and a caret has somewhere to

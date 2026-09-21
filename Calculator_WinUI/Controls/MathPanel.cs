@@ -61,6 +61,18 @@ namespace Calculator_WinUI.Controls
             set => SetValue(InkProperty, value);
         }
 
+        // the caret is drawn in the system accent rather than in the text color, so it stays findable in a
+        // long formula
+        public static readonly DependencyProperty CaretInkProperty = DependencyProperty.Register(
+            nameof(CaretInk), typeof(Brush), typeof(MathPanel),
+            new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).Rebuild()));
+
+        public Brush CaretInk
+        {
+            get => (Brush)GetValue(CaretInkProperty);
+            set => SetValue(CaretInkProperty, value);
+        }
+
         public FontFamily TextFont
         {
             get => _measurer.FontFamily;
@@ -166,11 +178,32 @@ namespace Calculator_WinUI.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
+                case CaretBox caret:
+                    RealizeCaret(caret);
+                    break;
+
                 case PlaceholderBox placeholder:
                     Add(new Rectangle { Stroke = Ink, StrokeThickness = placeholder.Thickness },
                         BoundsOf(placeholder));
                     break;
             }
+        }
+
+        // the box itself has no width, so the bar is straddled over the point it marks: half of it either
+        // side, which is how a text caret sits in the gap between two glyphs rather than beside one
+        private void RealizeCaret(CaretBox caret)
+        {
+            double width = caret.FontSize * LayoutStyle.CursorWidth;
+            double height = caret.FontSize * LayoutStyle.CursorHeight;
+            double bottom = caret.Baseline - caret.FontSize * LayoutStyle.CursorShift;
+            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
+
+            Add(new Rectangle
+            {
+                Fill = CaretInk ?? Ink,
+                RadiusX = radius,
+                RadiusY = radius
+            }, new Rect(caret.X - width / 2, bottom - height, width, height));
         }
 
         private void RealizeRun(TextRunBox run)
