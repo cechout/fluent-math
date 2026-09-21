@@ -193,7 +193,7 @@ namespace Calculator_WinUI.Tests
         // === symbols ===
 
         [Theory]
-        [InlineData("*", "⋅")]
+        [InlineData("*", "×")]
         [InlineData("/", "÷")]
         [InlineData("-", "−")]
         [InlineData("+", "+")]

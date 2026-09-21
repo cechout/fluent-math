@@ -29,7 +29,6 @@ namespace Calculator_WinUI.Models.Layout
         private const string StrutText = "0";
 
         // signs the display draws that no token carries as its value
-        private const string TimesSign = "×"; // the scientific form
         private const string MinusOne = "−1"; // the reciprocal and the inverse hyperbolics
 
 
@@ -116,7 +115,6 @@ namespace Calculator_WinUI.Models.Layout
             {
                 case FractionToken fraction: return BuildFraction(fraction, fontSize, scriptLevel, path, tokenIndex);
                 case PowerToken power: return BuildPower(power, fontSize, scriptLevel, path, tokenIndex);
-                case ScientificToken scientific: return BuildScientific(scientific, fontSize, scriptLevel, path, tokenIndex);
                 case RootToken root: return BuildRoot(root, fontSize, scriptLevel, path, tokenIndex);
                 case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel, path, tokenIndex);
                 case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel, path, tokenIndex);
@@ -196,9 +194,15 @@ namespace Calculator_WinUI.Models.Layout
             double operatorSize = fontSize * _style.OperatorScale;
             TextRunBox box = TextRun(OperatorSymbol(token.Value), operatorSize, token);
 
-            // both are em of the operator, so they shrink with it rather than with the text around it
+            // the raise is em of the operator, so it shrinks with it rather than with the text around it
             box.Raise = operatorSize * _style.OperatorRaise;
-            box.LeadingGap = operatorSize * _style.OperatorGap;
+
+            // the gap follows the size only as far as OperatorGapScaling says, because a gap that is
+            // fully proportional shrinks twice inside a fraction and closes up
+            double fullSize = _style.FontSizePx * _style.OperatorScale;
+            double gapSize = fullSize + (operatorSize - fullSize) * _style.OperatorGapScaling;
+
+            box.LeadingGap = gapSize * _style.OperatorGap;
             box.TrailingGap = box.LeadingGap;
 
             return box;
@@ -244,25 +248,6 @@ namespace Calculator_WinUI.Models.Layout
             exponent.Raise = baseBox.Ascent * _style.SuperscriptShift;
 
             return new RowBox(new List<MathBox> { baseBox, exponent });
-        }
-
-        // the EXP key, drawn as the times ten to the n it stands for
-        private RowBox BuildScientific(ScientificToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
-        {
-            double size = fontSize * _style.PowerScale;
-            double operatorSize = size * _style.OperatorScale;
-
-            TextRunBox times = TextRun(TimesSign, operatorSize, token);
-            times.Raise = operatorSize * _style.OperatorRaise;
-            times.LeadingGap = operatorSize * _style.OperatorGap;
-            times.TrailingGap = times.LeadingGap;
-
-            TextRunBox ten = TextRun("10", size, token);
-
-            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
-            exponent.Raise = ten.Ascent * _style.SuperscriptShift;
-
-            return new RowBox(new List<MathBox> { times, ten, exponent });
         }
 
         private RootBox BuildRoot(RootToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
@@ -446,7 +431,7 @@ namespace Calculator_WinUI.Models.Layout
         {
             return value switch
             {
-                "*" => "⋅", // dot operator, the sign the latex path writes as \cdot
+                "*" => "×", // multiplication sign, the one a pocket calculator prints
                 "/" => "÷", // division sign
                 "-" => "−", // real minus, which is wider and sits higher than a hyphen
                 _ => value

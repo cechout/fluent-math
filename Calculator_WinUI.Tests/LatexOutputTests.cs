@@ -51,12 +51,13 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void WritesAScientificExponentAsATimesTenPower()
+        public void WritesAScientificExponentAsAPlainMultiplicationAndPower()
         {
+            // the EXP key spells out times, one, zero, power, so there is no command of its own left
             string latex = Latex("3", "exp", "5");
 
-            Assert.Contains("\\htmlClass{m-op}{\\times}", latex);
-            Assert.Contains("10^{", latex);
+            Assert.Contains("\\htmlClass{m-op}{\\cdot}", latex);
+            Assert.Contains("m-pow", latex);
         }
 
         [Fact]

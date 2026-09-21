@@ -76,7 +76,7 @@ namespace Calculator_WinUI.Tests
             // the 2 has to still be standing with the exponent hanging off it; clearing it first and
             // then refusing the key leaves an empty tree, which renders as a bare 0
             Assert.Contains("2", viewModel.InputAndResultText);
-            Assert.Contains("10^", viewModel.InputAndResultText);
+            Assert.Contains("m-pow", viewModel.InputAndResultText);
         }
 
         [Theory]
@@ -253,15 +253,15 @@ namespace Calculator_WinUI.Tests
 
         // === the exponent key ===
 
-        // the one way to get a power of ten; the flyout used to carry a second key for it that looked
-        // almost the same and bound differently, and it was taken out rather than relabelled
+        // the one way to get a power of ten, and it is a multiplication like any other: the key spells
+        // out times, one, zero, power rather than making a token that binds tighter than it looks
         [Fact]
-        public void BindsTheExponentToTheNumberInFrontOfIt()
+        public void ReadsTheExponentKeyAsAnOrdinaryMultiplication()
         {
             var viewModel = new StandardViewModel();
             Press(viewModel, "1", "/", "3", "cmd_exp", "5", "=");
 
-            Assert.Equal("0.000003333333333", viewModel.InputAndResultText);
+            Assert.Equal("33333.3333333", viewModel.InputAndResultText);
         }
 
         [Fact]

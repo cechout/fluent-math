@@ -20,8 +20,8 @@ namespace Calculator_WinUI.Views
         public StandardViewModel ViewModel { get; }
 
         // rebuilt on every theme change, so they are fields rather than locals in the load handler
-        private MathDisplayStyle _historyStyle;
-        private MathDisplayStyle _inputStyle;
+        private MathLayoutStyle _historyStyle;
+        private MathLayoutStyle _inputStyle;
 
 
         // === constructor ===
@@ -91,13 +91,13 @@ namespace Calculator_WinUI.Views
 
         private void RebuildStyles()
         {
-            _historyStyle = MathDisplayStyle.ForHistoryLine();
-            _inputStyle = MathDisplayStyle.ForInputLine();
+            _historyStyle = MathLayoutStyle.ForHistoryLine();
+            _inputStyle = MathLayoutStyle.ForInputLine();
 
             // the panels take the knobs as numbers and redraw with them; their colors come from the
             // ThemeResources in the markup, which re-resolve themselves on a theme change
-            MathDisplay1.LayoutStyle = _historyStyle.ToLayoutStyle();
-            MathDisplay2.LayoutStyle = _inputStyle.ToLayoutStyle();
+            MathDisplay1.LayoutStyle = _historyStyle;
+            MathDisplay2.LayoutStyle = _inputStyle;
 
             MathDisplay1.Show(ViewModel.CalculationTokens);
             ShowInputLine();

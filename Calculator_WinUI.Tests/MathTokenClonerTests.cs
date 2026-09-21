@@ -72,14 +72,11 @@ namespace Calculator_WinUI.Tests
             power.BaseTokens.Add(Digit("9"));
             power.ExponentTokens.Add(Digit("2"));
 
-            ScientificToken scientific = new ScientificToken();
-            scientific.ExponentTokens.Add(Digit("5"));
-
             FunctionToken function = new FunctionToken("sin");
             function.ParameterTokens.Add(Digit("0"));
 
             List<MathToken> copy = MathTokenCloner.CloneList(
-                new List<MathToken> { root, logarithm, power, scientific, function });
+                new List<MathToken> { root, logarithm, power, function });
 
             Assert.Equal("3", ((RootToken)copy[0]).IndexTokens.Single().Value);
             Assert.Equal("8", ((RootToken)copy[0]).RadicandTokens.Single().Value);
@@ -87,8 +84,7 @@ namespace Calculator_WinUI.Tests
             Assert.Equal("8", ((LogarithmToken)copy[1]).ParameterTokens.Single().Value);
             Assert.Equal("9", ((PowerToken)copy[2]).BaseTokens.Single().Value);
             Assert.Equal("2", ((PowerToken)copy[2]).ExponentTokens.Single().Value);
-            Assert.Equal("5", ((ScientificToken)copy[3]).ExponentTokens.Single().Value);
-            Assert.Equal("0", ((FunctionToken)copy[4]).ParameterTokens.Single().Value);
+            Assert.Equal("0", ((FunctionToken)copy[3]).ParameterTokens.Single().Value);
         }
 
         [Fact]

@@ -17,7 +17,6 @@
     <Compile Include="..\Calculator_WinUI\Engines\*.cs" />
     <Compile Include="..\Calculator_WinUI\Models\MathToken.cs" />
     <Compile Include="..\Calculator_WinUI\Models\Layout\*.cs" />
-    <Compile Include="..\Calculator_WinUI\Models\MathDisplayStyle.cs" />
     <Compile Include="..\Calculator_WinUI\Models\NavigationMetadata.cs" />
     <Compile Include="..\Calculator_WinUI\Models\EvaluationMetadata.cs" />
     <Compile Include="..\Calculator_WinUI\Models\ResultFormatter.cs" />

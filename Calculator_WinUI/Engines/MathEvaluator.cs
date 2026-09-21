@@ -236,12 +236,6 @@ namespace Calculator_WinUI.Engines
                 // the EXP key belongs to the number it follows rather than to the expression around it,
                 // so it is consumed here inside the atom; that is what makes 1 / 3 EXP 5 one over three
                 // hundred thousand instead of a third of a hundred thousand
-                if (position < tokens.Count && tokens[position] is ScientificToken scientific)
-                {
-                    position++;
-                    return ApplyScientificExponent(number, scientific);
-                }
-
                 return number;
             }
 
@@ -356,14 +350,6 @@ namespace Calculator_WinUI.Engines
             if (double.IsNaN(result)) return Fail(EvaluationError.Domain); // negative base with a fractional exponent
 
             return result;
-        }
-
-        private double ApplyScientificExponent(double mantissa, ScientificToken scientific)
-        {
-            double exponent = EvaluateSlot(scientific.ExponentTokens);
-            if (_error != EvaluationError.None) return 0;
-
-            return mantissa * Math.Pow(10, exponent);
         }
 
         private double EvaluateRoot(RootToken root)

@@ -11,9 +11,30 @@ namespace Calculator_WinUI.Models.Layout
     // formula scales from FontSizePx alone
     public class MathLayoutStyle
     {
+        // === the two display lines ===
+
+        // the only thing the two lines differ in; everything below is shared
+        public const double InputLineFontSize = 36;
+        public const double HistoryLineFontSize = 18;
+
+        public static MathLayoutStyle ForInputLine()
+        {
+            return new MathLayoutStyle { FontSizePx = InputLineFontSize };
+        }
+
+        public static MathLayoutStyle ForHistoryLine()
+        {
+            return new MathLayoutStyle { FontSizePx = HistoryLineFontSize };
+        }
+
+
         // === text ===
 
-        public double FontSizePx { get; set; } = 36; // base size, every scale below is relative to it
+        public double FontSizePx { get; set; } = InputLineFontSize; // every scale below is relative to it
+
+        // both halves of a fraction stay at full size instead of dropping a level, which is a far taller
+        // fraction; the evaluator reads it too, because it decides the shape a result comes back in
+        public bool UseDisplayFractions { get; set; } = false;
 
         // how far a formula taller than its box may be shrunk before it is clipped after all
         //
@@ -59,6 +80,13 @@ namespace Calculator_WinUI.Models.Layout
         public double OperatorRaise { get; set; } = 0.20;
         public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
 
+        // how far the gap follows the size of the operator it belongs to
+        //
+        // at 1 it is fully proportional, and inside a fraction it then shrinks twice over, once with the
+        // script level and once with the operator scale, which closes it up almost entirely; at 0 it
+        // stays the gap of a full size operator however small this one is drawn
+        public double OperatorGapScaling { get; set; } = 0.5;
+
 
         // === fractions ===
 
@@ -69,9 +97,6 @@ namespace Calculator_WinUI.Models.Layout
         public double FractionNumeratorGap { get; set; } = 0.12;   // between the bar and the numerator
         public double FractionDenominatorGap { get; set; } = 0.12; // between the bar and the denominator
         public double FractionSidePadding { get; set; } = 0.06;    // how far the bar reaches past its content
-
-        // both halves stay at full size instead of dropping a level, which is a far taller fraction
-        public bool UseDisplayFractions { get; set; } = false;
 
 
         // === scripts ===
@@ -90,7 +115,7 @@ namespace Calculator_WinUI.Models.Layout
         public double RadicalVerticalGap { get; set; } = 0.04;    // em between that bar and the radicand
 
         // where the index sits, as a fraction of the height of the sign it stands on
-        public double RadicalIndexRaise { get; set; } = 0.6;
+        public double RadicalIndexRaise { get; set; } = 0.45;
 
 
         // === delimiters ===

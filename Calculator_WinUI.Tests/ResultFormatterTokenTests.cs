@@ -99,13 +99,18 @@ namespace Calculator_WinUI.Tests
         // === scientific ===
 
         [Fact]
-        public void AValueOutsideTheWindowBecomesAScientificToken()
+        public void AValueOutsideTheWindowIsSpelledOutAsAMultiplicationAndAPower()
         {
+            // the same shape the EXP key produces, so a result and a typed formula are one thing rather
+            // than two that happen to look alike
             List<MathToken> tokens = ResultFormatter.ToTokens(1.5e20);
 
-            ScientificToken scientific = Assert.IsType<ScientificToken>(tokens.Last());
-            Assert.Equal("1.5", Digits(tokens.Take(tokens.Count - 1)));
-            Assert.Equal("20", Digits(scientific.ExponentTokens));
+            Assert.Equal("1.5", Digits(tokens.Take(tokens.Count - 2)));
+            Assert.Equal(TokenType.Operator, tokens[tokens.Count - 2].Type);
+
+            PowerToken power = Assert.IsType<PowerToken>(tokens.Last());
+            Assert.Equal("10", Digits(power.BaseTokens));
+            Assert.Equal("20", Digits(power.ExponentTokens));
         }
 
         [Fact]
@@ -113,8 +118,8 @@ namespace Calculator_WinUI.Tests
         {
             List<MathToken> tokens = ResultFormatter.ToTokens(1.5e-20);
 
-            ScientificToken scientific = Assert.IsType<ScientificToken>(tokens.Last());
-            Assert.Equal(Minus + "20", Digits(scientific.ExponentTokens));
+            PowerToken power = Assert.IsType<PowerToken>(tokens.Last());
+            Assert.Equal(Minus + "20", Digits(power.ExponentTokens));
         }
 
 
@@ -133,7 +138,7 @@ namespace Calculator_WinUI.Tests
             List<MathToken> tokens = ResultFormatter.ToTokens(value);
 
             bool latexIsScientific = latex.Contains("10^");
-            bool tokensAreScientific = tokens.Any(token => token is ScientificToken);
+            bool tokensAreScientific = tokens.Any(token => token is PowerToken);
 
             Assert.Equal(latexIsScientific, tokensAreScientific);
         }

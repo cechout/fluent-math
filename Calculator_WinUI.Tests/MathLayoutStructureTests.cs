@@ -231,17 +231,22 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void TheScientificFormDrawsATimesSignATenAndARaisedExponent()
+        public void TheScientificFormIsAMultiplicationAndAPowerLikeAnyOther()
         {
-            ScientificToken scientific = new ScientificToken();
-            scientific.ExponentTokens.Add(Digit("5"));
+            // the EXP key spells out times, one, zero, power rather than making a shape of its own, so
+            // there is nothing here the layout has to know about
+            PowerToken power = new PowerToken();
+            power.BaseTokens.Add(Digit("1"));
+            power.BaseTokens.Add(Digit("0"));
+            power.ExponentTokens.Add(Digit("5"));
 
-            RowBox box = Assert.IsType<RowBox>(Row(scientific).Children.Single());
+            RowBox row = Row(new MathToken(TokenType.Operator, "*"), power);
 
-            Assert.Equal(3, box.Children.Count);
-            Assert.Equal("×", ((TextRunBox)box.Children[0]).Text);
-            Assert.Equal("10", ((TextRunBox)box.Children[1]).Text);
-            Assert.True(box.Children[2].Raise > 0);
+            Assert.Equal("×", ((TextRunBox)row.Children[0]).Text);
+
+            RowBox powerBox = Assert.IsType<RowBox>(row.Children[1]);
+            Assert.Equal("10", ((TextRunBox)((RowBox)powerBox.Children[0]).Children.Single()).Text);
+            Assert.True(powerBox.Children[1].Raise > 0);
         }
 
 

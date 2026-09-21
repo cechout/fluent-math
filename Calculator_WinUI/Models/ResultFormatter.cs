@@ -138,10 +138,15 @@ namespace Calculator_WinUI.Models
             {
                 (string mantissa, int exponent) = SplitScientific(value);
 
+                // spelled out the same way the EXP key spells it, so a result and a typed formula are
+                // the same shape rather than two that happen to look alike
                 List<MathToken> tokens = DigitTokens(mantissa);
-                ScientificToken scientific = new ScientificToken();
-                scientific.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
-                tokens.Add(scientific);
+                tokens.Add(new MathToken(TokenType.Operator, "*"));
+
+                PowerToken power = new PowerToken();
+                power.BaseTokens.AddRange(DigitTokens("10"));
+                power.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
+                tokens.Add(power);
 
                 return tokens;
             }

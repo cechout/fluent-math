@@ -241,12 +241,6 @@ namespace Calculator_WinUI.Engines
                         new TokenSlot(logarithm.ParameterTokens, ScopeRole.LogParameter)
                     };
 
-                case ScientificToken scientific:
-                    return new List<TokenSlot>
-                    {
-                        new TokenSlot(scientific.ExponentTokens, ScopeRole.ScientificExponent)
-                    };
-
                 case FunctionToken function:
                     return new List<TokenSlot>
                     {
@@ -520,21 +514,26 @@ namespace Calculator_WinUI.Engines
             }
         }
 
-        // the EXP key; the exponent gets a slot of its own so it can be typed into and walked through
-        // like any other, and so the evaluator can bind it to the number standing in front of it
+        // the EXP key, which is the work taken off you for typing times, one, zero, power and nothing
+        // more; it builds exactly what those four keys build, so everything downstream treats it as what
+        // it is rather than as a shape of its own
         //
-        // the evaluator only reads one that follows a number, so anywhere else it turns into a syntax
-        // error on = ; the key still goes in, see the sandbox note on the class
+        // it used to be a token with a single slot, and that cost a cursor position: there was nowhere to
+        // stand between the ten and the exponent, because the ten was drawn rather than typed, so walking
+        // left out of the exponent left the whole times ten to the n behind in one step
         public void StartScientific()
         {
             var ctx = CurrentContext;
-            var scientificToken = new ScientificToken();
 
-            ctx.Tokens.Insert(ctx.CursorIndex, scientificToken);
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, "*"));
+            ctx.CursorIndex++;
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, "1"));
+            ctx.CursorIndex++;
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, "0"));
             ctx.CursorIndex++;
 
-            _scopeStack.Push(new ScopeContext(scientificToken.ExponentTokens, scientificToken,
-                ScopeRole.ScientificExponent));
+            // pulls the ten it just typed into the base, the same way it would pull a hand typed one
+            StartPower();
         }
 
         // sin, cos, tan, ln; the name is passed straight through to LaTeX as a command
@@ -659,21 +658,6 @@ namespace Calculator_WinUI.Engines
             out int cursorOffset)
         {
             var salvaged = new List<MathToken>();
-
-            if (structureToken is ScientificToken scientific)
-            {
-                cursorOffset = 0;
-                if (scientific.ExponentTokens.Count == 0) return salvaged;
-
-                salvaged.Add(new MathToken(TokenType.Operator, "*"));
-                salvaged.Add(new MathToken(TokenType.Number, "1"));
-                salvaged.Add(new MathToken(TokenType.Number, "0"));
-
-                cursorOffset = salvaged.Count;
-                salvaged.AddRange(scientific.ExponentTokens);
-
-                return salvaged;
-            }
 
             cursorOffset = 0;
             bool reachedLeavingSlot = false;

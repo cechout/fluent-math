@@ -75,9 +75,10 @@ namespace Calculator_WinUI.Tests
         [Fact]
         public void TakesTheExponentKeyAnywhere()
         {
-            Assert.Single(Keys.Press("exp").RootTokens);
-            Assert.Equal(2, Keys.Press("pi", "exp").RootTokens.Count);
-            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("pi", "exp", "3")));
+            // times and the power token; the one and the zero moved into the base
+            Assert.Equal(2, Keys.Press("exp").RootTokens.Count);
+            Assert.Equal(3, Keys.Press("pi", "exp").RootTokens.Count);
+            Assert.Equal(Math.PI * 1000, Value(Keys.Press("pi", "exp", "3")), 9);
         }
 
 
@@ -108,39 +109,42 @@ namespace Calculator_WinUI.Tests
 
         // every caret position in 3x10^5 and what Backspace does from it, as one table
         //
-        // rows 0 and 4 are the trap: the caret at the end of the exponent and the caret behind the whole
-        // token sit almost on top of each other on screen, and Backspace does something quite different
-        // from each
+        // the trap the old table warned about is gone with the token: the ten is typed rather than drawn,
+        // so every place the caret appears to stand is a place it really stands, and Backspace does there
+        // what the picture says it will
         [Fact]
-        public void BackspacesOutOfAScientificTokenFromEveryCaretPosition()
+        public void BackspacesOutOfATimesTenPowerFromEveryCaretPosition()
         {
-            // row 0, caret right of the 5, still inside the exponent: the 5 goes and the box stays
+            // row 0, caret right of the 5, inside the exponent: the 5 goes and the empty power stays
             MathInputManager insideAtEnd = Keys.Press("3", "exp", "5", "back");
-            Assert.Equal(2, insideAtEnd.RootTokens.Count);
             Assert.Equal(EvaluationError.Syntax, ErrorOf(insideAtEnd));
 
-            // row 1, caret left of the 5: the structure dissolves into 3*105
+            // row 1, caret left of the 5: the power dissolves into 3*105
             Assert.Equal(315, Value(Keys.Press("3", "exp", "5", "left", "back")));
 
-            // row 2, caret between the 3 and the times sign: the 3 goes and the exponent is stranded
-            MathInputManager stranded = Keys.Press("3", "exp", "5", "left", "left", "back");
-            Assert.Single(stranded.RootTokens);
-            Assert.Equal(EvaluationError.Syntax, ErrorOf(stranded));
+            // row 2, caret right of the ten: a digit comes off it, leaving 3*1^5
+            Assert.Equal(3, Value(Keys.Press("3", "exp", "5", "left", "left", "back")));
 
-            // row 3, caret in front of everything: nothing to delete, nothing changes
-            Assert.Equal(3e5, Value(Keys.Press("3", "exp", "5", "left", "left", "left", "back")));
+            // row 3, caret between the one and the zero: the one goes, leaving 3*0^5
+            Assert.Equal(0, Value(Keys.Press("3", "exp", "5", "left", "left", "left", "back")));
 
-            // row 4, caret behind the whole token: the whole times ten to the n goes in one press
-            Assert.Equal(3, Value(Keys.Press("3", "exp", "5", "right", "back")));
+            // row 4, caret left of the ten: the power dissolves the same way row 1 does
+            Assert.Equal(315, Value(Keys.Press("3", "exp", "5", "left", "left", "left", "left", "back")));
+
+            // row 5, caret behind the whole power: it goes in one press and the times is left standing
+            Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("3", "exp", "5", "right", "back")));
         }
 
         [Fact]
-        public void DropsAnUntouchedScientificTokenWithoutATrace()
+        public void LeavesTheTimesTenBehindWhenAnUntouchedExponentIsDeleted()
         {
+            // the EXP key is four keystrokes taken off you, so undoing it takes four too; it used to be
+            // one token that vanished in one press, and that was the special case that cost a cursor
+            // position between the ten and the exponent
             MathInputManager manager = Keys.Press("3", "exp", "back");
 
-            Assert.Single(manager.RootTokens);
-            Assert.Equal(3, Value(manager));
+            Assert.Equal(4, manager.RootTokens.Count);
+            Assert.Equal(30, Value(manager));
         }
 
         [Fact]
@@ -323,12 +327,13 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void HasNothingAboveOrBelowAScientificExponent()
+        public void WalksBetweenTheTenAndItsExponentWithUpAndDown()
         {
+            // the exponent is an ordinary power now, so Down reaches the ten it stands on, landing at
+            // its start; Up from the exponent does nothing, since that is already the upper slot
             MathInputManager manager = Keys.Press("3", "exp", "5", "up", "down", "9");
 
-            // both keys do nothing, so the 9 is still in the exponent
-            Assert.Equal(3e59, Value(manager));
+            Assert.Equal(3 * Math.Pow(910, 5), Value(manager), 0);
         }
 
 
@@ -347,8 +352,9 @@ namespace Calculator_WinUI.Tests
             root.AddNumber("3");
             Assert.Equal(2, Value(root), 10);
 
+            // three tokens now: the 3, the times, and the power whose base holds the ten
             MathInputManager scientific = Keys.Press("3", "exp", "5");
-            Assert.True(scientific.SetCursorPosition("1.0@0"));
+            Assert.True(scientific.SetCursorPosition("2.1@0"));
             scientific.AddNumber("1");
             Assert.Equal(3e15, Value(scientific));
         }

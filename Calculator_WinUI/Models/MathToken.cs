@@ -16,7 +16,6 @@ namespace Calculator_WinUI.Models
         Root,
         Logarithm,
         Postfix,
-        Scientific,
         Answer
     }
 
@@ -254,29 +253,6 @@ namespace Calculator_WinUI.Models
         }
     }
 
-    // the EXP key of a pocket calculator, rendered as the times ten to the n it stands for
-    //
-    // it is a token of its own rather than a literal multiplication, because the exponent has to bind to
-    // the number in front of it: 1 / 3 EXP 5 is one over three hundred thousand, while the same thing
-    // written out as an ordinary multiplication comes out as a third of a hundred thousand
-    public class ScientificToken : MathToken
-    {
-        public List<MathToken> ExponentTokens { get; } = new List<MathToken>();
-
-        public ScientificToken() : base(TokenType.Scientific) { }
-
-        public override string ToLatex(LatexRenderContext context)
-        {
-            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 0);
-
-            // the times sign goes through the same helper the result line uses, and the whole thing is
-            // tagged as a power rather than given a class of its own, since it is a superscript and
-            // should follow whatever size the other superscripts are set to
-            string times = LatexHelper.TaggedOperator("\\times");
-            return LatexHelper.Tagged("m-pow", $"{times}10^{{{expStr}}}");
-        }
-    }
-
     // \sqrt[index]{radicand}, where an empty index means a plain square root rather than an empty slot
     public class RootToken : MathToken
     {
@@ -506,11 +482,6 @@ namespace Calculator_WinUI.Models
                     powerCopy.BaseTokens.AddRange(CloneList(power.BaseTokens));
                     powerCopy.ExponentTokens.AddRange(CloneList(power.ExponentTokens));
                     return powerCopy;
-
-                case ScientificToken scientific:
-                    ScientificToken scientificCopy = new ScientificToken();
-                    scientificCopy.ExponentTokens.AddRange(CloneList(scientific.ExponentTokens));
-                    return scientificCopy;
 
                 case RootToken root:
                     RootToken rootCopy = new RootToken();

@@ -16,8 +16,7 @@ namespace Calculator_WinUI.Models
         RootRadicand,
         FunctionParameter,
         LogBase,
-        LogParameter,
-        ScientificExponent
+        LogParameter
     }
 
     public enum NavDirection
