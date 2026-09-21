@@ -1,11 +1,10 @@
 namespace Calculator_WinUI.Models.Layout
 {
-    // the numbers the layout needs, kept apart from MathDisplayStyle because everything under Layout has
-    // to stay free of WinUI: MathDisplayStyle resolves the accent through UISettings and branches on
-    // ElementTheme, neither of which exists on the plain net8.0 runner the tests use
+    // every knob the formula display has, in one place, so a size can be found and turned without first
+    // working out which half of the display owns it
     //
-    // MathDisplayStyle keeps the colors and the display knobs that only matter once something is drawn,
-    // and hands one of these down
+    // no WinUI type appears here on purpose: everything under Layout has to build on the plain net8.0
+    // runner the tests use, so the colors stay in the markup and only numbers live here
     //
     // every length here is em of the size the piece it belongs to is set at, never a pixel, so the whole
     // formula scales from FontSizePx alone
@@ -135,6 +134,14 @@ namespace Calculator_WinUI.Models.Layout
         public double CursorHeight { get; set; } = 0.71;
         public double CursorShift { get; set; } = -0.04; // em above the baseline, negative drops it below
         public double CursorCornerRadius { get; set; } = 0.03;
+
+        // room kept free right of the last position of the formula, where half the caret stands once it
+        // is at the end of the line
+        //
+        // it is reserved whether the caret stands there or not: room that came and went with the caret
+        // would shift the whole formula sideways as it reached the end, which is the one thing the caret
+        // is never allowed to do
+        public double CursorTrailingSpace { get; set; } = 0.06;
 
 
         // === empty slots ===

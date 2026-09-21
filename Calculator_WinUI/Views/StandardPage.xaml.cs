@@ -54,7 +54,10 @@ namespace Calculator_WinUI.Views
         //
         // an address the input manager cannot use simply changes nothing, which is what makes this safe
         // to answer with the nearest position rather than only with an exact hit
-        private void MathDisplay2_Tapped(object sender, TappedRoutedEventArgs e)
+        //
+        // the point is taken relative to the panel even though the tap arrives at the scroller around it,
+        // which is what puts it in the space the boxes were laid out in, scroll offset and all
+        private void InputDisplay_Tapped(object sender, TappedRoutedEventArgs e)
         {
             string address = MathDisplay2.AddressAt(e.GetPosition(MathDisplay2));
             if (address == null) return;
@@ -141,9 +144,12 @@ namespace Calculator_WinUI.Views
         // in sight while it is being typed at the far end of it
         private void RevealCaret()
         {
-            if (MathDisplay2.CaretViewport is not Rect caret) return;
-
+            // the panel has only been told to redraw at this point; without the layout pass first, the
+            // caret rect read below is still the one from the keystroke before and the scroller trails
+            // the caret by a character, which leaves it standing on the edge of the display
             MathDisplay2.UpdateLayout();
+
+            if (MathDisplay2.CaretViewport is not Rect caret) return;
 
             double left = InputScroller.HorizontalOffset;
             double right = left + InputScroller.ViewportWidth;

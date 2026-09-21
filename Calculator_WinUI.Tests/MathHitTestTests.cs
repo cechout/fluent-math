@@ -22,12 +22,29 @@ namespace Calculator_WinUI.Tests
             }
         }
 
+        // a one half the width of any other digit, the way a proportional face sets it
+        private sealed class ProportionalMeasurer : ITextMeasurer
+        {
+            public TextMetrics Measure(string text, double fontSizePx)
+            {
+                double width = 0;
+                foreach (char character in text) width += character == '1' ? fontSizePx * 0.5 : fontSizePx;
+
+                return new TextMetrics(width, fontSizePx * 0.75, fontSizePx * 0.25);
+            }
+        }
+
         private const double FontSize = 10;
 
         private static RowBox Laid(IReadOnlyList<MathToken> tokens)
         {
+            return Laid(tokens, new FakeMeasurer());
+        }
+
+        private static RowBox Laid(IReadOnlyList<MathToken> tokens, ITextMeasurer measurer)
+        {
             MathLayoutEngine engine = new MathLayoutEngine(
-                new FakeMeasurer(), new MathLayoutStyle { FontSizePx = FontSize });
+                measurer, new MathLayoutStyle { FontSizePx = FontSize });
 
             RowBox row = engine.BuildRow(tokens);
             row.Place(0, row.Ascent);
@@ -177,6 +194,147 @@ namespace Calculator_WinUI.Tests
             RowBox row = Laid(new List<MathToken>());
 
             Assert.NotNull(MathHitTest.NearestAddress(row, 10, 10));
+        }
+
+        [Fact]
+        public void APointBetweenTwoDigitsTakesTheGapThatWasMeasuredRatherThanAnEqualShare()
+        {
+            // 1, 1, 9 at half, half and one: the gaps are at 0, 5, 10 and 20, where cutting the run into
+            // three equal shares would put them at 0, 6.7, 13.3 and 20
+            MathInputManager manager = Keys.Press("119");
+            RowBox row = Laid(manager.RootTokens, new ProportionalMeasurer());
+
+            string address = MathHitTest.NearestAddress(row, 8.5, row.Baseline);
+
+            Assert.True(manager.SetCursorPosition(address));
+            Assert.Equal(2, manager.ActiveCursorIndex);
+        }
+
+
+        // === a click lands in the line it was aimed at ===
+
+        // a slot and the row around it cover the same piece of screen, and the row is the wider of the
+        // two, so scoring their positions against each other hands most of a base, a numerator or a
+        // parameter to the position in front of the whole token: the line is picked first for that reason
+        [Fact]
+        public void APointOnTheBaseOfAPowerLandsInTheBaseRatherThanInFrontOfTheWholePower()
+        {
+            MathInputManager manager = Keys.Press("2", "pow", "3");
+            PowerToken power = (PowerToken)manager.RootTokens.Single();
+
+            RowBox row = Laid(manager.RootTokens);
+            MathBox baseBox = ((RowBox)row.Children.Single()).Children[0];
+
+            // the left half of the base, which is nearer to the position in front of the power than to
+            // either end of the base itself
+            string address = MathHitTest.NearestAddress(row, baseBox.X + baseBox.Width * 0.3, baseBox.Baseline);
+
+            Assert.True(manager.SetCursorPosition(address));
+            Assert.Same(power.BaseTokens, manager.ActiveTokens);
+        }
+
+        [Fact]
+        public void APointOnADigitInANumeratorLandsInTheNumerator()
+        {
+            MathInputManager manager = Keys.Press("frac", "12", "down", "3");
+            FractionToken fraction = (FractionToken)manager.RootTokens.Single();
+
+            RowBox row = Laid(manager.RootTokens);
+            MathBox numerator = ((FractionBox)row.Children.Single()).Numerator;
+
+            string address = MathHitTest.NearestAddress(row, numerator.X + 1, numerator.Baseline);
+
+            Assert.True(manager.SetCursorPosition(address));
+            Assert.Same(fraction.NumeratorTokens, manager.ActiveTokens);
+        }
+
+        [Fact]
+        public void APointOnTheNameOfALogarithmLandsBesideItRatherThanInsideIt()
+        {
+            // the name and the brackets are drawn by the token and belong to no slot, so a click on them
+            // is a click on the token as a whole
+            MathInputManager manager = Keys.Press("logb", "2", "right", "8");
+
+            RowBox row = Laid(manager.RootTokens);
+            MathBox name = ((RowBox)row.Children.Single()).Children[0];
+
+            string address = MathHitTest.NearestAddress(row, name.X + name.Width / 2, name.Baseline);
+
+            Assert.True(manager.SetCursorPosition(address));
+            Assert.Same(manager.RootTokens, manager.ActiveTokens);
+        }
+
+        [Fact]
+        public void APointInTheAirAboveTheFormulaAnswersAtTheEdgeItIsNearest()
+        {
+            // the display is taller and wider than the formula in it, and clicking in that air is how a
+            // formula that is only a few characters long is aimed at at all
+            MathInputManager manager = Keys.Press("12", "+", "34");
+            RowBox row = Laid(manager.RootTokens);
+
+            Assert.True(manager.SetCursorPosition(MathHitTest.NearestAddress(row, row.Width, row.Top - 400)));
+            Assert.Equal(5, manager.ActiveCursorIndex);
+
+            Assert.True(manager.SetCursorPosition(MathHitTest.NearestAddress(row, 0, row.Bottom + 400)));
+            Assert.Equal(0, manager.ActiveCursorIndex);
+        }
+
+
+        // === the caret and a click agree ===
+
+        // where the caret is drawn for the cursor the manager is holding, and the row it was drawn in
+        private static (RowBox Row, double X, double Baseline) CaretPoint(MathInputManager manager)
+        {
+            MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(),
+                new MathLayoutStyle { FontSizePx = FontSize },
+                new CaretTarget(manager.ActiveTokens, manager.ActiveCursorIndex));
+
+            RowBox row = engine.BuildRow(manager.RootTokens);
+            row.Place(0, row.Ascent);
+
+            CaretPlacement caret = engine.Caret.Value;
+
+            return (row, caret.Box.X + caret.Offset, caret.Line.Baseline);
+        }
+
+        // the one property that ties the three pieces together: click the point the caret is drawn at and
+        // it has to stay on that point, for every position the cursor can walk to
+        //
+        // it is what a user does without thinking about it, and it catches the stops and the caret
+        // drifting apart in a way no single assertion about either of them does
+        //
+        // the assertion is about the point rather than about the position, because two positions can be
+        // drawn in one place: the start of the base of a power and the position in front of the whole
+        // power are the same pixel, and a click there is free to answer with either of them
+        [Theory]
+        [InlineData("123", "+", "456")]
+        [InlineData("1", "frac", "2", "down", "3")]
+        [InlineData("2", "pow", "3")]
+        [InlineData("sqrt", "9")]
+        [InlineData("root", "3", "right", "8")]
+        [InlineData("logb", "2", "right", "8")]
+        [InlineData("fn:sin", "9")]
+        [InlineData("1", "exp", "5")]
+        [InlineData("frac", "down", "2")]
+        public void AClickOnTheCaretLeavesItExactlyWhereItStands(params string[] keys)
+        {
+            // every position the cursor reaches walking left out of the formula it just typed
+            for (int steps = 0; steps < 12; steps++)
+            {
+                List<string> run = new List<string>(keys);
+                for (int step = 0; step < steps; step++) run.Add("left");
+
+                MathInputManager manager = Keys.Press(run.ToArray());
+                (RowBox row, double x, double baseline) = CaretPoint(manager);
+
+                string address = MathHitTest.NearestAddress(row, x, baseline);
+                Assert.True(manager.SetCursorPosition(address), "the input manager refused " + address);
+
+                (RowBox _, double clickedX, double clickedBaseline) = CaretPoint(manager);
+
+                Assert.Equal(x, clickedX, 6);
+                Assert.Equal(baseline, clickedBaseline, 6);
+            }
         }
     }
 }

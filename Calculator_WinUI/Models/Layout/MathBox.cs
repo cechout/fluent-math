@@ -71,6 +71,13 @@ namespace Calculator_WinUI.Models.Layout
         // lands between them rather than at one end of the whole run
         public IReadOnlyList<string> TokenAddresses { get; internal set; }
 
+        // how far into the run each of those tokens begins, measured rather than spread evenly over the
+        // width: these are the very numbers the caret is placed at, so a click answers with the position
+        // the caret would be drawn in instead of with one a few pixels off
+        //
+        // written in the same step as the addresses; neither is ever set without the other
+        public IReadOnlyList<double> TokenOffsets { get; internal set; }
+
         public TextRunBox(string text, double fontSize, TextMetrics metrics, IReadOnlyList<MathToken> tokens)
         {
             Text = text;

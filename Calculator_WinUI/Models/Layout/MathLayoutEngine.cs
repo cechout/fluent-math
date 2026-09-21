@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 
 namespace Calculator_WinUI.Models.Layout
@@ -60,6 +59,8 @@ namespace Calculator_WinUI.Models.Layout
             bool carriesCaret = CaretIsIn(tokens);
 
             List<MathBox> children = new List<MathBox>();
+            MathBox caretBox = null;
+            double caretOffset = 0;
             int index = 0;
 
             while (index < tokens.Count)
@@ -83,8 +84,8 @@ namespace Calculator_WinUI.Models.Layout
                 // the caret hangs off the box it stands in front of, or inside the run it stands in
                 if (carriesCaret && _caret.Index >= start && _caret.Index < index)
                 {
-                    double offset = box is TextRunBox run ? OffsetInRun(run, _caret.Index - start, fontSize) : 0;
-                    Caret = new CaretPlacement(box, offset, fontSize);
+                    caretBox = box;
+                    caretOffset = box is TextRunBox run ? OffsetInRun(run, _caret.Index - start) : 0;
                 }
             }
 
@@ -102,7 +103,14 @@ namespace Calculator_WinUI.Models.Layout
             // past the last token there is no box to hang off, so it hangs off the row itself
             if (carriesCaret && _caret.Index >= tokens.Count)
             {
-                Caret = new CaretPlacement(row, row.Width, fontSize);
+                caretBox = row;
+                caretOffset = row.Width;
+            }
+
+            // reported once the row exists, because the row is what the caret takes its height from
+            if (carriesCaret && caretBox != null)
+            {
+                Caret = new CaretPlacement(caretBox, caretOffset, row, fontSize);
             }
 
             return row;
@@ -148,7 +156,7 @@ namespace Calculator_WinUI.Models.Layout
             string run = text.ToString();
 
             return Addressed(new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered),
-                path, start);
+                path, start, fontSize);
         }
 
         // how far into a run the caret stands, when it stands between two digits of the same number
@@ -156,28 +164,39 @@ namespace Calculator_WinUI.Models.Layout
         // the run itself is measured and drawn whole; only the caret is placed inside it. Splitting the
         // run instead would hand the text stack two pieces to set, each with the side bearings of its own
         // first glyph, and the digits either side of the caret would shift as it passed between them
-        private double OffsetInRun(TextRunBox run, int tokenOffset, double fontSize)
+        private static double OffsetInRun(TextRunBox run, int tokenOffset)
         {
             if (tokenOffset <= 0) return 0;
-            if (tokenOffset >= run.Tokens.Count) return run.Width;
+            if (run.TokenOffsets == null || tokenOffset >= run.TokenOffsets.Count) return run.Width;
 
-            string prefix = string.Concat(run.Tokens.Take(tokenOffset).Select(token => token.Value));
-
-            return _measurer.Measure(prefix, fontSize).Width;
+            return run.TokenOffsets[tokenOffset];
         }
 
         // a run stands in front of several cursor positions at once, one per digit it covers, so a click
         // between two digits of the same number can land between them
-        private static TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex)
+        //
+        // each of them is measured rather than assumed to be an equal share of the width: a decimal point
+        // is far narrower than a digit, and the caret and a click have to agree on where the gap is
+        //
+        // the prefixes cost nothing after the first keystroke, since the measurer keeps every answer and a
+        // formula asks for the same handful of runs again on every rebuild
+        private TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex, double fontSize)
         {
             string[] addresses = new string[run.Tokens.Count];
+            double[] offsets = new double[run.Tokens.Count];
+            StringBuilder prefix = new StringBuilder();
+
             for (int offset = 0; offset < addresses.Length; offset++)
             {
                 addresses[offset] = Address(path, firstTokenIndex + offset);
+                offsets[offset] = offset == 0 ? 0 : _measurer.Measure(prefix.ToString(), fontSize).Width;
+
+                prefix.Append(run.Tokens[offset].Value);
             }
 
             run.CursorAddress = addresses.Length > 0 ? addresses[0] : null;
             run.TokenAddresses = addresses;
+            run.TokenOffsets = offsets;
 
             return run;
         }
@@ -353,7 +372,7 @@ namespace Calculator_WinUI.Models.Layout
 
             placeholder.CursorAddress = Address(path, 0);
 
-            if (CaretIsIn(tokens)) Caret = new CaretPlacement(placeholder, 0, fontSize);
+            if (CaretIsIn(tokens)) Caret = new CaretPlacement(placeholder, 0, placeholder, fontSize);
 
             return placeholder;
         }

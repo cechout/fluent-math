@@ -67,7 +67,7 @@ Calculator_WinUI/
 ├── Controls/     the formula display: MathPanel, XamlTextMeasurer
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model and the currency logic: MathToken, NavigationMetadata,
-│                 EvaluationMetadata, ResultFormatter, MathDisplayStyle, ConvertCurrency,
+│                 EvaluationMetadata, ResultFormatter, ConvertCurrency,
 │                 GetCurrencyData, CurrencyHelper
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer

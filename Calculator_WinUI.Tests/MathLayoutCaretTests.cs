@@ -230,6 +230,47 @@ namespace Calculator_WinUI.Tests
             Assert.NotSame(box.Numerator, caret.Value.Box);
         }
 
+        // === how high it stands ===
+
+        // the caret hangs off the box it stands in front of, and an operator is not where its row is: it
+        // rides above the baseline so it reads level with the digits, and a caret that took its baseline
+        // from it would stand higher in front of a plus than in front of a digit
+        [Fact]
+        public void ACaretInFrontOfAnOperatorStandsOnTheBaselineOfItsRowRatherThanOnTheOperators()
+        {
+            List<MathToken> tokens = new List<MathToken>
+            {
+                Digit("1"), new MathToken(TokenType.Operator, "+"), Digit("1")
+            };
+
+            (RowBox row, CaretPlacement? beforeOperator) = WithCaret(tokens, 1);
+            CaretPlacement? beforeDigit = WithCaret(tokens, 2).Caret;
+
+            // the two hang off different boxes, and one of those sits higher than the other
+            Assert.Same(row.Children[1], beforeOperator.Value.Box);
+            Assert.NotEqual(row.Baseline, beforeOperator.Value.Box.Baseline);
+
+            // and both stand at the same height all the same
+            Assert.Same(row, beforeOperator.Value.Line);
+            Assert.Equal(row.Baseline, beforeOperator.Value.Line.Baseline);
+            Assert.Equal(beforeOperator.Value.Line.Baseline, beforeDigit.Value.Line.Baseline);
+        }
+
+        [Fact]
+        public void ACaretInARaisedSlotRidesUpWithIt()
+        {
+            PowerToken power = new PowerToken();
+            power.BaseTokens.Add(Digit("2"));
+            power.ExponentTokens.Add(Digit("3"));
+
+            List<MathToken> tokens = new List<MathToken> { power };
+            (RowBox row, CaretPlacement? caret) = Lay(tokens, new CaretTarget(power.ExponentTokens, 1));
+
+            // an exponent is a row of its own with a raise on it, so the line the caret reports is that
+            // row and the caret is drawn as high as the digit beside it
+            Assert.True(caret.Value.Line.Baseline < row.Baseline);
+        }
+
         [Fact]
         public void ACaretInADeeperSlotIsDrawnAtTheSizeOfThatSlot()
         {

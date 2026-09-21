@@ -36,6 +36,7 @@ namespace Calculator_WinUI.Controls
         public Rect? CaretViewport { get; private set; }
 
         private Rect? _caretLocal;
+        private double _caretPad;
         private double _fitScale = 1;
         private double _offsetX;
         private double _offsetY;
@@ -138,6 +139,10 @@ namespace Calculator_WinUI.Controls
                 caret = engine.Caret;
             }
 
+            // a line that carries a caret keeps room for the half of it that stands right of the last
+            // position, or the edge of the display cuts it in two
+            _caretPad = caret == null ? 0 : LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace;
+
             // placed against its own top edge, so every bound below is already in the space this panel
             // arranges in
             _root.Place(0, _root.Ascent);
@@ -172,7 +177,7 @@ namespace Calculator_WinUI.Controls
                 ? new ScaleTransform { ScaleX = _fitScale, ScaleY = _fitScale }
                 : null;
 
-            return new Size(_root.Width * _fitScale, _root.Height * _fitScale);
+            return new Size((_root.Width + _caretPad) * _fitScale, _root.Height * _fitScale);
         }
 
         protected override Size ArrangeOverride(Size finalSize)
@@ -184,8 +189,9 @@ namespace Calculator_WinUI.Controls
             double width = finalSize.Width / _fitScale;
             double height = finalSize.Height / _fitScale;
 
-            // a calculator display fills from the right and sits in the middle of its box
-            double offsetX = Math.Max(0, width - _root.Width);
+            // a calculator display fills from the right and sits in the middle of its box; the caret room
+            // comes off the right, which is the only place it is needed
+            double offsetX = Math.Max(0, width - _root.Width - _caretPad);
             double offsetY = Math.Max(0, (height - _root.Height) / 2);
 
             _offsetX = offsetX;
@@ -217,14 +223,20 @@ namespace Calculator_WinUI.Controls
         // the nearest place the caret could go to a point in this panel, or null when there is nothing
         // to aim at
         //
-        // the point arrives in the space the panel is drawn in, so the fit scale and the two arrange
-        // offsets have to come back off before the boxes recognise it
+        // the point arrives in this panels own coordinates, which is the unscaled space the boxes were
+        // placed in: a render transform belongs to the step from the panel into its parent, so anything
+        // that reports a point relative to the panel has already taken the fit scale back off and only
+        // the two arrange offsets are left to undo
         public string AddressAt(Point point)
         {
             if (_root == null || _text != null) return null;
 
-            return MathHitTest.NearestAddress(
-                _root, point.X / _fitScale - _offsetX, point.Y / _fitScale - _offsetY);
+            // a line drawn without a caret is not the one being typed in: after = the display holds the
+            // result rather than the formula that produced it, and the addresses a point in it works out
+            // to would be read against a tree that is no longer on screen
+            if (_caret.Tokens == null) return null;
+
+            return MathHitTest.NearestAddress(_root, point.X - _offsetX, point.Y - _offsetY);
         }
 
 
@@ -284,8 +296,12 @@ namespace Calculator_WinUI.Controls
             double size = caret.FontSize;
             double width = size * LayoutStyle.CursorWidth;
             double height = size * LayoutStyle.CursorHeight;
-            double bottom = caret.Box.Baseline - size * LayoutStyle.CursorShift;
             double radius = size * LayoutStyle.CursorCornerRadius;
+
+            // the baseline of the line it stands in, never the one of the box it hangs off: an operator
+            // rides above the baseline of its row, and taking the height from it would stand the caret
+            // higher in front of a plus than in front of a digit
+            double bottom = caret.Line.Baseline - size * LayoutStyle.CursorShift;
 
             Rect caretRect = new Rect(
                 caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);

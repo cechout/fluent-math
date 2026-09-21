@@ -9,106 +9,184 @@ namespace Calculator_WinUI.Models.Layout
     // it answers with the address MathInputManager.SetCursorPosition already parses; that is the whole
     // reason the layout carries addresses at all
     //
-    // the answer is the nearest cursor position rather than the one under the finger: there is no formula
-    // in which a click has no sensible answer, and landing one gap off is better than doing nothing
+    // the line the point fell in is picked first and the position inside it second, rather than scoring
+    // every position in the formula against each other. A numerator and the row the fraction stands in
+    // cover the same piece of screen, and so do the base of a power and the row around it; scored
+    // together, a click on the base answers with the position in front of the whole power whenever that
+    // one happens to be a few pixels nearer sideways, which is a click that did nothing a reader can see
     public static class MathHitTest
     {
-        // one place the caret could go, and the band of the row it belongs to
+        // one token list as it was laid out: the box that holds it, how many lists it sits inside, and
+        // every place the caret could stand in it
+        private sealed class Line
+        {
+            public MathBox Box { get; }
+            public int Depth { get; }
+            public List<Stop> Stops { get; } = new List<Stop>();
+
+            public Line(MathBox box, int depth)
+            {
+                Box = box;
+                Depth = depth;
+            }
+        }
+
+        // one place the caret could go, at the gap it stands in
         private readonly struct Stop
         {
             public string Address { get; }
             public double X { get; }
-            public double Top { get; }
-            public double Bottom { get; }
 
-            public Stop(string address, double x, double top, double bottom)
+            public Stop(string address, double x)
             {
                 Address = address;
                 X = x;
-                Top = top;
-                Bottom = bottom;
             }
         }
 
-        // how much heavier a vertical miss counts than a horizontal one
+        // two lines that end within this much of each other end in the same place
         //
-        // without it a click low under a fraction would answer with a position in the numerator whenever
-        // that happened to be nearer sideways, which reads as the caret jumping to the wrong line
-        private const double VerticalWeight = 3;
+        // a slot and the row around it often share an edge exactly, and the two coordinates are sums of
+        // the same lengths added in a different order, so one of them can come out a rounding step short;
+        // without the slack, a click on the bottom edge of a denominator would answer above the fraction
+        private const double SamePlace = 0.5;
 
         public static string NearestAddress(MathBox root, double x, double y)
         {
-            List<Stop> stops = new List<Stop>();
-            Collect(root, stops);
+            if (root == null) return null;
 
+            // a point outside the formula aims at the edge nearest to it: the display is wider and taller
+            // than what is drawn in it, and a click in that air is still a click at a place
+            x = Math.Clamp(x, root.X, root.X + root.Width);
+            y = Math.Clamp(y, root.Top, root.Bottom);
+
+            List<Line> lines = new List<Line>();
+            Collect(root, 0, lines);
+
+            // the root covers the whole formula and the point was just clamped into it, so the nearest
+            // miss is zero and only the lines the point really fell in are still in the running
+            double nearest = double.MaxValue;
+            foreach (Line line in lines)
+            {
+                nearest = Math.Min(nearest, Misses(line.Box, x, y));
+            }
+
+            // the innermost of them: a numerator sits inside the row the fraction stands in, and a point
+            // in both of them was aimed at the numerator
+            //
+            // two slots of one token are equally deep and can share an edge, which a base and its exponent
+            // always do; a point on that edge falls in both, and the one whose baseline it is nearer to is
+            // the one it was aimed at
+            Line target = null;
+            double targetGap = 0;
+
+            foreach (Line line in lines)
+            {
+                if (Misses(line.Box, x, y) > nearest + SamePlace) continue;
+
+                double gap = Math.Abs(line.Box.Baseline - y);
+                if (target != null && line.Depth < target.Depth) continue;
+                if (target != null && line.Depth == target.Depth && gap >= targetGap) continue;
+
+                target = line;
+                targetGap = gap;
+            }
+
+            return target == null ? null : NearestStop(target, x);
+        }
+
+        private static void Collect(MathBox box, int depth, List<Line> lines)
+        {
+            Line line = LineOf(box, depth);
+            if (line != null)
+            {
+                lines.Add(line);
+                depth++; // whatever is nested in this list sits one line deeper
+            }
+
+            switch (box)
+            {
+                case RowBox row:
+                    foreach (MathBox child in row.Children) Collect(child, depth, lines);
+                    break;
+
+                case FractionBox fraction:
+                    Collect(fraction.Numerator, depth, lines);
+                    Collect(fraction.Denominator, depth, lines);
+                    break;
+
+                case RootBox root:
+                    if (root.Index != null) Collect(root.Index, depth, lines);
+                    Collect(root.Radicand, depth, lines);
+                    break;
+            }
+        }
+
+        // a row that carries an end address is a token list the cursor can stand in; one without it is a
+        // construction the engine built out of several boxes, such as a power or a logarithm, and it holds
+        // no position of its own
+        private static Line LineOf(MathBox box, int depth)
+        {
+            if (box is PlaceholderBox placeholder)
+            {
+                Line slot = new Line(placeholder, depth);
+                slot.Stops.Add(new Stop(placeholder.CursorAddress, placeholder.X));
+
+                return slot;
+            }
+
+            if (box is not RowBox row || row.EndAddress == null) return null;
+
+            Line line = new Line(row, depth);
+            foreach (MathBox child in row.Children)
+            {
+                // a run covers several tokens and therefore several positions, each at the width that was
+                // measured for what precedes it
+                if (child is TextRunBox run && run.TokenAddresses != null && run.TokenOffsets != null)
+                {
+                    for (int offset = 0; offset < run.TokenAddresses.Count; offset++)
+                    {
+                        line.Stops.Add(new Stop(run.TokenAddresses[offset], run.X + run.TokenOffsets[offset]));
+                    }
+
+                    continue;
+                }
+
+                line.Stops.Add(new Stop(child.CursorAddress, child.X));
+            }
+
+            // the position after the last token, which no child stands in front of
+            line.Stops.Add(new Stop(row.EndAddress, row.X + row.Width));
+
+            return line;
+        }
+
+        // how far the point lies outside this box, zero when it fell inside it
+        private static double Misses(MathBox box, double x, double y)
+        {
+            double dx = x < box.X ? box.X - x : Math.Max(0, x - box.X - box.Width);
+            double dy = y < box.Top ? box.Top - y : Math.Max(0, y - box.Bottom);
+
+            return dx + dy;
+        }
+
+        private static string NearestStop(Line line, double x)
+        {
             string best = null;
-            double bestScore = double.MaxValue;
+            double bestDistance = double.MaxValue;
 
-            foreach (Stop stop in stops)
+            foreach (Stop stop in line.Stops)
             {
                 if (stop.Address == null) continue;
 
-                double dx = Math.Abs(stop.X - x);
-                double dy = y < stop.Top ? stop.Top - y : (y > stop.Bottom ? y - stop.Bottom : 0);
-                double score = dx + dy * VerticalWeight;
+                double distance = Math.Abs(stop.X - x);
+                if (distance >= bestDistance) continue;
 
-                if (score >= bestScore) continue;
-
-                bestScore = score;
+                bestDistance = distance;
                 best = stop.Address;
             }
 
             return best;
-        }
-
-        private static void Collect(MathBox box, List<Stop> stops)
-        {
-            switch (box)
-            {
-                case RowBox row:
-                    foreach (MathBox child in row.Children)
-                    {
-                        CollectRun(child, row, stops);
-                        Collect(child, stops);
-                    }
-
-                    // the position after the last token, which no child stands in front of
-                    stops.Add(new Stop(row.EndAddress, row.X + row.Width, row.Top, row.Bottom));
-                    break;
-
-                case FractionBox fraction:
-                    Collect(fraction.Numerator, stops);
-                    Collect(fraction.Denominator, stops);
-                    break;
-
-                case RootBox root:
-                    if (root.Index != null) Collect(root.Index, stops);
-                    Collect(root.Radicand, stops);
-                    break;
-
-                case PlaceholderBox placeholder:
-                    stops.Add(new Stop(placeholder.CursorAddress, placeholder.X, placeholder.Top, placeholder.Bottom));
-                    break;
-            }
-        }
-
-        // a run covers several tokens and therefore several positions; the gaps between its digits are
-        // spread evenly across its width, which is close enough for a finger and avoids measuring every
-        // prefix of every number on every click
-        private static void CollectRun(MathBox child, RowBox row, List<Stop> stops)
-        {
-            if (child is TextRunBox run && run.TokenAddresses != null && run.TokenAddresses.Count > 1)
-            {
-                double step = run.Width / run.TokenAddresses.Count;
-                for (int offset = 0; offset < run.TokenAddresses.Count; offset++)
-                {
-                    stops.Add(new Stop(run.TokenAddresses[offset], run.X + step * offset, row.Top, row.Bottom));
-                }
-
-                return;
-            }
-
-            stops.Add(new Stop(child.CursorAddress, child.X, row.Top, row.Bottom));
         }
     }
 }

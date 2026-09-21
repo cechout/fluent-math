@@ -98,22 +98,27 @@
                 Ink="{ThemeResource TextFillColorSecondaryBrush}" />
 
             <!--  the input line scrolls sideways once the formula is wider than the display  -->
+            <!--
+                the tap is taken here rather than on the panel, and the transparent background is what
+                makes that work: the formula is only as wide as it is, and aiming at the air beside it
+                is how a short one is clicked into at all
+            -->
             <ScrollViewer
                 x:Name="InputScroller"
                 Grid.Row="1"
                 Margin="4,0,4,8"
+                Background="Transparent"
                 HorizontalScrollBarVisibility="Auto"
                 HorizontalScrollMode="Auto"
+                Tapped="InputDisplay_Tapped"
                 VerticalScrollBarVisibility="Disabled"
                 VerticalScrollMode="Disabled">
 
-                <!--  (the transparent background is what makes the empty space between glyphs tappable)  -->
                 <controls:MathPanel
                     x:Name="MathDisplay2"
                     Background="Transparent"
                     CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                    Ink="{ThemeResource TextFillColorPrimaryBrush}"
-                    Tapped="MathDisplay2_Tapped" />
+                    Ink="{ThemeResource TextFillColorPrimaryBrush}" />
             </ScrollViewer>
         </Grid>
 

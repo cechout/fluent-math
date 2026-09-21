@@ -47,16 +47,23 @@ namespace Calculator_WinUI.Models.Layout
     // anything the caret contributes to the layout moves its neighbours as it travels, and it does not
     // take a box to do that; two halves of one number measured apart are already enough, because each
     // half is set by the text stack with its own side bearings
+    // the box says where it stands sideways, the line how high it stands
+    //
+    // those are two different boxes as soon as the caret stands in front of an operator, because an
+    // operator rides above the baseline of its row; a caret that took its baseline from the box it hangs
+    // off would ride up with it and stand higher in front of a plus than in front of a digit
     public readonly struct CaretPlacement
     {
         public MathBox Box { get; }      // what it hangs off
         public double Offset { get; }    // from that boxes left edge, in its own coordinates
+        public MathBox Line { get; }     // the row or slot it stands in, which owns the baseline
         public double FontSize { get; }  // the size it is drawn at
 
-        public CaretPlacement(MathBox box, double offset, double fontSize)
+        public CaretPlacement(MathBox box, double offset, MathBox line, double fontSize)
         {
             Box = box;
             Offset = offset;
+            Line = line;
             FontSize = fontSize;
         }
     }
