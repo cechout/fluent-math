@@ -107,10 +107,13 @@
                 VerticalScrollBarVisibility="Disabled"
                 VerticalScrollMode="Disabled">
 
+                <!--  (the transparent background is what makes the empty space between glyphs tappable)  -->
                 <controls:MathPanel
                     x:Name="MathDisplay2"
+                    Background="Transparent"
                     CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                    Ink="{ThemeResource TextFillColorPrimaryBrush}" />
+                    Ink="{ThemeResource TextFillColorPrimaryBrush}"
+                    Tapped="MathDisplay2_Tapped" />
             </ScrollViewer>
         </Grid>
 

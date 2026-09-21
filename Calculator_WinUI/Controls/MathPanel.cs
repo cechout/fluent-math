@@ -37,6 +37,8 @@ namespace Calculator_WinUI.Controls
 
         private Rect? _caretLocal;
         private double _fitScale = 1;
+        private double _offsetX;
+        private double _offsetY;
 
         private readonly struct PlacedElement
         {
@@ -179,6 +181,9 @@ namespace Calculator_WinUI.Controls
             double offsetX = Math.Max(0, width - _root.Width);
             double offsetY = Math.Max(0, (height - _root.Height) / 2);
 
+            _offsetX = offsetX;
+            _offsetY = offsetY;
+
             foreach (PlacedElement placed in _placed)
             {
                 placed.Element.Arrange(new Rect(
@@ -197,6 +202,22 @@ namespace Calculator_WinUI.Controls
                 : null;
 
             return finalSize;
+        }
+
+
+        // === hit testing ===
+
+        // the nearest place the caret could go to a point in this panel, or null when there is nothing
+        // to aim at
+        //
+        // the point arrives in the space the panel is drawn in, so the fit scale and the two arrange
+        // offsets have to come back off before the boxes recognise it
+        public string AddressAt(Point point)
+        {
+            if (_root == null || _text != null) return null;
+
+            return MathHitTest.NearestAddress(
+                _root, point.X / _fitScale - _offsetX, point.Y / _fitScale - _offsetY);
         }
 
 

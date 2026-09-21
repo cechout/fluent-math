@@ -3,6 +3,7 @@ using Calculator_WinUI.Models.Layout;
 using Calculator_WinUI.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using System;
 using System.ComponentModel;
 using Windows.Foundation;
@@ -52,6 +53,21 @@ namespace Calculator_WinUI.Views
         {
             // the page sits in the tree by now, so ActualTheme finally answers with the theme in force
             RebuildStyles();
+        }
+
+
+        // === clicking into the formula ===
+
+        // a tap moves the caret to the nearest place it could stand
+        //
+        // an address the input manager cannot use simply changes nothing, which is what makes this safe
+        // to answer with the nearest position rather than only with an exact hit
+        private void MathDisplay2_Tapped(object sender, TappedRoutedEventArgs e)
+        {
+            string address = MathDisplay2.AddressAt(e.GetPosition(MathDisplay2));
+            if (address == null) return;
+
+            ViewModel.PlaceCursor(address);
         }
 
 

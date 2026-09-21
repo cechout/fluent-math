@@ -28,6 +28,11 @@ namespace Calculator_WinUI.Models.Layout
         public double LeadingGap { get; internal set; }
         public double TrailingGap { get; internal set; }
 
+        // the cursor position immediately in front of this box, in the form MathInputManager parses, so a
+        // click can be turned back into a place in the tree; null on a box that is not a token, such as
+        // the caret itself or a drawn delimiter
+        public string CursorAddress { get; internal set; }
+
 
         // === placed ===
 
@@ -62,6 +67,10 @@ namespace Calculator_WinUI.Models.Layout
         public double FontSize { get; }
         public IReadOnlyList<MathToken> Tokens { get; }
 
+        // one cursor address per token the run covers, so a click between two digits of the same number
+        // lands between them rather than at one end of the whole run
+        public IReadOnlyList<string> TokenAddresses { get; internal set; }
+
         public TextRunBox(string text, double fontSize, TextMetrics metrics, IReadOnlyList<MathToken> tokens)
         {
             Text = text;
@@ -83,6 +92,9 @@ namespace Calculator_WinUI.Models.Layout
     public sealed class RowBox : MathBox
     {
         public IReadOnlyList<MathBox> Children { get; }
+
+        // the position after the last token, which no child stands in front of
+        public string EndAddress { get; internal set; }
 
         public RowBox(IReadOnlyList<MathBox> children)
         {

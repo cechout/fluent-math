@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 
@@ -41,12 +42,15 @@ namespace Calculator_WinUI.Models.Layout
 
         public RowBox BuildRow(IReadOnlyList<MathToken> tokens)
         {
-            return BuildRow(tokens, _style.FontSizePx, 0);
+            return BuildRow(tokens, _style.FontSizePx, 0, "");
         }
 
         // the size and the level both come in rather than off the style, because a slot one step further
         // in is set smaller than the row around it and has to know how much further it may still shrink
-        public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel)
+        // path is the address of this list, empty at the root; it is built exactly the way
+        // LatexRenderContext builds it, so MathInputManager.SetCursorPosition parses what comes out
+        public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel,
+            string path = "")
         {
             // the caret belongs to exactly one list, the one being written into, and it is that list by
             // identity rather than by contents
@@ -61,31 +65,40 @@ namespace Calculator_WinUI.Models.Layout
 
                 if (tokens[index].Type == TokenType.Number)
                 {
-                    AddNumberRun(children, tokens, ref index, fontSize, carriesCaret);
+                    AddNumberRun(children, tokens, ref index, fontSize, carriesCaret, path);
                     continue;
                 }
 
-                children.Add(BuildToken(tokens[index], fontSize, scriptLevel));
+                MathBox box = BuildToken(tokens[index], fontSize, scriptLevel, path, index);
+                box.CursorAddress = Address(path, index);
+                children.Add(box);
                 index++;
             }
 
             if (carriesCaret && _caret.Index >= tokens.Count) children.Add(Caret(fontSize));
 
-            if (children.Count == 0) return RowBox.Empty(_measurer.Measure(StrutText, fontSize));
+            if (children.Count == 0)
+            {
+                RowBox empty = RowBox.Empty(_measurer.Measure(StrutText, fontSize));
+                empty.EndAddress = Address(path, 0);
 
-            return new RowBox(children);
+                return empty;
+            }
+
+            return new RowBox(children) { EndAddress = Address(path, tokens.Count) };
         }
 
-        private MathBox BuildToken(MathToken token, double fontSize, int scriptLevel)
+        private MathBox BuildToken(MathToken token, double fontSize, int scriptLevel,
+            string path, int tokenIndex)
         {
             switch (token)
             {
-                case FractionToken fraction: return BuildFraction(fraction, fontSize, scriptLevel);
-                case PowerToken power: return BuildPower(power, fontSize, scriptLevel);
-                case ScientificToken scientific: return BuildScientific(scientific, fontSize, scriptLevel);
-                case RootToken root: return BuildRoot(root, fontSize, scriptLevel);
-                case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel);
-                case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel);
+                case FractionToken fraction: return BuildFraction(fraction, fontSize, scriptLevel, path, tokenIndex);
+                case PowerToken power: return BuildPower(power, fontSize, scriptLevel, path, tokenIndex);
+                case ScientificToken scientific: return BuildScientific(scientific, fontSize, scriptLevel, path, tokenIndex);
+                case RootToken root: return BuildRoot(root, fontSize, scriptLevel, path, tokenIndex);
+                case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel, path, tokenIndex);
+                case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel, path, tokenIndex);
                 case PostfixToken postfix: return BuildPostfix(postfix, fontSize, scriptLevel);
             }
 
@@ -100,7 +113,7 @@ namespace Calculator_WinUI.Models.Layout
         // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
         // own, because a bracket has to scale with what it encloses as soon as it can
         private void AddNumberRun(List<MathBox> children, IReadOnlyList<MathToken> tokens, ref int index,
-            double fontSize, bool carriesCaret)
+            double fontSize, bool carriesCaret, string path)
         {
             int start = index;
             StringBuilder text = new StringBuilder();
@@ -118,7 +131,7 @@ namespace Calculator_WinUI.Models.Layout
 
             if (!carriesCaret || _caret.Index <= start || _caret.Index >= index)
             {
-                children.Add(new TextRunBox(run, fontSize, whole, covered));
+                children.Add(Addressed(new TextRunBox(run, fontSize, whole, covered), path, start));
                 return;
             }
 
@@ -131,14 +144,31 @@ namespace Calculator_WinUI.Models.Layout
             string left = string.Concat(covered.Take(split).Select(token => token.Value));
             double leftWidth = _measurer.Measure(left, fontSize).Width;
 
-            children.Add(new TextRunBox(left, fontSize,
-                new TextMetrics(leftWidth, whole.Ascent, whole.Descent), covered.Take(split).ToList()));
+            children.Add(Addressed(new TextRunBox(left, fontSize,
+                new TextMetrics(leftWidth, whole.Ascent, whole.Descent), covered.Take(split).ToList()),
+                path, start));
 
             children.Add(Caret(fontSize));
 
-            children.Add(new TextRunBox(run.Substring(left.Length), fontSize,
+            children.Add(Addressed(new TextRunBox(run.Substring(left.Length), fontSize,
                 new TextMetrics(whole.Width - leftWidth, whole.Ascent, whole.Descent),
-                covered.Skip(split).ToList()));
+                covered.Skip(split).ToList()), path, _caret.Index));
+        }
+
+        // a run stands in front of several cursor positions at once, one per digit it covers, so a click
+        // between two digits of the same number can land between them
+        private static TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex)
+        {
+            string[] addresses = new string[run.Tokens.Count];
+            for (int offset = 0; offset < addresses.Length; offset++)
+            {
+                addresses[offset] = Address(path, firstTokenIndex + offset);
+            }
+
+            run.CursorAddress = addresses.Length > 0 ? addresses[0] : null;
+            run.TokenAddresses = addresses;
+
+            return run;
         }
 
         private CaretBox Caret(double fontSize)
@@ -167,7 +197,7 @@ namespace Calculator_WinUI.Models.Layout
 
         // === structures ===
 
-        private FractionBox BuildFraction(FractionToken token, double fontSize, int scriptLevel)
+        private FractionBox BuildFraction(FractionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.FractionScale;
 
@@ -178,8 +208,8 @@ namespace Calculator_WinUI.Models.Layout
             int innerLevel = display ? scriptLevel : scriptLevel + 1;
 
             return new FractionBox(
-                BuildSlot(token.NumeratorTokens, innerSize, innerLevel),
-                BuildSlot(token.DenominatorTokens, innerSize, innerLevel),
+                BuildSlot(token.NumeratorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 0)),
+                BuildSlot(token.DenominatorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 1)),
                 size * _style.FractionBarThickness,
                 size * _style.MathAxisHeight,
                 size * _style.FractionNumeratorGap,
@@ -190,19 +220,19 @@ namespace Calculator_WinUI.Models.Layout
         // the base is a slot of its own rather than whatever atom happens to stand in front, which is the
         // whole difference to writing this as latex: nothing has to be braced and nothing can bind to the
         // wrong thing
-        private RowBox BuildPower(PowerToken token, double fontSize, int scriptLevel)
+        private RowBox BuildPower(PowerToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.PowerScale;
 
-            MathBox baseBox = BuildSlot(token.BaseTokens, size, scriptLevel);
-            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+            MathBox baseBox = BuildSlot(token.BaseTokens, size, scriptLevel, SlotPath(path, tokenIndex, 0));
+            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 1));
             exponent.Raise = baseBox.Ascent * _style.SuperscriptShift;
 
             return new RowBox(new List<MathBox> { baseBox, exponent });
         }
 
         // the EXP key, drawn as the times ten to the n it stands for
-        private RowBox BuildScientific(ScientificToken token, double fontSize, int scriptLevel)
+        private RowBox BuildScientific(ScientificToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.PowerScale;
             double operatorSize = size * _style.OperatorScale;
@@ -214,13 +244,13 @@ namespace Calculator_WinUI.Models.Layout
 
             TextRunBox ten = TextRun("10", size, token);
 
-            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
             exponent.Raise = ten.Ascent * _style.SuperscriptShift;
 
             return new RowBox(new List<MathBox> { times, ten, exponent });
         }
 
-        private RootBox BuildRoot(RootToken token, double fontSize, int scriptLevel)
+        private RootBox BuildRoot(RootToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.RootScale;
 
@@ -228,18 +258,18 @@ namespace Calculator_WinUI.Models.Layout
             // like one; it only appears once the caret walks into it
             MathBox index = token.IndexTokens.Count == 0
                 ? null
-                : BuildRow(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2);
+                : BuildRow(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2, SlotPath(path, tokenIndex, 0));
 
             return new RootBox(
                 index,
-                BuildSlot(token.RadicandTokens, size, scriptLevel),
+                BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1)),
                 size * _style.RadicalHookWidth,
                 size * _style.RadicalRuleThickness,
                 size * _style.RadicalVerticalGap,
                 _style.RadicalIndexRaise);
         }
 
-        private RowBox BuildLogarithm(LogarithmToken token, double fontSize, int scriptLevel)
+        private RowBox BuildLogarithm(LogarithmToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.LogarithmScale;
             List<MathBox> parts = new List<MathBox> { TextRun("log", size, token) };
@@ -247,21 +277,21 @@ namespace Calculator_WinUI.Models.Layout
             // an empty base stays invisible, the same way an empty root index does
             if (token.BaseTokens.Count > 0)
             {
-                MathBox logBase = BuildRow(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+                MathBox logBase = BuildRow(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
                 logBase.Raise = -size * _style.SubscriptShift;
                 parts.Add(logBase);
             }
 
-            AddDelimited(parts, BuildSlot(token.ParameterTokens, size, scriptLevel),
+            AddDelimited(parts, BuildSlot(token.ParameterTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1)),
                 DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, size);
 
             return new RowBox(parts);
         }
 
-        private RowBox BuildFunction(FunctionToken token, double fontSize, int scriptLevel)
+        private RowBox BuildFunction(FunctionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.FunctionScale;
-            MathBox parameter = BuildSlot(token.ParameterTokens, size, scriptLevel);
+            MathBox parameter = BuildSlot(token.ParameterTokens, size, scriptLevel, SlotPath(path, tokenIndex, 0));
             List<MathBox> parts = new List<MathBox>();
 
             if (token.DrawsAsBars)
@@ -307,19 +337,24 @@ namespace Calculator_WinUI.Models.Layout
 
         // a slot that holds nothing still has to occupy space, or it cannot be seen and a caret cannot
         // stand in it
-        private MathBox BuildSlot(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel)
+        private MathBox BuildSlot(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel,
+            string path)
         {
-            if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel);
+            if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel, path);
 
             PlaceholderBox placeholder = new PlaceholderBox(
                 fontSize * _style.PlaceholderSize, fontSize * _style.PlaceholderThickness);
 
+            placeholder.CursorAddress = Address(path, 0);
             if (_caret.Tokens == null || !ReferenceEquals(tokens, _caret.Tokens)) return placeholder;
 
             // an empty slot keeps its box while the caret stands in it rather than letting the caret
             // replace it, or the slot would vanish the moment the caret moved on and there would be
             // nothing left to walk back into
-            return new RowBox(new List<MathBox> { Caret(fontSize), placeholder });
+            return new RowBox(new List<MathBox> { Caret(fontSize), placeholder })
+            {
+                EndAddress = Address(path, 0)
+            };
         }
 
         // a delimiter takes its height from what it encloses, which is why it is a box of its own rather
@@ -349,6 +384,21 @@ namespace Calculator_WinUI.Models.Layout
         // the two ratios are of the base size rather than of the level above, so the step from the second
         // level to the third is a factor of one and a deeply nested formula stops shrinking instead of
         // vanishing
+        // one cursor position, and the address of one slot of one token; both are built exactly the way
+        // LatexRenderContext builds them, which is what lets the input manager parse either of them
+        private static string Address(string path, int cursorIndex)
+        {
+            return path + "@" + cursorIndex.ToString(CultureInfo.InvariantCulture);
+        }
+
+        private static string SlotPath(string path, int tokenIndex, int slotIndex)
+        {
+            string step = tokenIndex.ToString(CultureInfo.InvariantCulture)
+                + "." + slotIndex.ToString(CultureInfo.InvariantCulture);
+
+            return path.Length == 0 ? step : path + "/" + step;
+        }
+
         private double ScriptSize(double fontSize, int fromLevel)
         {
             return fontSize * (LevelScale(fromLevel + 1) / LevelScale(fromLevel));
