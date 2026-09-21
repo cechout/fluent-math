@@ -190,6 +190,10 @@ namespace Calculator_WinUI.Models
         private readonly string _latexName;
         private readonly bool _drawsAsBars;
 
+        // whether this one draws as a pair of bars instead of a named call, which is a fact about the
+        // shape of the token rather than about either output format, so both renderers read it here
+        public bool DrawsAsBars => _drawsAsBars;
+
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName)
         {
             _latexName = functionName;

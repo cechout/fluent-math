@@ -6,11 +6,35 @@ namespace Calculator_WinUI.Models.Layout
     //
     // MathDisplayStyle keeps the colors and the display knobs that only matter once something is drawn,
     // and hands one of these down
+    //
+    // every length here is em of the size the piece it belongs to is set at, never a pixel, so the whole
+    // formula scales from FontSizePx alone
     public class MathLayoutStyle
     {
         // === text ===
 
         public double FontSizePx { get; set; } = 36; // base size, every scale below is relative to it
+
+
+        // === script levels ===
+
+        // a numerator, a denominator and an exponent are set at script size, and one step further in at
+        // scriptscript; nothing goes smaller than that
+        //
+        // both are fractions of the base size rather than of the level above, which is why a third level
+        // stays where the second one is instead of shrinking away to nothing
+        public double ScriptScale { get; set; } = 0.7;
+        public double ScriptScriptScale { get; set; } = 0.5;
+
+
+        // === structures ===
+
+        // the size of a whole structured token relative to the text around it; 1.0 leaves it alone
+        public double FractionScale { get; set; } = 1.0;
+        public double PowerScale { get; set; } = 1.0;
+        public double RootScale { get; set; } = 1.0;
+        public double LogarithmScale { get; set; } = 1.0;
+        public double FunctionScale { get; set; } = 1.0;
 
 
         // === operators ===
@@ -28,5 +52,54 @@ namespace Calculator_WinUI.Models.Layout
         public double OperatorGap { get; set; } = 0.1;
         public double OperatorRaise { get; set; } = 0.20;
         public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
+
+
+        // === fractions ===
+
+        // the math axis is the line a fraction bar rests on, em above the baseline
+        public double MathAxisHeight { get; set; } = 0.25;
+
+        public double FractionBarThickness { get; set; } = 0.04;
+        public double FractionNumeratorGap { get; set; } = 0.12;   // between the bar and the numerator
+        public double FractionDenominatorGap { get; set; } = 0.12; // between the bar and the denominator
+        public double FractionSidePadding { get; set; } = 0.06;    // how far the bar reaches past its content
+
+        // both halves stay at full size instead of dropping a level, which is a far taller fraction
+        public bool UseDisplayFractions { get; set; } = false;
+
+
+        // === scripts ===
+
+        // of the ascent of whatever carries the exponent, so a tall base lifts it further
+        public double SuperscriptShift { get; set; } = 0.55;
+
+        // em below the baseline, for the base of a logarithm
+        public double SubscriptShift { get; set; } = 0.2;
+
+
+        // === roots ===
+
+        public double RadicalHookWidth { get; set; } = 0.55;     // em, the part in front of the radicand
+        public double RadicalRuleThickness { get; set; } = 0.05; // em, the bar over the radicand
+        public double RadicalVerticalGap { get; set; } = 0.1;    // em between that bar and the radicand
+
+        // where the index sits, as a fraction of the height of the sign it stands on
+        public double RadicalIndexRaise { get; set; } = 0.6;
+
+
+        // === delimiters ===
+
+        // a delimiter takes its height from what it encloses, so these are only its width and the air it
+        // keeps around the content
+        public double DelimiterWidth { get; set; } = 0.3;
+        public double DelimiterPadding { get; set; } = 0.05;
+
+
+        // === empty slots ===
+
+        // an empty slot draws a box rather than collapsing, so it can be seen and a caret has somewhere to
+        // stand; a slot with no extent at all would be unreachable
+        public double PlaceholderSize { get; set; } = 0.5;       // em, the side of the square
+        public double PlaceholderThickness { get; set; } = 0.04; // em of its outline
     }
 }

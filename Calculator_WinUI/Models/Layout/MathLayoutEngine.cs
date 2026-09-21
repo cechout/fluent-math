@@ -19,6 +19,10 @@ namespace Calculator_WinUI.Models.Layout
         // what the display is mostly made of
         private const string StrutText = "0";
 
+        // signs the display draws that no token carries as its value
+        private const string TimesSign = "×"; // the scientific form
+        private const string MinusOne = "−1"; // the reciprocal and the inverse hyperbolics
+
 
         // === construction ===
 
@@ -33,32 +37,27 @@ namespace Calculator_WinUI.Models.Layout
 
         public RowBox BuildRow(IReadOnlyList<MathToken> tokens)
         {
-            return BuildRow(tokens, _style.FontSizePx);
+            return BuildRow(tokens, _style.FontSizePx, 0);
         }
 
-        // the size comes in rather than off the style because a slot one level down is set smaller than
-        // the row around it, which is what the structured tokens will need
-        public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize)
+        // the size and the level both come in rather than off the style, because a slot one step further
+        // in is set smaller than the row around it and has to know how much further it may still shrink
+        public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel)
         {
             List<MathBox> children = new List<MathBox>();
             int index = 0;
 
             while (index < tokens.Count)
             {
-                if (tokens[index].Type == TokenType.Number)
+                MathToken token = tokens[index];
+
+                if (token.Type == TokenType.Number)
                 {
                     children.Add(BuildNumberRun(tokens, ref index, fontSize));
                     continue;
                 }
 
-                if (tokens[index].Type == TokenType.Operator)
-                {
-                    children.Add(BuildOperator(tokens[index], fontSize));
-                    index++;
-                    continue;
-                }
-
-                children.Add(BuildAtom(tokens[index], fontSize));
+                children.Add(BuildToken(token, fontSize, scriptLevel));
                 index++;
             }
 
@@ -67,8 +66,26 @@ namespace Calculator_WinUI.Models.Layout
             return new RowBox(children);
         }
 
+        private MathBox BuildToken(MathToken token, double fontSize, int scriptLevel)
+        {
+            switch (token)
+            {
+                case FractionToken fraction: return BuildFraction(fraction, fontSize, scriptLevel);
+                case PowerToken power: return BuildPower(power, fontSize, scriptLevel);
+                case ScientificToken scientific: return BuildScientific(scientific, fontSize, scriptLevel);
+                case RootToken root: return BuildRoot(root, fontSize, scriptLevel);
+                case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel);
+                case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel);
+                case PostfixToken postfix: return BuildPostfix(postfix, fontSize, scriptLevel);
+            }
 
-        // === pieces ===
+            if (token.Type == TokenType.Operator) return BuildOperator(token, fontSize);
+
+            return BuildAtom(token, fontSize);
+        }
+
+
+        // === leaves ===
 
         // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
         // own, because a bracket has to scale with what it encloses as soon as it can
@@ -91,10 +108,7 @@ namespace Calculator_WinUI.Models.Layout
         private TextRunBox BuildOperator(MathToken token, double fontSize)
         {
             double operatorSize = fontSize * _style.OperatorScale;
-            string symbol = OperatorSymbol(token.Value);
-
-            TextRunBox box = new TextRunBox(
-                symbol, operatorSize, _measurer.Measure(symbol, operatorSize), new[] { token });
+            TextRunBox box = TextRun(OperatorSymbol(token.Value), operatorSize, token);
 
             // both are em of the operator, so they shrink with it rather than with the text around it
             box.Raise = operatorSize * _style.OperatorRaise;
@@ -106,17 +120,201 @@ namespace Calculator_WinUI.Models.Layout
 
         private TextRunBox BuildAtom(MathToken token, double fontSize)
         {
-            string text = AtomText(token);
+            return TextRun(AtomText(token), fontSize, token);
+        }
+
+
+        // === structures ===
+
+        private FractionBox BuildFraction(FractionToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.FractionScale;
+
+            // both halves drop a level, unless a display fraction is asked for, which keeps them at full
+            // size and takes the wider clearances with it
+            bool display = _style.UseDisplayFractions;
+            double innerSize = display ? size : ScriptSize(size, scriptLevel);
+            int innerLevel = display ? scriptLevel : scriptLevel + 1;
+
+            return new FractionBox(
+                BuildSlot(token.NumeratorTokens, innerSize, innerLevel),
+                BuildSlot(token.DenominatorTokens, innerSize, innerLevel),
+                size * _style.FractionBarThickness,
+                size * _style.MathAxisHeight,
+                size * _style.FractionNumeratorGap,
+                size * _style.FractionDenominatorGap,
+                size * _style.FractionSidePadding);
+        }
+
+        // the base is a slot of its own rather than whatever atom happens to stand in front, which is the
+        // whole difference to writing this as latex: nothing has to be braced and nothing can bind to the
+        // wrong thing
+        private RowBox BuildPower(PowerToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.PowerScale;
+
+            MathBox baseBox = BuildSlot(token.BaseTokens, size, scriptLevel);
+            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+            exponent.Raise = baseBox.Ascent * _style.SuperscriptShift;
+
+            return new RowBox(new List<MathBox> { baseBox, exponent });
+        }
+
+        // the EXP key, drawn as the times ten to the n it stands for
+        private RowBox BuildScientific(ScientificToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.PowerScale;
+            double operatorSize = size * _style.OperatorScale;
+
+            TextRunBox times = TextRun(TimesSign, operatorSize, token);
+            times.Raise = operatorSize * _style.OperatorRaise;
+            times.LeadingGap = operatorSize * _style.OperatorGap;
+            times.TrailingGap = times.LeadingGap;
+
+            TextRunBox ten = TextRun("10", size, token);
+
+            MathBox exponent = BuildSlot(token.ExponentTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+            exponent.Raise = ten.Ascent * _style.SuperscriptShift;
+
+            return new RowBox(new List<MathBox> { times, ten, exponent });
+        }
+
+        private RootBox BuildRoot(RootToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.RootScale;
+
+            // an empty index stays invisible rather than drawing a placeholder, so a square root looks
+            // like one; it only appears once the caret walks into it
+            MathBox index = token.IndexTokens.Count == 0
+                ? null
+                : BuildRow(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2);
+
+            return new RootBox(
+                index,
+                BuildSlot(token.RadicandTokens, size, scriptLevel),
+                size * _style.RadicalHookWidth,
+                size * _style.RadicalRuleThickness,
+                size * _style.RadicalVerticalGap,
+                _style.RadicalIndexRaise);
+        }
+
+        private RowBox BuildLogarithm(LogarithmToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.LogarithmScale;
+            List<MathBox> parts = new List<MathBox> { TextRun("log", size, token) };
+
+            // an empty base stays invisible, the same way an empty root index does
+            if (token.BaseTokens.Count > 0)
+            {
+                MathBox logBase = BuildRow(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1);
+                logBase.Raise = -size * _style.SubscriptShift;
+                parts.Add(logBase);
+            }
+
+            AddDelimited(parts, BuildSlot(token.ParameterTokens, size, scriptLevel),
+                DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, size);
+
+            return new RowBox(parts);
+        }
+
+        private RowBox BuildFunction(FunctionToken token, double fontSize, int scriptLevel)
+        {
+            double size = fontSize * _style.FunctionScale;
+            MathBox parameter = BuildSlot(token.ParameterTokens, size, scriptLevel);
+            List<MathBox> parts = new List<MathBox>();
+
+            if (token.DrawsAsBars)
+            {
+                AddDelimited(parts, parameter, DelimiterKind.Bar, DelimiterKind.Bar, size);
+                return new RowBox(parts);
+            }
+
+            (string name, bool inverse) = FunctionParts(token.Value);
+            TextRunBox nameRun = TextRun(name, size, token);
+            parts.Add(nameRun);
+
+            if (inverse)
+            {
+                TextRunBox raised = TextRun(MinusOne, ScriptSize(size, scriptLevel), token);
+                raised.Raise = nameRun.Ascent * _style.SuperscriptShift;
+                parts.Add(raised);
+            }
+
+            AddDelimited(parts, parameter,
+                DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, size);
+
+            return new RowBox(parts);
+        }
+
+        // the factorial and the percent stand behind their operand as plain signs; the reciprocal is a
+        // raised minus one, the way a Casio prints it
+        private MathBox BuildPostfix(PostfixToken token, double fontSize, int scriptLevel)
+        {
+            if (token.Value != "inv") return BuildAtom(token, fontSize);
+
+            TextRunBox raised = TextRun(MinusOne, ScriptSize(fontSize, scriptLevel), token);
+
+            // there is no base box to measure here, since the operand is whatever precedes this token in
+            // the row, so the lift comes off a digit instead
+            raised.Raise = _measurer.Measure(StrutText, fontSize).Ascent * _style.SuperscriptShift;
+
+            return raised;
+        }
+
+
+        // === helpers ===
+
+        // a slot that holds nothing still has to occupy space, or it cannot be seen and a caret cannot
+        // stand in it
+        private MathBox BuildSlot(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel)
+        {
+            if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel);
+
+            return new PlaceholderBox(
+                fontSize * _style.PlaceholderSize, fontSize * _style.PlaceholderThickness);
+        }
+
+        // a delimiter takes its height from what it encloses, which is why it is a box of its own rather
+        // than a character inside a run
+        private void AddDelimited(List<MathBox> parts, MathBox content,
+            DelimiterKind open, DelimiterKind close, double fontSize)
+        {
+            double padding = fontSize * _style.DelimiterPadding;
+            double width = fontSize * _style.DelimiterWidth;
+            double ascent = content.Ascent + padding;
+            double descent = content.Descent + padding;
+
+            parts.Add(new DelimiterBox(open, width, ascent, descent));
+            parts.Add(content);
+            parts.Add(new DelimiterBox(close, width, ascent, descent));
+        }
+
+        private TextRunBox TextRun(string text, double fontSize, MathToken token)
+        {
             return new TextRunBox(text, fontSize, _measurer.Measure(text, fontSize), new[] { token });
+        }
+
+        // the size one step further in
+        //
+        // the two ratios are of the base size rather than of the level above, so the step from the second
+        // level to the third is a factor of one and a deeply nested formula stops shrinking instead of
+        // vanishing
+        private double ScriptSize(double fontSize, int fromLevel)
+        {
+            return fontSize * (LevelScale(fromLevel + 1) / LevelScale(fromLevel));
+        }
+
+        private double LevelScale(int level)
+        {
+            if (level <= 0) return 1.0;
+            if (level == 1) return _style.ScriptScale;
+
+            return _style.ScriptScriptScale;
         }
 
 
         // === symbols ===
 
-        // --- revisit: structured tokens ---
-        // a fraction, a power, a root, a logarithm, a function, a postfix and a scientific token all fall
-        // through to their bare value here, which is wrong on screen but never silently empty; each gets a
-        // box of its own in the steps that follow, and this default goes with the last of them
         private static string AtomText(MathToken token)
         {
             return token.Type switch
@@ -136,6 +334,20 @@ namespace Calculator_WinUI.Models.Layout
                 "/" => "÷", // division sign
                 "-" => "−", // real minus, which is wider and sits higher than a hyphen
                 _ => value
+            };
+        }
+
+        // the inverse hyperbolics print as the plain function carrying a raised minus one, the way a Casio
+        // does; FunctionToken spells the same thing out for the latex path as sinh^{-1}, so the two lists
+        // have to move together
+        private static (string Name, bool Inverse) FunctionParts(string functionName)
+        {
+            return functionName switch
+            {
+                "arsinh" => ("sinh", true),
+                "arcosh" => ("cosh", true),
+                "artanh" => ("tanh", true),
+                _ => (functionName, false)
             };
         }
     }
