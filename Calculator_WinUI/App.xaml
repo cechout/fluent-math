@@ -222,6 +222,14 @@
             -->
             <x:Double x:Key="BarKeyHeight">32</x:Double>
 
+            <!--  key spacing  -->
+            <!--
+                the one gap between two keys, on the pad and inside every panel alike; a panel is
+                meant to read as a piece of the pad that happens to float, and that only holds while
+                the two are spaced the same
+            -->
+            <x:Double x:Key="KeySpacing">2.5</x:Double>
+
             <!--  panel key size  -->
             <!--
                 a panel key runs the keypad styles, which carry no size because a key on the pad takes

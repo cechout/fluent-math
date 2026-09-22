@@ -565,8 +565,9 @@ namespace Calculator_WinUI.ViewModels
 
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
-        // sec, csc and cot across the four trigonometry layers; floor, ceil, rand, the sexagesimal key
-        // and the angle unit postfix in the function panel; the mixed fraction on the keypad
+        // sec, csc and cot across the four trig panel layers; the five function panel keys; the whole
+        // number theory and probability panels; the mixed fraction on the keypad; the two header keys,
+        // which are waiting on a history list and a variable store rather than on a token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_sec", "cmd_csc", "cmd_cot",
@@ -574,7 +575,10 @@ namespace Calculator_WinUI.ViewModels
             "cmd_sech", "cmd_csch", "cmd_coth",
             "cmd_asech", "cmd_acsch", "cmd_acoth",
             "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
-            "cmd_frac_mixed"
+            "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
+            "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
+            "cmd_frac_mixed",
+            "cmd_history", "cmd_memory"
         };
 
         // the second keyboard layer is two buttons stacked in the same cell, so switching layers is

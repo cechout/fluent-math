@@ -26,6 +26,9 @@ namespace Calculator_WinUI.Tests
             "cmd_paren_open", "cmd_paren_close",
             "cmd_fact", "cmd_inv", "cmd_percent", "cmd_abs",
             "cmd_pow_e", "cmd_exp", "cmd_frac_mixed",
+            "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
+            "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
+            "cmd_history", "cmd_memory",
             "cmd_angle_cycle", "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
         };
 
@@ -49,7 +52,10 @@ namespace Calculator_WinUI.Tests
             "cmd_sec", "cmd_csc", "cmd_cot", "cmd_asec", "cmd_acsc", "cmd_acot",
             "cmd_sech", "cmd_csch", "cmd_coth", "cmd_asech", "cmd_acsch", "cmd_acoth",
             "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
-            "cmd_frac_mixed"
+            "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
+            "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
+            "cmd_frac_mixed",
+            "cmd_history", "cmd_memory"
         };
 
         // the keys that read an operand to their left, so pressing one on a shown result carries on

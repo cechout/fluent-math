@@ -73,12 +73,14 @@ namespace Calculator_WinUI.Views
         // the keys in both panels carry their own Command, so this only closes the panel behind them;
         // without it it would stay open over the keypad after every function
         //
-        // one handler for both, because a key only ever sits in the panel that is open and hiding the
-        // other one costs nothing
+        // one handler for all of them, because a key only ever sits in the panel that is open and
+        // hiding the others costs nothing; a new panel adds its flyout here
         private void FlyoutKey_Click(object sender, RoutedEventArgs e)
         {
             TrigonometryFlyout.Hide();
             FunctionFlyout.Hide();
+            NumberTheoryFlyout.Hide();
+            ProbabilityFlyout.Hide();
         }
 
         // the two latches belong to the open panel and not to the app, so they come back to the plain
