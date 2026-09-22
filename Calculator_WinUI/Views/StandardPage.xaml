@@ -1262,6 +1262,9 @@
             all three are the same size and sit in the same place, which is what lets the copy line
             up with the original; the stops are opaque here and the code-behind opens the side that
             has somewhere left to scroll
+            three stops per side: the strip is gone outright for the width of the chevron, so it
+            ends where the button begins rather than passing under it, and the ramp back to full
+            runs from there
         -->
         <Grid
             x:Name="PanelStripFade"
@@ -1281,8 +1284,10 @@
             <Rectangle.Fill>
                 <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                     <GradientStop x:Name="PanelFadeLeftOuter" Offset="0.0" Color="#FFFFFFFF" />
+                    <GradientStop x:Name="PanelFadeLeftCut" Offset="0.0" Color="#FFFFFFFF" />
                     <GradientStop x:Name="PanelFadeLeftInner" Offset="0.0" Color="#FFFFFFFF" />
                     <GradientStop x:Name="PanelFadeRightInner" Offset="1.0" Color="#FFFFFFFF" />
+                    <GradientStop x:Name="PanelFadeRightCut" Offset="1.0" Color="#FFFFFFFF" />
                     <GradientStop x:Name="PanelFadeRightOuter" Offset="1.0" Color="#FFFFFFFF" />
                 </LinearGradientBrush>
             </Rectangle.Fill>

@@ -136,13 +136,13 @@ namespace Calculator_WinUI.Views
 
         // === panel bar fade ===
 
-        // how far in from the edge the strip is back at full strength, and how little of it is left
-        // at the edge itself; a mask reads nothing but alpha, so the color is white throughout and
-        // only the alpha carries the ramp
+        // how far in from the edge the strip is back at full strength, chevron included, and what
+        // is left of it out there; a mask reads nothing but alpha, so the color is white throughout
+        // and only the alpha carries the ramp
         private const double PanelFadeWidth = 44;
 
         private static readonly Color MaskKeep = Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
-        private static readonly Color MaskDrop = Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF);
+        private static readonly Color MaskDrop = Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF);
 
         // the strip fades out into the window edge, and nothing is painted over it to do that: a
         // veil would be a color of its own over the backdrop, and the Mica would stop showing
@@ -205,18 +205,31 @@ namespace Calculator_WinUI.Views
             return size;
         }
 
-        // the ramp is a share of the width and the width is not fixed, so the two inner stops are
-        // placed from the measured viewport; a side with nothing behind it keeps its stops on the
-        // edge and at full alpha, which is a mask that changes nothing
+        // the ramp is a share of the width and the width is not fixed, so every stop is placed from
+        // the measured viewport; a side with nothing behind it keeps its stops on the edge and at
+        // full alpha, which is a mask that changes nothing
+        //
+        // the cut is where the strip ends: the outer stop is held flat from the edge to the inner
+        // side of the chevron, so a category button never passes under the one control covering it
+        // the chevron is asked for its own width rather than the number being repeated here, and
+        // Width answers where ActualWidth does not, since the button has not been through a layout
+        // pass yet on the frame it appears
         private void UpdatePanelFade(bool fadeLeft, bool fadeRight)
         {
             double width = PanelScroller.ActualWidth;
             double ramp = width > 0 ? Math.Min(0.5, PanelFadeWidth / width) : 0;
 
+            double leftCut = width > 0 ? Math.Min(ramp, PanelScrollLeft.Width / width) : 0;
+            double rightCut = width > 0 ? Math.Min(ramp, PanelScrollRight.Width / width) : 0;
+
             PanelFadeLeftOuter.Color = fadeLeft ? MaskDrop : MaskKeep;
+            PanelFadeLeftCut.Color = fadeLeft ? MaskDrop : MaskKeep;
+            PanelFadeLeftCut.Offset = fadeLeft ? leftCut : 0;
             PanelFadeLeftInner.Offset = fadeLeft ? ramp : 0;
 
             PanelFadeRightInner.Offset = fadeRight ? 1 - ramp : 1;
+            PanelFadeRightCut.Offset = fadeRight ? 1 - rightCut : 1;
+            PanelFadeRightCut.Color = fadeRight ? MaskDrop : MaskKeep;
             PanelFadeRightOuter.Color = fadeRight ? MaskDrop : MaskKeep;
         }
 
