@@ -49,20 +49,23 @@
 
                     <!--  === panel bar scrim ===  -->
                     <!--
-                        the strip scrolls under the chevron, so the chevron needs something behind it
-                        that a category button cannot be read through; both stops are the same tint
-                        and only the alpha moves, which is what keeps the fade out of a color that is
-                        in neither the bar nor the backdrop
+                        the veil a category button scrolls out of sight under; it is alpha over the
+                        backdrop and nothing else, so the Mica keeps coming through all the way to
+                        the edge instead of a tint taking over where the gradient runs out
+                        black, because the keys here are light on a dark backdrop and darkening
+                        is what takes them away
+                        nothing behind alpha ever disappears completely, and it is not meant to: the
+                        far end reads as the bar carrying on past the window rather than stopping
                     -->
                     <LinearGradientBrush x:Key="PanelScrimLeft" StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Offset="0.0" Color="#F2202020" />
-                        <GradientStop Offset="0.55" Color="#F2202020" />
-                        <GradientStop Offset="1.0" Color="#00202020" />
+                        <GradientStop Offset="0.0" Color="#E6000000" />
+                        <GradientStop Offset="0.55" Color="#E6000000" />
+                        <GradientStop Offset="1.0" Color="#00000000" />
                     </LinearGradientBrush>
                     <LinearGradientBrush x:Key="PanelScrimRight" StartPoint="1,0" EndPoint="0,0">
-                        <GradientStop Offset="0.0" Color="#F2202020" />
-                        <GradientStop Offset="0.55" Color="#F2202020" />
-                        <GradientStop Offset="1.0" Color="#00202020" />
+                        <GradientStop Offset="0.0" Color="#E6000000" />
+                        <GradientStop Offset="0.55" Color="#E6000000" />
+                        <GradientStop Offset="1.0" Color="#00000000" />
                     </LinearGradientBrush>
                 </ResourceDictionary>
 
@@ -102,20 +105,24 @@
 
                     <!--  === panel bar scrim ===  -->
                     <!--
-                        the strip scrolls under the chevron, so the chevron needs something behind it
-                        that a category button cannot be read through; both stops are the same tint
-                        and only the alpha moves, which is what keeps the fade out of a color that is
-                        in neither the bar nor the backdrop
+                        the veil a category button scrolls out of sight under; it is alpha over the
+                        backdrop and nothing else, so the Mica keeps coming through all the way to
+                        the edge instead of a tint taking over where the gradient runs out
+                        white, the one place the two themes do not share an ink: the keys here
+                        are dark on a light backdrop, so black would pull them out rather than
+                        fade them
+                        nothing behind alpha ever disappears completely, and it is not meant to: the
+                        far end reads as the bar carrying on past the window rather than stopping
                     -->
                     <LinearGradientBrush x:Key="PanelScrimLeft" StartPoint="0,0" EndPoint="1,0">
-                        <GradientStop Offset="0.0" Color="#F2F3F3F3" />
-                        <GradientStop Offset="0.55" Color="#F2F3F3F3" />
-                        <GradientStop Offset="1.0" Color="#00F3F3F3" />
+                        <GradientStop Offset="0.0" Color="#E6FFFFFF" />
+                        <GradientStop Offset="0.55" Color="#E6FFFFFF" />
+                        <GradientStop Offset="1.0" Color="#00FFFFFF" />
                     </LinearGradientBrush>
                     <LinearGradientBrush x:Key="PanelScrimRight" StartPoint="1,0" EndPoint="0,0">
-                        <GradientStop Offset="0.0" Color="#F2F3F3F3" />
-                        <GradientStop Offset="0.55" Color="#F2F3F3F3" />
-                        <GradientStop Offset="1.0" Color="#00F3F3F3" />
+                        <GradientStop Offset="0.0" Color="#E6FFFFFF" />
+                        <GradientStop Offset="0.55" Color="#E6FFFFFF" />
+                        <GradientStop Offset="1.0" Color="#00FFFFFF" />
                     </LinearGradientBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
