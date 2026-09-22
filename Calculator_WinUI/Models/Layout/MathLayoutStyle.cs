@@ -49,8 +49,8 @@ namespace Calculator_WinUI.Models.Layout
         //
         // both are fractions of the base size rather than of the level above, which is why a third level
         // stays where the second one is instead of shrinking away to nothing
-        public double ScriptScale { get; set; } = 0.85;
-        public double ScriptScriptScale { get; set; } = 0.75;
+        public double ScriptScale { get; set; } = 0.7;
+        public double ScriptScriptScale { get; set; } = 0.4;
 
 
         // === structures ===
@@ -74,9 +74,9 @@ namespace Calculator_WinUI.Models.Layout
         // the raise exists because a plus and a minus are centred on the math axis, and the height of that
         // axis scales with the font size; shrinking an operator therefore also drops it, and this puts it
         // back up where it reads level with the digits
-        public double OperatorScale { get; set; } = 0.6;
-        public double OperatorGap { get; set; } = 0.1;
-        public double OperatorRaise { get; set; } = 0.20;
+        public double OperatorScale { get; set; } = 0.8;
+        public double OperatorGap { get; set; } = 0.15;
+        public double OperatorRaise { get; set; } = 0.16;
         public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
 
         // how far the gap follows the size of the operator it belongs to
