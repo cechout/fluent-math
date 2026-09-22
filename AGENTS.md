@@ -64,10 +64,13 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ```text
 Calculator_WinUI/
 ├── Assets/       the app icon and the package logos
+├── Controls/     the formula display: MathPanel, XamlTextMeasurer
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model and the currency logic: MathToken, NavigationMetadata,
-│                 EvaluationMetadata, ResultFormatter, MathDisplayStyle, ConvertCurrency,
+│                 EvaluationMetadata, ResultFormatter, ConvertCurrency,
 │                 GetCurrencyData, CurrencyHelper
+│   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
+│                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   StandardViewModel, CurrencyViewModel, RelayCommand
 └── Views/        StandardPage, CurrencyPage, SettingsPage
@@ -118,10 +121,16 @@ plain library, so the suite runs on any dotnet runner.
 dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
 ```
 
-Nothing the user sees is covered by it: the formula is drawn by KaTeX inside a `WebView2`, and no test
-here opens a window. The bar for a change is that the tests stay green, that the build stays green, and
-that the screen it touches was opened in a running app and looked at. Report what you did not verify
-instead of implying it passed.
+The formula layout is covered too, under `Models/Layout/`: it is arithmetic over boxes and its text
+metrics arrive through an interface, so a test hands it numbers it chose itself and asserts the result
+rather than looking at a screenshot. Two files hold the layout and the input engine against each other,
+which is where the bugs neither of them can see alone turn up: a click has to land the caret on the
+point it was aimed at, and a press of an arrow key has to move the caret somewhere the eye can follow.
+
+What is still not covered is the drawing: no test here opens a window, and nothing checks that a box
+ends up on screen where the layout said it would. The bar for a change is that the tests stay green,
+that the build stays green, and that the screen it touches was opened in a running app and looked at.
+Report what you did not verify instead of implying it passed.
 
 ## Commit & Push
 

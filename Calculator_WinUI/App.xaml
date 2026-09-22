@@ -11,7 +11,13 @@
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
 
-            <!--  dark values are alpha over the Mica backdrop, light values are opaque  -->
+            <!--
+                every fill and every border is alpha over the Mica backdrop, so a key tracks whatever
+                shows through instead of pinning a color
+                base is the Mica tint, #F3F3F3 in light and #202020 in dark
+                white on a dark base is alpha = 255 * (target - base) / (255 - base)
+                black on a light base is alpha = 255 * (base - target) / base
+            -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
 
@@ -46,29 +52,35 @@
 
                     <!--  === fill colors ===  -->
                     <!--  number pad  -->
-                    <SolidColorBrush x:Key="NumPadNormal" Color="#FFFFFFFF" />
-                    <SolidColorBrush x:Key="NumPadHover" Color="#FFF9F9F9" />
-                    <SolidColorBrush x:Key="NumPadPressed" Color="#FFF6F6F6" />
+                    <!--
+                        NumPadNormal and OpHover aim at #FCFCFC and not at the #FFFFFF they used to
+                        be: pure white over a base of 243 needs alpha 255 and would stop tracking the
+                        backdrop, and three levels buy the translucency back
+                    -->
+                    <SolidColorBrush x:Key="NumPadNormal" Color="#BFFFFFFF" />
+                    <SolidColorBrush x:Key="NumPadHover" Color="#80FFFFFF" />
+                    <SolidColorBrush x:Key="NumPadPressed" Color="#40FFFFFF" />
 
                     <!--  operator button  -->
-                    <SolidColorBrush x:Key="OpNormal" Color="#FFF9F9F9" />
-                    <SolidColorBrush x:Key="OpHover" Color="#FFFFFFFF" />
-                    <SolidColorBrush x:Key="OpPressed" Color="#FFF9F9F9" />
+                    <SolidColorBrush x:Key="OpNormal" Color="#80FFFFFF" />
+                    <SolidColorBrush x:Key="OpHover" Color="#BFFFFFFF" />
+                    <SolidColorBrush x:Key="OpPressed" Color="#80FFFFFF" />
 
                     <!--  === border colors ===  -->
                     <!--  number pad  -->
+                    <!--  (both stops land on ControlStrokeColorDefault and ControlStrokeColorSecondary)  -->
                     <LinearGradientBrush x:Key="NumPadBorder" StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Offset="0.7" Color="#FFE5E5E5" />
-                        <GradientStop Offset="1.0" Color="#FFCCCCCC" />
+                        <GradientStop Offset="0.7" Color="#0F000000" />
+                        <GradientStop Offset="1.0" Color="#29000000" />
                     </LinearGradientBrush>
-                    <SolidColorBrush x:Key="NumPadBorderPressed" Color="#FFE5E5E5" />
+                    <SolidColorBrush x:Key="NumPadBorderPressed" Color="#0F000000" />
 
                     <!--  operator button  -->
                     <LinearGradientBrush x:Key="OpBorder" StartPoint="0,0" EndPoint="0,1">
-                        <GradientStop Offset="0.7" Color="#FFDEDEDE" />
-                        <GradientStop Offset="1.0" Color="#FFC2C2C2" />
+                        <GradientStop Offset="0.7" Color="#16000000" />
+                        <GradientStop Offset="1.0" Color="#33000000" />
                     </LinearGradientBrush>
-                    <SolidColorBrush x:Key="OpBorderPressed" Color="#FFDEDEDE" />
+                    <SolidColorBrush x:Key="OpBorderPressed" Color="#16000000" />
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 
@@ -80,6 +92,7 @@
 
                 <Setter Property="BorderBrush" Value="{ThemeResource NumPadBorder}" />
                 <Setter Property="BorderThickness" Value="1,1,1,1" />
+                <Setter Property="CornerRadius" Value="4" />
 
                 <Setter Property="Template">
                     <Setter.Value>
@@ -89,7 +102,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
+                                CornerRadius="{TemplateBinding CornerRadius}">
                                 <ContentPresenter
                                     x:Name="ContentPresenter"
                                     HorizontalAlignment="Center"
@@ -146,6 +159,7 @@
 
                 <Setter Property="BorderBrush" Value="{ThemeResource OpBorder}" />
                 <Setter Property="BorderThickness" Value="1,1,1,1" />
+                <Setter Property="CornerRadius" Value="4" />
 
                 <Setter Property="Template">
                     <Setter.Value>
@@ -155,7 +169,7 @@
                                 Background="{TemplateBinding Background}"
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
-                                CornerRadius="4">
+                                CornerRadius="{TemplateBinding CornerRadius}">
                                 <ContentPresenter
                                     x:Name="ContentPresenter"
                                     HorizontalAlignment="Center"
@@ -195,6 +209,107 @@
                                     </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
                             </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
+            <!--  subtle button  -->
+            <!--
+                the platform SubtleButtonStyle fades its fill in over 83 ms but swaps the border
+                brush in the frame the state changes, and both resolve to the same brush; a hover
+                therefore starts as a 1px outline in the final color around a still empty button
+                every state brush below is the one the platform style uses, the border just stays
+                transparent in all of them, and the fill is sized to the outer border edge so it
+                still covers the full box
+            -->
+            <Style x:Key="SubtleBarButtonStyle" TargetType="Button">
+                <Setter Property="Background" Value="{ThemeResource SubtleButtonBackground}" />
+                <Setter Property="BackgroundSizing" Value="OuterBorderEdge" />
+                <Setter Property="Foreground" Value="{ThemeResource SubtleButtonForeground}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource SubtleButtonBorderBrush}" />
+                <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
+                <Setter Property="Padding" Value="{StaticResource ButtonPadding}" />
+                <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}" />
+                <Setter Property="FontWeight" Value="Normal" />
+                <Setter Property="FontSize" Value="{ThemeResource ControlContentThemeFontSize}" />
+                <Setter Property="UseSystemFocusVisuals" Value="{StaticResource UseSystemFocusVisuals}" />
+                <Setter Property="FocusVisualMargin" Value="-3" />
+                <Setter Property="CornerRadius" Value="{ThemeResource ControlCornerRadius}" />
+
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="Button">
+                            <ContentPresenter
+                                x:Name="ContentPresenter"
+                                Padding="{TemplateBinding Padding}"
+                                HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                AutomationProperties.AccessibilityView="Raw"
+                                Background="{TemplateBinding Background}"
+                                BackgroundSizing="{TemplateBinding BackgroundSizing}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}"
+                                ContentTransitions="{TemplateBinding ContentTransitions}"
+                                CornerRadius="{TemplateBinding CornerRadius}"
+                                Foreground="{TemplateBinding Foreground}">
+
+                                <!--  the value of ControlFasterAnimationDuration  -->
+                                <!--
+                                    (spelled out because BrushTransition.Duration is a TimeSpan and
+                                    the platform keys are strings; the platform button hardcodes it
+                                    the same way)
+                                -->
+                                <ContentPresenter.BackgroundTransition>
+                                    <BrushTransition Duration="0:0:0.083" />
+                                </ContentPresenter.BackgroundTransition>
+
+                                <VisualStateManager.VisualStateGroups>
+                                    <VisualStateGroup x:Name="CommonStates">
+
+                                        <VisualState x:Name="Normal" />
+
+                                        <VisualState x:Name="PointerOver">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonBackgroundPointerOver}" />
+                                                </ObjectAnimationUsingKeyFrames>
+
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonForegroundPointerOver}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Pressed">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonBackgroundPressed}" />
+                                                </ObjectAnimationUsingKeyFrames>
+
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonForegroundPressed}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+
+                                        <VisualState x:Name="Disabled">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Background">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonBackgroundDisabled}" />
+                                                </ObjectAnimationUsingKeyFrames>
+
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonForegroundDisabled}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+
+                                    </VisualStateGroup>
+                                </VisualStateManager.VisualStateGroups>
+                            </ContentPresenter>
                         </ControlTemplate>
                     </Setter.Value>
                 </Setter>

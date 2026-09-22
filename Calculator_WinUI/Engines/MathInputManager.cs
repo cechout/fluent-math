@@ -60,7 +60,17 @@ namespace Calculator_WinUI.Engines
 
         // moving inside the current scope always wins; only once the cursor is already at a scope edge,
         // or the direction is Up/Down, does the scopes own role decide where it goes next
+        //
+        // one press has to move the caret somewhere the eye can follow, which is what the call below the
+        // move is for: it keeps the cursor off a position that is drawn where the one beside it is drawn
         public void Move(NavDirection direction)
+        {
+            MoveOnce(direction);
+
+            EnterTokensThatBeginWithTheirFirstSlot();
+        }
+
+        private void MoveOnce(NavDirection direction)
         {
             var ctx = CurrentContext;
 
@@ -127,6 +137,34 @@ namespace Calculator_WinUI.Engines
             return true;
         }
 
+        // a power draws nothing in front of its base, so the position in front of the token and the first
+        // position inside the base are one place on screen; every other structured token draws something
+        // there, a bar with the numerator centred over it, a radical sign, or a name
+        //
+        // `MathLayoutEngine.BuildPower` is what makes that true, and the two have to move together
+        private static bool BeginsWithItsFirstSlot(MathToken token)
+        {
+            return token is PowerToken;
+        }
+
+        // the cursor never stands in front of such a token, it stands in the slot instead
+        //
+        // standing on both costs a press of an arrow key that changes nothing the eye can see, in either
+        // direction. The inner one is the one that is kept, because what is typed there joins the number
+        // that is on screen rather than landing beside a structure the display draws no boundary for
+        private void EnterTokensThatBeginWithTheirFirstSlot()
+        {
+            while (true)
+            {
+                var ctx = CurrentContext;
+                if (ctx.CursorIndex >= ctx.Tokens.Count) return;
+
+                MathToken token = ctx.Tokens[ctx.CursorIndex];
+                if (!BeginsWithItsFirstSlot(token)) return;
+                if (!TryEnterTokenFromLeft(token)) return;
+            }
+        }
+
         // Left and Right first walk to the neighbouring slot of the same token and only leave the token
         // once there is no neighbour left, which is what makes a root index, a logarithm base or the far
         // half of a fraction reachable with the arrow keys alone
@@ -138,6 +176,10 @@ namespace Calculator_WinUI.Engines
 
                 _scopeStack.Pop();
                 PositionCursorAtParentToken(context.ParentToken, before: true);
+
+                // that position is the place the cursor just left when the token begins with the slot it
+                // came out of, so the move carries straight on out of it rather than stopping there
+                if (BeginsWithItsFirstSlot(context.ParentToken)) MoveOnce(NavDirection.Left);
                 return;
             }
 
@@ -239,12 +281,6 @@ namespace Calculator_WinUI.Engines
                     {
                         new TokenSlot(logarithm.BaseTokens, ScopeRole.LogBase),
                         new TokenSlot(logarithm.ParameterTokens, ScopeRole.LogParameter)
-                    };
-
-                case ScientificToken scientific:
-                    return new List<TokenSlot>
-                    {
-                        new TokenSlot(scientific.ExponentTokens, ScopeRole.ScientificExponent)
                     };
 
                 case FunctionToken function:
@@ -520,21 +556,26 @@ namespace Calculator_WinUI.Engines
             }
         }
 
-        // the EXP key; the exponent gets a slot of its own so it can be typed into and walked through
-        // like any other, and so the evaluator can bind it to the number standing in front of it
+        // the EXP key, which is the work taken off you for typing times, one, zero, power and nothing
+        // more; it builds exactly what those four keys build, so everything downstream treats it as what
+        // it is rather than as a shape of its own
         //
-        // the evaluator only reads one that follows a number, so anywhere else it turns into a syntax
-        // error on = ; the key still goes in, see the sandbox note on the class
+        // it used to be a token with a single slot, and that cost a cursor position: there was nowhere to
+        // stand between the ten and the exponent, because the ten was drawn rather than typed, so walking
+        // left out of the exponent left the whole times ten to the n behind in one step
         public void StartScientific()
         {
             var ctx = CurrentContext;
-            var scientificToken = new ScientificToken();
 
-            ctx.Tokens.Insert(ctx.CursorIndex, scientificToken);
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Operator, "*"));
+            ctx.CursorIndex++;
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, "1"));
+            ctx.CursorIndex++;
+            ctx.Tokens.Insert(ctx.CursorIndex, new MathToken(TokenType.Number, "0"));
             ctx.CursorIndex++;
 
-            _scopeStack.Push(new ScopeContext(scientificToken.ExponentTokens, scientificToken,
-                ScopeRole.ScientificExponent));
+            // pulls the ten it just typed into the base, the same way it would pull a hand typed one
+            StartPower();
         }
 
         // sin, cos, tan, ln; the name is passed straight through to LaTeX as a command
@@ -660,21 +701,6 @@ namespace Calculator_WinUI.Engines
         {
             var salvaged = new List<MathToken>();
 
-            if (structureToken is ScientificToken scientific)
-            {
-                cursorOffset = 0;
-                if (scientific.ExponentTokens.Count == 0) return salvaged;
-
-                salvaged.Add(new MathToken(TokenType.Operator, "*"));
-                salvaged.Add(new MathToken(TokenType.Number, "1"));
-                salvaged.Add(new MathToken(TokenType.Number, "0"));
-
-                cursorOffset = salvaged.Count;
-                salvaged.AddRange(scientific.ExponentTokens);
-
-                return salvaged;
-            }
-
             cursorOffset = 0;
             bool reachedLeavingSlot = false;
 
@@ -746,6 +772,11 @@ namespace Calculator_WinUI.Engines
             }
 
             CurrentContext.CursorIndex = cursorIndex;
+
+            // an address in front of a token that begins with its own first slot names a place the caret
+            // is never drawn on its own, so it is resolved to the one inside the slot
+            EnterTokensThatBeginWithTheirFirstSlot();
+
             return true;
         }
 
@@ -819,6 +850,13 @@ namespace Calculator_WinUI.Engines
 
         // read-only view of the tree for the evaluator; this class stays the only thing that mutates it
         public IReadOnlyList<MathToken> RootTokens => _rootTokens;
+
+        // where the caret stands, for a display that draws it itself
+        //
+        // the list is handed out by reference on purpose: that identity is what tells one empty slot from
+        // another, and two of them compare equal by contents
+        public IReadOnlyList<MathToken> ActiveTokens => CurrentContext.Tokens;
+        public int ActiveCursorIndex => CurrentContext.CursorIndex;
 
         // empty input renders as "0" so the display is never blank
         //

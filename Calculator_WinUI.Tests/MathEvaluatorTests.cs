@@ -272,9 +272,12 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void BindsAScientificExponentTighterThanADivision()
+        public void ReadsAScientificExponentAsTheMultiplicationItIs()
         {
-            Assert.Equal(1.0 / 300000, Value("1", "/", "3", "exp", "5"), 15);
+            // the EXP key spells out times ten to the n and binds like any other multiplication, so this
+            // reads left to right as a third of a hundred thousand rather than as one over three hundred
+            // thousand; that changed when the key stopped being a token of its own
+            Assert.Equal(100000.0 / 3.0, Value("1", "/", "3", "exp", "5"), 9);
         }
 
         [Fact]
@@ -459,7 +462,9 @@ namespace Calculator_WinUI.Tests
         {
             // deleting the 3 out of 3x10^5 is an ordinary backspace away, and what is left has no
             // reading at all; it has to come back as an error rather than as an exception
-            Assert.Equal(EvaluationError.Syntax, Error("3", "exp", "5", "left", "left", "back"));
+            // two steps left is now inside the ten, so backspace takes a digit off it rather than
+            // stranding the exponent
+            Assert.Equal(3, Value("3", "exp", "5", "left", "left", "back"));
         }
 
         [Fact]

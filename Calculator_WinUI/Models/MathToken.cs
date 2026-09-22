@@ -16,7 +16,6 @@ namespace Calculator_WinUI.Models
         Root,
         Logarithm,
         Postfix,
-        Scientific,
         Answer
     }
 
@@ -190,6 +189,10 @@ namespace Calculator_WinUI.Models
         private readonly string _latexName;
         private readonly bool _drawsAsBars;
 
+        // whether this one draws as a pair of bars instead of a named call, which is a fact about the
+        // shape of the token rather than about either output format, so both renderers read it here
+        public bool DrawsAsBars => _drawsAsBars;
+
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName)
         {
             _latexName = functionName;
@@ -247,29 +250,6 @@ namespace Calculator_WinUI.Models
             // at the end of the base became the base, and KaTeX dropped the exponent onto the height
             // of a caret that has none
             return LatexHelper.Tagged("m-pow", $"{{{baseStr}}}^{{{expStr}}}");
-        }
-    }
-
-    // the EXP key of a pocket calculator, rendered as the times ten to the n it stands for
-    //
-    // it is a token of its own rather than a literal multiplication, because the exponent has to bind to
-    // the number in front of it: 1 / 3 EXP 5 is one over three hundred thousand, while the same thing
-    // written out as an ordinary multiplication comes out as a third of a hundred thousand
-    public class ScientificToken : MathToken
-    {
-        public List<MathToken> ExponentTokens { get; } = new List<MathToken>();
-
-        public ScientificToken() : base(TokenType.Scientific) { }
-
-        public override string ToLatex(LatexRenderContext context)
-        {
-            string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 0);
-
-            // the times sign goes through the same helper the result line uses, and the whole thing is
-            // tagged as a power rather than given a class of its own, since it is a superscript and
-            // should follow whatever size the other superscripts are set to
-            string times = LatexHelper.TaggedOperator("\\times");
-            return LatexHelper.Tagged("m-pow", $"{times}10^{{{expStr}}}");
         }
     }
 
@@ -464,6 +444,75 @@ namespace Calculator_WinUI.Models
             // the box is also all there is to aim at in an empty slot, so it carries the address of
             // the one position inside it; without that an empty numerator could never be clicked into
             return latex + Addressed(EmptySlotLatex, slotContext, 0);
+        }
+    }
+
+
+    // a detached deep copy of a token list
+    //
+    // the display needs one the moment = is pressed: the tree carries on being edited afterwards, since
+    // = deliberately leaves it alone so a Math ERROR can be corrected, and the history line therefore
+    // cannot simply hold a reference to it; MathInputManager clears its root list in place
+    //
+    // it sits beside the token classes rather than as a virtual on each of them, so the whole of the
+    // copying is one thing to read and a token type added later fails loudly here instead of losing a
+    // slot quietly
+    public static class MathTokenCloner
+    {
+        public static List<MathToken> CloneList(IReadOnlyList<MathToken> tokens)
+        {
+            List<MathToken> copy = new List<MathToken>(tokens.Count);
+            foreach (MathToken token in tokens) copy.Add(Clone(token));
+
+            return copy;
+        }
+
+        public static MathToken Clone(MathToken token)
+        {
+            switch (token)
+            {
+                case FractionToken fraction:
+                    FractionToken fractionCopy = new FractionToken();
+                    fractionCopy.NumeratorTokens.AddRange(CloneList(fraction.NumeratorTokens));
+                    fractionCopy.DenominatorTokens.AddRange(CloneList(fraction.DenominatorTokens));
+                    return fractionCopy;
+
+                case PowerToken power:
+                    PowerToken powerCopy = new PowerToken();
+                    powerCopy.BaseTokens.AddRange(CloneList(power.BaseTokens));
+                    powerCopy.ExponentTokens.AddRange(CloneList(power.ExponentTokens));
+                    return powerCopy;
+
+                case RootToken root:
+                    RootToken rootCopy = new RootToken();
+                    rootCopy.IndexTokens.AddRange(CloneList(root.IndexTokens));
+                    rootCopy.RadicandTokens.AddRange(CloneList(root.RadicandTokens));
+                    return rootCopy;
+
+                case LogarithmToken logarithm:
+                    LogarithmToken logarithmCopy = new LogarithmToken();
+                    logarithmCopy.BaseTokens.AddRange(CloneList(logarithm.BaseTokens));
+                    logarithmCopy.ParameterTokens.AddRange(CloneList(logarithm.ParameterTokens));
+                    return logarithmCopy;
+
+                case FunctionToken function:
+                    FunctionToken functionCopy = new FunctionToken(function.Value);
+                    functionCopy.ParameterTokens.AddRange(CloneList(function.ParameterTokens));
+                    return functionCopy;
+
+                // the leaves rebuild themselves from their own name, which is what fills the private
+                // fields a constant, a postfix and a function keep beside Value
+                case ConstantToken constant: return new ConstantToken(constant.Value);
+                case PostfixToken postfix: return new PostfixToken(postfix.Value);
+                case AnsToken: return new AnsToken();
+            }
+
+            if (token.GetType() != typeof(MathToken))
+            {
+                throw new NotSupportedException($"no clone for {token.GetType().Name}");
+            }
+
+            return new MathToken(token.Type, token.Value);
         }
     }
 }
