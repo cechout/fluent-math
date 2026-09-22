@@ -155,6 +155,31 @@ namespace Calculator_WinUI.Tests
             Assert.Equal(operatorSize + gap + gap, row.Width);
         }
 
+        // the same rule the air around a radicand follows, and the reason it is written once: a gap in em
+        // shrinks with its own piece, and inside a structure that is set smaller it shrinks twice over
+        [Theory]
+        [InlineData(1.0, 0.5)]  // fully proportional: half the size, half the gap
+        [InlineData(0.0, 1.0)]  // held: the gap of a full size operator, whatever size this one is
+        [InlineData(0.5, 0.75)] // half way between the two
+        public void TheGapOfAnOperatorFollowsItsSizeOnlyAsFarAsItsScalingSays(
+            double scaling, double expectedShare)
+        {
+            MathLayoutStyle style = new MathLayoutStyle
+            {
+                FontSizePx = FontSize,
+                OperatorScale = 0.5,
+                OperatorGap = 0.2,
+                OperatorGapScaling = scaling
+            };
+
+            // set at half the size of the line it is in, the way one inside a fraction is
+            RowBox row = Engine(style).BuildRow(
+                new List<MathToken> { Operator("+") }, FontSize * 0.5, 1);
+
+            double fullGap = FontSize * 0.5 * 0.2;
+            Assert.Equal(fullGap * expectedShare, row.Children.Single().LeadingGap, 9);
+        }
+
         [Fact]
         public void AnOperatorRidesAboveTheBaselineByItsOwnRaise()
         {

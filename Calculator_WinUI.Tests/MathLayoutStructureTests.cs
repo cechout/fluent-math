@@ -40,7 +40,11 @@ namespace Calculator_WinUI.Tests
                 SubscriptShift = 0.3,
                 DelimiterWidth = 0.4,
                 DelimiterPadding = 0,
-                PlaceholderSize = 0.6
+                PlaceholderSize = 0.6,
+                RadicalHookWidth = 0.5,
+                RadicalLeadingPad = 0.2,
+                RadicalTrailingPad = 0.2,
+                RadicalPadScaling = 1
             };
         }
 
@@ -280,10 +284,9 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
-        public void TheRadicandSitsAfterTheIndexAndTheHook()
+        public void TheRadicandSitsAfterTheIndexAndTheHookAndTheAirBehindIt()
         {
             MathLayoutStyle style = Style();
-            style.RadicalHookWidth = 0.5;
 
             RootToken root = new RootToken();
             root.IndexTokens.Add(Digit("3"));
@@ -292,7 +295,53 @@ namespace Calculator_WinUI.Tests
             RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
             box.Place(0, 100);
 
-            Assert.Equal(box.IndexWidth + FontSize * 0.5, box.Radicand.X);
+            // the sign fills the hook to its last pixel, so the pad is the only thing between it and the
+            // first glyph of what it encloses
+            Assert.Equal(box.IndexWidth + FontSize * 0.5 + FontSize * 0.2, box.Radicand.X);
+        }
+
+        [Fact]
+        public void TheBarReachesPastBothEndsOfTheRadicand()
+        {
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(Digit("2"));
+
+            RootBox box = (RootBox)Row(root).Children.Single();
+
+            // hook, the air in front, the digit, the air behind
+            Assert.Equal(FontSize * 0.5 + FontSize * 0.2 + FontSize + FontSize * 0.2, box.Width);
+        }
+
+        // a root set inside a fraction is drawn at script size, and air written in em alone shrinks with
+        // it until the sign sits on its content
+        [Theory]
+        [InlineData(1.0, 0.5)]  // fully proportional: half the size, half the air
+        [InlineData(0.0, 1.0)]  // held: the air a full size root keeps, whatever size this one is
+        [InlineData(0.5, 0.75)] // half way between the two
+        public void TheAirAroundARadicandFollowsTheSizeOnlyAsFarAsItsScalingSays(
+            double scaling, double expectedShare)
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalPadScaling = scaling;
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(Digit("2"));
+
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.Add(root);
+            fraction.DenominatorTokens.Add(Digit("1"));
+
+            FractionBox box = (FractionBox)Engine(style)
+                .BuildRow(new List<MathToken> { fraction }).Children.Single();
+
+            RootBox nested = (RootBox)((RowBox)box.Numerator).Children.Single();
+            nested.Place(0, 100);
+
+            // the numerator is set at ScriptScale, which this style pins at a half
+            double size = FontSize * 0.5;
+            double pad = nested.Radicand.X - nested.X - nested.IndexWidth - size * 0.5;
+
+            Assert.Equal(FontSize * 0.2 * expectedShare, pad, 9);
         }
 
         [Fact]

@@ -218,8 +218,8 @@ namespace Calculator_WinUI.Models.Layout
 
             // the gap follows the size only as far as OperatorGapScaling says, because a gap that is
             // fully proportional shrinks twice inside a fraction and closes up
-            double fullSize = _style.FontSizePx * _style.OperatorScale;
-            double gapSize = fullSize + (operatorSize - fullSize) * _style.OperatorGapScaling;
+            double gapSize = GapAt(operatorSize, _style.FontSizePx * _style.OperatorScale,
+                _style.OperatorGapScaling);
 
             box.LeadingGap = gapSize * _style.OperatorGap;
             box.TrailingGap = box.LeadingGap;
@@ -280,6 +280,11 @@ namespace Calculator_WinUI.Models.Layout
                 ? null
                 : BuildSlot(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2, SlotPath(path, tokenIndex, 0));
 
+            // the air either side of the radicand follows the size only as far as RadicalPadScaling
+            // says; fully proportional it closes up on a root set small inside a fraction, which reads
+            // as the sign touching what it encloses
+            double padSize = GapAt(size, _style.FontSizePx * _style.RootScale, _style.RadicalPadScaling);
+
             return new RootBox(
                 index,
                 BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1)),
@@ -287,7 +292,8 @@ namespace Calculator_WinUI.Models.Layout
                 size * _style.RadicalRuleThickness,
                 size * _style.RadicalVerticalGap,
                 _style.RadicalIndexRaise,
-                size * _style.RadicalTrailingPad);
+                padSize * _style.RadicalLeadingPad,
+                padSize * _style.RadicalTrailingPad);
         }
 
         private RowBox BuildLogarithm(LogarithmToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
@@ -418,6 +424,16 @@ namespace Calculator_WinUI.Models.Layout
                 + "." + slotIndex.ToString(CultureInfo.InvariantCulture);
 
             return path.Length == 0 ? step : path + "/" + step;
+        }
+
+        // how wide a gap is once the piece it belongs to has been set smaller than the line it is in
+        //
+        // a gap written in em shrinks with its piece, and inside a structure that is itself set smaller
+        // it shrinks twice over and closes up. 1 leaves it fully proportional, 0 keeps the gap the piece
+        // would have at full size however small it ended up, and anything between splits the difference
+        private static double GapAt(double size, double fullSize, double scaling)
+        {
+            return fullSize + (size - fullSize) * scaling;
         }
 
         private double ScriptSize(double fontSize, int fromLevel)
