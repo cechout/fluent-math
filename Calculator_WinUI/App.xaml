@@ -46,6 +46,24 @@
                         <GradientStop Offset="1.0" Color="#17FFFFFF" />
                     </LinearGradientBrush>
                     <SolidColorBrush x:Key="OpBorderPressed" Color="#1CFFFFFF" />
+
+                    <!--  === panel bar scrim ===  -->
+                    <!--
+                        the strip scrolls under the chevron, so the chevron needs something behind it
+                        that a category button cannot be read through; both stops are the same tint
+                        and only the alpha moves, which is what keeps the fade out of a color that is
+                        in neither the bar nor the backdrop
+                    -->
+                    <LinearGradientBrush x:Key="PanelScrimLeft" StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0.0" Color="#F2202020" />
+                        <GradientStop Offset="0.55" Color="#F2202020" />
+                        <GradientStop Offset="1.0" Color="#00202020" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="PanelScrimRight" StartPoint="1,0" EndPoint="0,0">
+                        <GradientStop Offset="0.0" Color="#F2202020" />
+                        <GradientStop Offset="0.55" Color="#F2202020" />
+                        <GradientStop Offset="1.0" Color="#00202020" />
+                    </LinearGradientBrush>
                 </ResourceDictionary>
 
                 <ResourceDictionary x:Key="Light">
@@ -81,6 +99,24 @@
                         <GradientStop Offset="1.0" Color="#33000000" />
                     </LinearGradientBrush>
                     <SolidColorBrush x:Key="OpBorderPressed" Color="#16000000" />
+
+                    <!--  === panel bar scrim ===  -->
+                    <!--
+                        the strip scrolls under the chevron, so the chevron needs something behind it
+                        that a category button cannot be read through; both stops are the same tint
+                        and only the alpha moves, which is what keeps the fade out of a color that is
+                        in neither the bar nor the backdrop
+                    -->
+                    <LinearGradientBrush x:Key="PanelScrimLeft" StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Offset="0.0" Color="#F2F3F3F3" />
+                        <GradientStop Offset="0.55" Color="#F2F3F3F3" />
+                        <GradientStop Offset="1.0" Color="#00F3F3F3" />
+                    </LinearGradientBrush>
+                    <LinearGradientBrush x:Key="PanelScrimRight" StartPoint="1,0" EndPoint="0,0">
+                        <GradientStop Offset="0.0" Color="#F2F3F3F3" />
+                        <GradientStop Offset="0.55" Color="#F2F3F3F3" />
+                        <GradientStop Offset="1.0" Color="#00F3F3F3" />
+                    </LinearGradientBrush>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
 

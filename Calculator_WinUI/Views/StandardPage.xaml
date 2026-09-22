@@ -7,15 +7,24 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Calculator_WinUI.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:toolkit="using:CommunityToolkit.WinUI.Controls"
     mc:Ignorable="d">
 
+    <!--
+        four bands: header, display, panel bar, keypad
+        the caret bar moved into the display block and the divider stayed the top edge of the panel
+        bar, which is what leaves the two halves of the page as neighbouring rows; a splitter laid
+        over the divider trades height between them, and since only a star sized row inside either
+        half can grow, neither bar ever changes height
+        a MinHeight on each star row is the whole travel limit: the two always add up to the same
+        number, so a floor under one is the ceiling over the other
+    -->
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="2*" />
+            <RowDefinition Height="2*" MinHeight="96" />
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="6*" />
+            <RowDefinition Height="6*" MinHeight="216" />
         </Grid.RowDefinitions>
 
 
@@ -86,11 +95,15 @@
             both lines are drawn by a MathPanel out of ordinary XAML elements
             top is the previous calculation, bottom is what is being typed; content is pushed in from
             the code-behind, since neither line can be bound to
+            the caret bar is the third row of this block rather than a band of its own; the splitter
+            resizes the block as a whole, so a bar that has to keep its height belongs in an Auto row
+            inside it
         -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="2*" />
                 <RowDefinition Height="3*" MinHeight="40" />
+                <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
             <controls:MathPanel
@@ -104,11 +117,15 @@
                 the tap is taken here rather than on the panel, and the transparent background is what
                 makes that work: the formula is only as wide as it is, and aiming at the air beside it
                 is how a short one is clicked into at all
+                the scroller reaches to 4px above the caret bar and the panel inside it gives those
+                4px back at the bottom, which leaves the formula exactly where it was and opens a
+                strip underneath it; a ScrollViewer draws its scrollbar inside its own bounds, so
+                without that strip the bar is drawn over the formula rather than below it
             -->
             <ScrollViewer
                 x:Name="InputScroller"
                 Grid.Row="1"
-                Margin="4,0,4,8"
+                Margin="4,0,4,4"
                 Background="Transparent"
                 HorizontalScrollBarVisibility="Auto"
                 HorizontalScrollMode="Auto"
@@ -118,71 +135,70 @@
 
                 <controls:MathPanel
                     x:Name="MathDisplay2"
+                    Margin="0,0,0,4"
                     Background="Transparent"
                     CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
                     Ink="{ThemeResource TextFillColorPrimaryBrush}" />
             </ScrollViewer>
-        </Grid>
 
+            <!--  caret bar  -->
+            <!--
+                the arrow keys move the caret rather than write anything, so they sit with the display
+                instead of on the pad; the angle unit rides along because it is the other thing that is a
+                mode and not an input, and its button shows the unit it is currently in
+                the two groups are pushed to opposite edges and the keys are a fixed size rather than a
+                share of the width, so neither group reflows as the window is resized
+                the keys are flat, like the panel buttons below them, and both bars run at the same key
+                height: everything above the divider is read from or switched, and the raised fill below
+                it is what marks a key that writes something
+            -->
+            <Grid
+                Grid.Row="2"
+                Height="{StaticResource BarKeyHeight}">
 
-        <!--  caret bar  -->
-        <!--
-            the arrow keys move the caret rather than write anything, so they sit with the display
-            instead of on the pad; the angle unit rides along because it is the other thing that is a
-            mode and not an input, and its button shows the unit it is currently in
-            the two groups are pushed to opposite edges and the keys are a fixed size rather than a
-            share of the width, so neither group reflows as the window is resized
-            the keys are flat, like the panel buttons below them, and both bars run at the same key
-            height: everything above the divider is read from or switched, and the raised fill below
-            it is what marks a key that writes something
-        -->
-        <Grid
-            Grid.Row="2"
-            Height="{StaticResource BarKeyHeight}"
-            Margin="0,0,0,4">
-
-            <Button
-                Height="{StaticResource BarKeyHeight}"
-                HorizontalAlignment="Left"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_angle_cycle"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
-            </Button>
-
-            <StackPanel
-                HorizontalAlignment="Right"
-                Orientation="Horizontal"
-                Spacing="{StaticResource KeySpacing}">
                 <Button
                     Height="{StaticResource BarKeyHeight}"
+                    HorizontalAlignment="Left"
                     Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_left"
+                    CommandParameter="cmd_angle_cycle"
                     Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE76B;" />
+                    <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
                 </Button>
-                <Button
-                    Height="{StaticResource BarKeyHeight}"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_down"
-                    Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE70D;" />
-                </Button>
-                <Button
-                    Height="{StaticResource BarKeyHeight}"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_up"
-                    Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE70E;" />
-                </Button>
-                <Button
-                    Height="{StaticResource BarKeyHeight}"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_right"
-                    Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE76C;" />
-                </Button>
-            </StackPanel>
+
+                <StackPanel
+                    HorizontalAlignment="Right"
+                    Orientation="Horizontal"
+                    Spacing="{StaticResource KeySpacing}">
+                    <Button
+                        Height="{StaticResource BarKeyHeight}"
+                        Command="{x:Bind ViewModel.InputCommand}"
+                        CommandParameter="cmd_nav_left"
+                        Style="{StaticResource SubtleBarButtonStyle}">
+                        <FontIcon FontSize="14" Glyph="&#xE76B;" />
+                    </Button>
+                    <Button
+                        Height="{StaticResource BarKeyHeight}"
+                        Command="{x:Bind ViewModel.InputCommand}"
+                        CommandParameter="cmd_nav_down"
+                        Style="{StaticResource SubtleBarButtonStyle}">
+                        <FontIcon FontSize="14" Glyph="&#xE70D;" />
+                    </Button>
+                    <Button
+                        Height="{StaticResource BarKeyHeight}"
+                        Command="{x:Bind ViewModel.InputCommand}"
+                        CommandParameter="cmd_nav_up"
+                        Style="{StaticResource SubtleBarButtonStyle}">
+                        <FontIcon FontSize="14" Glyph="&#xE70E;" />
+                    </Button>
+                    <Button
+                        Height="{StaticResource BarKeyHeight}"
+                        Command="{x:Bind ViewModel.InputCommand}"
+                        CommandParameter="cmd_nav_right"
+                        Style="{StaticResource SubtleBarButtonStyle}">
+                        <FontIcon FontSize="14" Glyph="&#xE76C;" />
+                    </Button>
+                </StackPanel>
+            </Grid>
         </Grid>
 
 
@@ -196,31 +212,37 @@
             the keys inside carry the same InputCommand as the pad, the Click handler only closes the
             panel behind them so it reads as a menu
         -->
-        <StackPanel Grid.Row="3" Margin="0,0,0,4">
+        <StackPanel Grid.Row="2" Margin="0,0,0,4">
 
             <!--
                 the negative sides cancel the pages own 4px inset, so the line reaches the window
                 edge rather than stopping where the keys stop; it separates two bars and a bar runs
                 the full width
+                the 4px above the line used to hang under the caret bar; it moved here so the line
+                sits in the middle of the 9px band the splitter takes hold of
             -->
             <Rectangle
                 Height="1"
-                Margin="-4,0,-4,4"
+                Margin="-4,4,-4,4"
                 HorizontalAlignment="Stretch"
                 Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
                 RadiusX="0.5"
                 RadiusY="0.5" />
 
             <!--
-                the bar takes a button per family and there is no width at which they all fit, so it
-                scrolls sideways rather than clipping the last one; no scrollbar, the row is short
-                and a drag or a wheel is how it is reached
+                the bar takes a button per family and there is no window width at which they all
+                fit, so it scrolls sideways rather than clipping the last one; no scrollbar, the row
+                is short and a wheel or a chevron is how it is reached
             -->
             <ScrollViewer
+                x:Name="PanelScroller"
                 HorizontalScrollBarVisibility="Hidden"
                 HorizontalScrollMode="Auto"
+                Loaded="PanelScroller_Loaded"
+                SizeChanged="PanelScroller_SizeChanged"
                 VerticalScrollBarVisibility="Disabled"
-                VerticalScrollMode="Disabled">
+                VerticalScrollMode="Disabled"
+                ViewChanged="PanelScroller_ViewChanged">
                 <StackPanel Orientation="Horizontal" Spacing="4">
 
                 <Button Height="{StaticResource BarKeyHeight}" Style="{StaticResource SubtleBarButtonStyle}">
@@ -1229,6 +1251,82 @@
         </StackPanel>
 
 
+        <!--  panel bar chevrons  -->
+        <!--
+            a chevron is over the strip rather than beside it, so the category buttons still get the
+            full width whenever nothing overflows; it appears only while that side has somewhere
+            left to go, and the scrim behind it is what the strip disappears into rather than
+            ending on a half drawn word
+            both sit in the panel bar row of the page grid instead of in the bar itself, which keeps
+            the flyouts one level shallower than wrapping the strip would; the bottom margin is the
+            one the bar carries, so a chevron lands on the strip and not on the divider above it
+        -->
+        <Grid
+            x:Name="PanelScrollLeft"
+            Grid.Row="2"
+            Margin="0,0,0,4"
+            HorizontalAlignment="Left"
+            VerticalAlignment="Bottom"
+            Visibility="Collapsed">
+            <Rectangle
+                Width="44"
+                Fill="{ThemeResource PanelScrimLeft}"
+                IsHitTestVisible="False" />
+            <Button
+                Width="24"
+                Height="{StaticResource BarKeyHeight}"
+                Padding="0"
+                HorizontalAlignment="Left"
+                Click="PanelScrollLeft_Click"
+                Style="{StaticResource SubtleBarButtonStyle}">
+                <FontIcon FontSize="12" Glyph="&#xE76B;" />
+            </Button>
+        </Grid>
+
+        <Grid
+            x:Name="PanelScrollRight"
+            Grid.Row="2"
+            Margin="0,0,0,4"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Visibility="Collapsed">
+            <Rectangle
+                Width="44"
+                Fill="{ThemeResource PanelScrimRight}"
+                IsHitTestVisible="False" />
+            <Button
+                Width="24"
+                Height="{StaticResource BarKeyHeight}"
+                Padding="0"
+                HorizontalAlignment="Right"
+                Click="PanelScrollRight_Click"
+                Style="{StaticResource SubtleBarButtonStyle}">
+                <FontIcon FontSize="12" Glyph="&#xE76C;" />
+            </Button>
+        </Grid>
+
+
+        <!--  divider grab  -->
+        <!--
+            a direct child of the page grid laid over the top 9px of the panel bar, which is the
+            4px, the divider line and the 4px under it; it is transparent until the pointer reaches
+            it, so the band goes on looking like the line it covers
+            PreviousAndNext is what makes it trade the display row against the keypad row rather
+            than resize the bar it stands in, and the MinHeight on those two rows is how far it
+            goes; a Toolkit sizer also carries the resize cursor, the keyboard arrows and an
+            automation peer, none of which a Rectangle with a manipulation handler would
+        -->
+        <toolkit:GridSplitter
+            Grid.Row="2"
+            Height="9"
+            Margin="-4,0,-4,0"
+            Padding="0"
+            VerticalAlignment="Top"
+            IsThumbVisible="False"
+            ResizeBehavior="PreviousAndNext"
+            ResizeDirection="Rows" />
+
+
         <!--  keypad  -->
         <!--
             every key binds to the same InputCommand and identifies itself through its
@@ -1237,7 +1335,7 @@
             NormalVisibility / ShiftVisibility, one of which is always collapsed
         -->
         <Grid
-            Grid.Row="4"
+            Grid.Row="3"
             ColumnSpacing="{StaticResource KeySpacing}"
             RowSpacing="{StaticResource KeySpacing}">
             <Grid.RowDefinitions>

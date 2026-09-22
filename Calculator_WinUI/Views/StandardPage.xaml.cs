@@ -70,6 +70,64 @@ namespace Calculator_WinUI.Views
 
         // === panel bar ===
 
+        // the bar holds more category buttons than any window width fits, so the side that runs off
+        // the edge gets a chevron; one click moves the strip by most of a viewport rather than by a
+        // button, which is what puts the far end of the bar two clicks away
+        private const double PanelScrollRatio = 0.7;
+
+        private void PanelScroller_Loaded(object sender, RoutedEventArgs e)
+        {
+            // the strip is in the tree by now but has not been through a pass, so its extent is
+            // still zero and both chevrons would read as not needed; the same ordering the caret
+            // reveal needs, and for the same reason
+            PanelScroller.UpdateLayout();
+
+            UpdatePanelChevrons();
+        }
+
+        private void PanelScroller_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdatePanelChevrons();
+        }
+
+        private void PanelScroller_ViewChanged(object sender, ScrollViewerViewChangedEventArgs e)
+        {
+            UpdatePanelChevrons();
+        }
+
+        private void PanelScrollLeft_Click(object sender, RoutedEventArgs e)
+        {
+            ScrollPanelBar(-1);
+        }
+
+        private void PanelScrollRight_Click(object sender, RoutedEventArgs e)
+        {
+            ScrollPanelBar(1);
+        }
+
+        // an offset lands a fraction of a pixel short of its end often enough that both edges are
+        // read with a pixel of slack; ScrollableWidth is zero while the whole bar fits, which is
+        // what collapses both chevrons through the same two comparisons
+        private void UpdatePanelChevrons()
+        {
+            double offset = PanelScroller.HorizontalOffset;
+
+            PanelScrollLeft.Visibility = offset > 1
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            PanelScrollRight.Visibility = offset < PanelScroller.ScrollableWidth - 1
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+        }
+
+        private void ScrollPanelBar(int direction)
+        {
+            double step = PanelScroller.ViewportWidth * PanelScrollRatio;
+
+            PanelScroller.ChangeView(PanelScroller.HorizontalOffset + (direction * step), null, null);
+        }
+
         // the keys in both panels carry their own Command, so this only closes the panel behind them;
         // without it it would stay open over the keypad after every function
         //
