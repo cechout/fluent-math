@@ -406,7 +406,39 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_frac"
                 Style="{StaticResource OperatorButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x/y" />
+                <!--
+                    the key is drawn as the stacked fraction it inserts instead of being written on
+                    one line, so it shows the shape that ends up on the display
+                    both halves sit at the script size the display sets a numerator in, and tight
+                    line bounds drop the leading around them, which is what keeps the stack inside a
+                    key; the bar reaches past them on either side the way the display draws it
+                -->
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock
+                        Grid.Row="0"
+                        Margin="2,0,2,2"
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Text="x"
+                        TextLineBounds="Tight" />
+                    <Rectangle
+                        Grid.Row="1"
+                        Height="1"
+                        Fill="{ThemeResource TextFillColorPrimaryBrush}" />
+                    <TextBlock
+                        Grid.Row="2"
+                        Margin="2,2,2,0"
+                        HorizontalAlignment="Center"
+                        FontSize="12"
+                        Text="y"
+                        TextLineBounds="Tight" />
+                </Grid>
             </Button>
             <Button
                 Grid.Row="1"
@@ -756,7 +788,8 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_exp"
                 Style="{StaticResource NumberPadButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="*10ⁿ" />
+                <!--  the multiplication sign is the one the display prints, not the asterisk it is typed as  -->
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="×10ⁿ" />
             </Button>
             <Button
                 Grid.Row="6"
