@@ -49,8 +49,8 @@ namespace Calculator_WinUI.Models.Layout
         //
         // both are fractions of the base size rather than of the level above, which is why a third level
         // stays where the second one is instead of shrinking away to nothing
-        public double ScriptScale { get; set; } = 0.9;
-        public double ScriptScriptScale { get; set; } = 0.8;
+        public double ScriptScale { get; set; } = 0.85;
+        public double ScriptScriptScale { get; set; } = 0.75;
 
 
         // === structures ===
@@ -111,7 +111,7 @@ namespace Calculator_WinUI.Models.Layout
 
         public double RadicalHookWidth { get; set; } = 0.55; // em, the part in front of the radicand
         public double RadicalRuleThickness { get; set; } = 0.05; // em, the bar over the radicand
-        public double RadicalVerticalGap { get; set; } = 0.04; // em between that bar and the radicand
+        public double RadicalVerticalGap { get; set; } = 0.02; // em between that bar and the radicand
 
         // air between the sign and the radicand
         //
@@ -137,7 +137,7 @@ namespace Calculator_WinUI.Models.Layout
         public double RadicalPadScaling { get; set; } = 0.5;
 
         // where the index sits, as a fraction of the height of the sign it stands on
-        public double RadicalIndexRaise { get; set; } = 0.45;
+        public double RadicalIndexRaise { get; set; } = 0.25;
 
 
         // === delimiters ===
