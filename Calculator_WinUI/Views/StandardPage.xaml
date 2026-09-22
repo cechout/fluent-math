@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <Page
     x:Class="Calculator_WinUI.Views.StandardPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -106,76 +106,71 @@
         <!--  caret bar  -->
         <!--
             the arrow keys move the caret rather than write anything, so they sit with the display
-            instead of on the pad; the five columns are the keypads, which is what lines the bar up
-            with the keys below it
-            the angle unit rides along because it is the other thing that is a mode and not an input,
-            and the button shows the unit it is currently in
-            the keys are flat, like the panel buttons below them: everything above the divider is a
-            band the pad is read from, and the raised fill is what marks a key that writes something
+            instead of on the pad; the angle unit rides along because it is the other thing that is a
+            mode and not an input, and its button shows the unit it is currently in
+            the two groups are pushed to opposite edges and the keys are a fixed size rather than a
+            share of the width, so neither group reflows as the window is resized
+            the keys are flat, like the panel buttons below them, and both bars run at the same key
+            height: everything above the divider is read from or switched, and the raised fill below
+            it is what marks a key that writes something
         -->
         <Grid
             Grid.Row="2"
-            Height="36"
-            Margin="0,0,0,4"
-            ColumnSpacing="2.5">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="*" />
-            </Grid.ColumnDefinitions>
+            Height="{StaticResource BarKeyHeight}"
+            Margin="0,0,0,4">
 
             <Button
-                Grid.Column="0"
+                Width="40"
+                Height="{StaticResource BarKeyHeight}"
                 Padding="0"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
+                HorizontalAlignment="Left"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_angle_cycle"
                 Style="{StaticResource SubtleBarButtonStyle}">
                 <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
             </Button>
-            <Button
-                Grid.Column="1"
-                Padding="0"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_nav_left"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE76B;" />
-            </Button>
-            <Button
-                Grid.Column="2"
-                Padding="0"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_nav_up"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE70E;" />
-            </Button>
-            <Button
-                Grid.Column="3"
-                Padding="0"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_nav_down"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE70D;" />
-            </Button>
-            <Button
-                Grid.Column="4"
-                Padding="0"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_nav_right"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE76C;" />
-            </Button>
+
+            <StackPanel
+                HorizontalAlignment="Right"
+                Orientation="Horizontal"
+                Spacing="2.5">
+                <Button
+                    Width="32"
+                    Height="{StaticResource BarKeyHeight}"
+                    Padding="0"
+                    Command="{x:Bind ViewModel.InputCommand}"
+                    CommandParameter="cmd_nav_left"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE76B;" />
+                </Button>
+                <Button
+                    Width="32"
+                    Height="{StaticResource BarKeyHeight}"
+                    Padding="0"
+                    Command="{x:Bind ViewModel.InputCommand}"
+                    CommandParameter="cmd_nav_up"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE70E;" />
+                </Button>
+                <Button
+                    Width="32"
+                    Height="{StaticResource BarKeyHeight}"
+                    Padding="0"
+                    Command="{x:Bind ViewModel.InputCommand}"
+                    CommandParameter="cmd_nav_down"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE70D;" />
+                </Button>
+                <Button
+                    Width="32"
+                    Height="{StaticResource BarKeyHeight}"
+                    Padding="0"
+                    Command="{x:Bind ViewModel.InputCommand}"
+                    CommandParameter="cmd_nav_right"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE76C;" />
+                </Button>
+            </StackPanel>
         </Grid>
 
 
@@ -204,7 +199,9 @@
 
             <StackPanel Orientation="Horizontal" Spacing="4">
 
-                <Button Style="{StaticResource SubtleBarButtonStyle}">
+                <Button
+                    Height="{StaticResource BarKeyHeight}"
+                    Style="{StaticResource SubtleBarButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock
                             VerticalAlignment="Center"
@@ -571,7 +568,9 @@
                     </Button.Flyout>
                 </Button>
 
-                <Button Style="{StaticResource SubtleBarButtonStyle}">
+                <Button
+                    Height="{StaticResource BarKeyHeight}"
+                    Style="{StaticResource SubtleBarButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock
                             VerticalAlignment="Center"

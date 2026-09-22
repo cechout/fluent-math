@@ -214,6 +214,14 @@
                 </Setter>
             </Style>
 
+            <!--  bar key height  -->
+            <!--
+                the caret bar and the panel bar carry the same key height, so the two read as one
+                block between the display and the pad; it is one number rather than two so they
+                cannot drift apart
+            -->
+            <x:Double x:Key="BarKeyHeight">32</x:Double>
+
             <!--  flyout key  -->
             <!--
                 the keypad style at a fixed size, because a flyout gives no grid cell to stretch into
