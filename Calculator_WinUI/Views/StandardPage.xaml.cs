@@ -1,12 +1,15 @@
 ﻿using Calculator_WinUI.Models;
 using Calculator_WinUI.Models.Layout;
 using Calculator_WinUI.ViewModels;
+using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using System;
 using System.ComponentModel;
 using Windows.Foundation;
+using Windows.UI;
 
 namespace Calculator_WinUI.Views
 {
@@ -32,6 +35,7 @@ namespace Calculator_WinUI.Views
             this.InitializeComponent();
 
             RebuildStyles();
+            ApplyPanelBarFade();
 
             this.Loaded += StandardPage_Loaded;
             this.ActualThemeChanged += StandardPage_ActualThemeChanged;
@@ -112,13 +116,14 @@ namespace Calculator_WinUI.Views
         {
             double offset = PanelScroller.HorizontalOffset;
 
-            PanelScrollLeft.Visibility = offset > 1
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            bool left = offset > 1;
+            bool right = offset < PanelScroller.ScrollableWidth - 1;
 
-            PanelScrollRight.Visibility = offset < PanelScroller.ScrollableWidth - 1
-                ? Visibility.Visible
-                : Visibility.Collapsed;
+            PanelScrollLeft.Visibility = left ? Visibility.Visible : Visibility.Collapsed;
+            PanelScrollRight.Visibility = right ? Visibility.Visible : Visibility.Collapsed;
+
+            // a chevron and the fade under it answer the same question, so they are decided together
+            UpdatePanelFade(left, right);
         }
 
         private void ScrollPanelBar(int direction)
@@ -126,6 +131,93 @@ namespace Calculator_WinUI.Views
             double step = PanelScroller.ViewportWidth * PanelScrollRatio;
 
             PanelScroller.ChangeView(PanelScroller.HorizontalOffset + (direction * step), null, null);
+        }
+
+
+        // === panel bar fade ===
+
+        // how far in from the edge the strip is back at full strength, and how little of it is left
+        // at the edge itself; a mask reads nothing but alpha, so the color is white throughout and
+        // only the alpha carries the ramp
+        private const double PanelFadeWidth = 44;
+
+        private static readonly Color MaskKeep = Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
+        private static readonly Color MaskDrop = Color.FromArgb(0x1A, 0xFF, 0xFF, 0xFF);
+
+        // the strip fades out into the window edge, and nothing is painted over it to do that: a
+        // veil would be a color of its own over the backdrop, and the Mica would stop showing
+        // through exactly where the bar runs out
+        //
+        // so the strip is redirected rather than covered. One CompositionVisualSurface captures the
+        // scrollers rendering, a second captures a Rectangle that is nothing but a gradient, and a
+        // CompositionMaskBrush takes the alpha of the second as the alpha of the first; a sprite
+        // over an empty host in the same place draws the result
+        //
+        // this is the shape of the Toolkit Labs OpacityMaskView, which is also what the WinUI
+        // Gallery ships its own opacity mask sample on
+        private void ApplyPanelBarFade()
+        {
+            Compositor compositor = ElementCompositionPreview.GetElementVisual(PanelStripFade).Compositor;
+
+            CompositionMaskBrush mask = compositor.CreateMaskBrush();
+            mask.Source = RedirectOf(PanelScroller);
+            mask.Mask = RedirectOf(PanelStripMask);
+
+            // the sprite is sized off the scroller rather than off the host it hangs on, so a copy
+            // can never end up scaled against the original by a pixel of rounding somewhere
+            SpriteVisual sprite = compositor.CreateSpriteVisual();
+            sprite.Brush = mask;
+            sprite.StartAnimation(nameof(sprite.Size), SizeOf(PanelScroller));
+
+            ElementCompositionPreview.SetElementChildVisual(PanelStripFade, sprite);
+        }
+
+        // the element is hidden through its composition visual and not through UIElement.Opacity,
+        // and that difference is the whole trick: a visual surface renders the subtree without the
+        // source visuals own opacity, so the capture survives while the original stops drawing, and
+        // XAML hit testing reads UIElement.Opacity rather than the visual, so every button in the
+        // strip stays clickable while a sprite is what is actually on screen
+        //
+        // the surface carries its own size rather than inheriting one, so it is bound to the visual
+        // instead of read once and left behind by the next window resize
+        private static CompositionBrush RedirectOf(UIElement element)
+        {
+            Visual visual = ElementCompositionPreview.GetElementVisual(element);
+            Compositor compositor = visual.Compositor;
+
+            CompositionVisualSurface surface = compositor.CreateVisualSurface();
+            surface.SourceVisual = visual;
+            surface.StartAnimation(nameof(surface.SourceSize), SizeOf(element));
+
+            visual.Opacity = 0;
+
+            return compositor.CreateSurfaceBrush(surface);
+        }
+
+        // a Vector2 expression that stays on the elements measured size for as long as it runs
+        private static ExpressionAnimation SizeOf(UIElement element)
+        {
+            Visual visual = ElementCompositionPreview.GetElementVisual(element);
+
+            ExpressionAnimation size = visual.Compositor.CreateExpressionAnimation("source.Size");
+            size.SetReferenceParameter("source", visual);
+
+            return size;
+        }
+
+        // the ramp is a share of the width and the width is not fixed, so the two inner stops are
+        // placed from the measured viewport; a side with nothing behind it keeps its stops on the
+        // edge and at full alpha, which is a mask that changes nothing
+        private void UpdatePanelFade(bool fadeLeft, bool fadeRight)
+        {
+            double width = PanelScroller.ActualWidth;
+            double ramp = width > 0 ? Math.Min(0.5, PanelFadeWidth / width) : 0;
+
+            PanelFadeLeftOuter.Color = fadeLeft ? MaskDrop : MaskKeep;
+            PanelFadeLeftInner.Offset = fadeLeft ? ramp : 0;
+
+            PanelFadeRightInner.Offset = fadeRight ? 1 - ramp : 1;
+            PanelFadeRightOuter.Color = fadeRight ? MaskDrop : MaskKeep;
         }
 
         // the keys in both panels carry their own Command, so this only closes the panel behind them;

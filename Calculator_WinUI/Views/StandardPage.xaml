@@ -1251,59 +1251,82 @@
         </StackPanel>
 
 
+        <!--  panel bar fade  -->
+        <!--
+            the strip does not stop where the window does, it fades out into it, and that happens
+            without painting anything: a veil over the keys would be a color of its own, and the
+            backdrop would stop showing through exactly where the bar runs out
+            these two carry no look of their own. The empty host is what the faded copy of the strip
+            is drawn over, and the rectangle is nothing but the gradient that says how much of each
+            column survives; the code-behind reads the alpha of the second as the alpha of the first
+            all three are the same size and sit in the same place, which is what lets the copy line
+            up with the original; the stops are opaque here and the code-behind opens the side that
+            has somewhere left to scroll
+        -->
+        <Grid
+            x:Name="PanelStripFade"
+            Grid.Row="2"
+            Height="{StaticResource BarKeyHeight}"
+            Margin="0,0,0,4"
+            VerticalAlignment="Bottom"
+            IsHitTestVisible="False" />
+
+        <Rectangle
+            x:Name="PanelStripMask"
+            Grid.Row="2"
+            Height="{StaticResource BarKeyHeight}"
+            Margin="0,0,0,4"
+            VerticalAlignment="Bottom"
+            IsHitTestVisible="False">
+            <Rectangle.Fill>
+                <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                    <GradientStop x:Name="PanelFadeLeftOuter" Offset="0.0" Color="#FFFFFFFF" />
+                    <GradientStop x:Name="PanelFadeLeftInner" Offset="0.0" Color="#FFFFFFFF" />
+                    <GradientStop x:Name="PanelFadeRightInner" Offset="1.0" Color="#FFFFFFFF" />
+                    <GradientStop x:Name="PanelFadeRightOuter" Offset="1.0" Color="#FFFFFFFF" />
+                </LinearGradientBrush>
+            </Rectangle.Fill>
+        </Rectangle>
+
+
         <!--  panel bar chevrons  -->
         <!--
             a chevron is over the strip rather than beside it, so the category buttons still get the
-            full width whenever nothing overflows; it appears only while that side has somewhere
-            left to go, and the scrim behind it is what the strip disappears into rather than
-            ending on a half drawn word
+            full width whenever nothing overflows, and it appears only while that side has somewhere
+            left to go
             both sit in the panel bar row of the page grid instead of in the bar itself, which keeps
             the flyouts one level shallower than wrapping the strip would; the bottom margin is the
             one the bar carries, so a chevron lands on the strip and not on the divider above it
         -->
-        <Grid
+        <Button
             x:Name="PanelScrollLeft"
             Grid.Row="2"
+            Width="24"
+            Height="{StaticResource BarKeyHeight}"
             Margin="0,0,0,4"
+            Padding="0"
             HorizontalAlignment="Left"
             VerticalAlignment="Bottom"
+            Click="PanelScrollLeft_Click"
+            Style="{StaticResource SubtleBarButtonStyle}"
             Visibility="Collapsed">
-            <Rectangle
-                Width="44"
-                Fill="{ThemeResource PanelScrimLeft}"
-                IsHitTestVisible="False" />
-            <Button
-                Width="24"
-                Height="{StaticResource BarKeyHeight}"
-                Padding="0"
-                HorizontalAlignment="Left"
-                Click="PanelScrollLeft_Click"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="12" Glyph="&#xE76B;" />
-            </Button>
-        </Grid>
+            <FontIcon FontSize="12" Glyph="&#xE76B;" />
+        </Button>
 
-        <Grid
+        <Button
             x:Name="PanelScrollRight"
             Grid.Row="2"
+            Width="24"
+            Height="{StaticResource BarKeyHeight}"
             Margin="0,0,0,4"
+            Padding="0"
             HorizontalAlignment="Right"
             VerticalAlignment="Bottom"
+            Click="PanelScrollRight_Click"
+            Style="{StaticResource SubtleBarButtonStyle}"
             Visibility="Collapsed">
-            <Rectangle
-                Width="44"
-                Fill="{ThemeResource PanelScrimRight}"
-                IsHitTestVisible="False" />
-            <Button
-                Width="24"
-                Height="{StaticResource BarKeyHeight}"
-                Padding="0"
-                HorizontalAlignment="Right"
-                Click="PanelScrollRight_Click"
-                Style="{StaticResource SubtleBarButtonStyle}">
-                <FontIcon FontSize="12" Glyph="&#xE76C;" />
-            </Button>
-        </Grid>
+            <FontIcon FontSize="12" Glyph="&#xE76C;" />
+        </Button>
 
 
         <!--  divider grab  -->
