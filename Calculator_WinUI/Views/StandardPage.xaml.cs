@@ -392,6 +392,9 @@ namespace Calculator_WinUI.Views
                 return;
             }
 
+            // set before the redraw, because rebuilding the line is what works the preview out again
+            MathDisplay2.CaretIsPlaceable = ViewModel.CanPlaceCursor;
+
             MathDisplay2.Show(ViewModel.InputTokens,
                 new CaretTarget(ViewModel.CaretTokens, ViewModel.CaretIndex));
 

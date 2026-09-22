@@ -116,6 +116,14 @@ namespace Calculator_WinUI.Controls
             set => _measurer.FontFamily = value;
         }
 
+        // whether a point in this line is worth aiming at
+        //
+        // the display sometimes draws a formula the input manager does not hold. The zero on an empty
+        // line is one of those and holds a single position, so the hit test would happily answer with
+        // the other side of it while the caret stays put; the page turns this off for that state and
+        // neither the preview nor a tap offers a place that is not one
+        public bool CaretIsPlaceable { get; set; } = true;
+
 
         // === content ===
 
@@ -273,13 +281,12 @@ namespace Calculator_WinUI.Controls
         // the two arrange offsets are left to undo
         public string AddressAt(Point point)
         {
-            if (_root == null || _text != null) return null;
+            if (_root == null || _text != null || !CaretIsPlaceable) return null;
 
-            // a line drawn without a caret is not the one being typed in: after = the display holds the
-            // result rather than the formula that produced it, and the addresses a point in it works out
-            // to would be read against a tree that is no longer on screen
-            if (_caret.Tokens == null) return null;
-
+            // a line drawn without a caret is still one that can be clicked into: after = the display
+            // holds the result rather than the formula that produced it, and the ViewModel answers that
+            // by seeding the result, which puts the very tokens the address was worked out against into
+            // the manager
             return MathHitTest.NearestAddress(_root, point.X - _offsetX, point.Y - _offsetY);
         }
 
@@ -396,9 +403,10 @@ namespace Calculator_WinUI.Controls
 
         private void RealizePreview()
         {
-            // a line with no caret target is not the one being typed in: after = the display holds the
-            // result rather than the formula, and a click in it does nothing either
-            if (_previewPoint is not Point point || _root == null || _text != null || _caret.Tokens == null)
+            // an error message is a line of text rather than a formula, and there is nothing in it to
+            // aim at; a result carries no caret either and is still clickable, so the caret target is
+            // not what decides this
+            if (_previewPoint is not Point point || _root == null || _text != null || !CaretIsPlaceable)
             {
                 CollapsePreview();
                 return;

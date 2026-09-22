@@ -493,11 +493,34 @@ namespace Calculator_WinUI.ViewModels
                 _inputManager.ActiveTokens, _inputManager.ActiveCursorIndex, null);
         }
 
+        // whether a point in the display is a place the cursor can be aimed at
+        //
+        // the zero on an empty formula is drawn and not typed: it holds one position rather than two,
+        // so a click on either side of it would leave the cursor exactly where it already stands, and a
+        // preview of that click would be promising a move that cannot happen
+        public bool CanPlaceCursor => _inputManager.RootTokens.Count > 0;
+
         // a click in the display rather than a keypress; the address is written by the renderer and
         // checked by the input manager, so an unusable one simply changes nothing
         public void PlaceCursor(string address)
         {
-            if (!_inputManager.SetCursorPosition(address)) return;
+            if (!CanPlaceCursor) return;
+
+            // after = the display holds the result and not the formula that produced it, so the address
+            // was worked out against the result; seeding it is what puts those very tokens into the
+            // manager and makes the address mean the place it looked like it meant
+            //
+            // a result whose seeded shape is not the one that was drawn, a scientific form against the
+            // plain string it is seeded from, keeps the cursor where the seed left it rather than
+            // dropping the click on the floor
+            bool seeded = false;
+            if (_isShowingResult)
+            {
+                SeedWithShownResult();
+                seeded = true;
+            }
+
+            if (!_inputManager.SetCursorPosition(address) && !seeded) return;
 
             // clicking into the formula is editing it, the same way an arrow key after = is
             _isShowingResult = false;
