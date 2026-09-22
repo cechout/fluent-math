@@ -278,6 +278,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -707,6 +712,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -816,6 +826,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -930,6 +945,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -1032,6 +1052,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 
@@ -1096,6 +1121,11 @@
                                     <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+                                    <Setter Property="RenderTransform">
+                                        <Setter.Value>
+                                            <TranslateTransform Y="{StaticResource PanelFlyoutOffset}" />
+                                        </Setter.Value>
+                                    </Setter>
                                 </Style>
                             </Flyout.FlyoutPresenterStyle>
 

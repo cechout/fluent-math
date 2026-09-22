@@ -242,6 +242,19 @@
             <x:Double x:Key="PanelKeyWidth">56</x:Double>
             <x:Double x:Key="PanelKeyHeight">40</x:Double>
 
+            <!--  panel offset  -->
+            <!--
+                how far a panel stands off the button that opened it, counted from where the
+                placement drops it; negative lifts it toward the button
+                it moves through a render transform rather than a margin because a margin is
+                measured, and the popup is sized to what it measures: the panel would be shifted out
+                of its own window and lose the edge it was shifted past. A transform moves the
+                drawing and nothing else, so the window stays the size it always was
+                a Flyout carries no offset of its own. The gap is decided in the placement code
+                behind FlyoutBase and there is no resource anywhere that reaches it
+            -->
+            <x:Double x:Key="PanelFlyoutOffset">-4</x:Double>
+
             <!--  subtle button  -->
             <!--
                 the platform SubtleButtonStyle fades its fill in over 83 ms but swaps the border
