@@ -48,10 +48,10 @@ namespace Calculator_WinUI
             //
             // the floor carries the two fixed bars on the standard page above the keypad, the caret bar
             // and the panel bar, which together are about 80px that cannot shrink
-            this.SetWindowSize(330, 560);
+            this.SetWindowSize(330, 500);
             var manager = WindowManager.Get(this);
             manager.MinWidth = 300;
-            manager.MinHeight = 530;
+            manager.MinHeight = 460;
         }
 
 

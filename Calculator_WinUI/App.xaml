@@ -253,7 +253,7 @@
                 a Flyout carries no offset of its own. The gap is decided in the placement code
                 behind FlyoutBase and there is no resource anywhere that reaches it
             -->
-            <x:Double x:Key="PanelFlyoutOffset">-4</x:Double>
+            <x:Double x:Key="PanelFlyoutOffset">-5</x:Double>
 
             <!--  subtle button  -->
             <!--
@@ -299,7 +299,6 @@
                                 ContentTransitions="{TemplateBinding ContentTransitions}"
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Foreground="{TemplateBinding Foreground}">
-
                                 <!--  the value of ControlFasterAnimationDuration  -->
                                 <!--
                                     (spelled out because BrushTransition.Duration is a TimeSpan and
