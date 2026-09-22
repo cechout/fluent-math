@@ -3,10 +3,10 @@
     x:Class="Calculator_WinUI.Views.StandardPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:Calculator_WinUI.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:Calculator_WinUI.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:controls="using:Calculator_WinUI.Controls"
     mc:Ignorable="d">
 
     <Grid Margin="4,4,4,4">
@@ -120,9 +120,7 @@
             Margin="0,0,0,4">
 
             <Button
-                Width="40"
                 Height="{StaticResource BarKeyHeight}"
-                Padding="0"
                 HorizontalAlignment="Left"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_angle_cycle"
@@ -135,36 +133,28 @@
                 Orientation="Horizontal"
                 Spacing="2.5">
                 <Button
-                    Width="32"
                     Height="{StaticResource BarKeyHeight}"
-                    Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_nav_left"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE76B;" />
                 </Button>
                 <Button
-                    Width="32"
                     Height="{StaticResource BarKeyHeight}"
-                    Padding="0"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_nav_up"
-                    Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="14" Glyph="&#xE70E;" />
-                </Button>
-                <Button
-                    Width="32"
-                    Height="{StaticResource BarKeyHeight}"
-                    Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_nav_down"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="14" Glyph="&#xE70D;" />
                 </Button>
                 <Button
-                    Width="32"
                     Height="{StaticResource BarKeyHeight}"
-                    Padding="0"
+                    Command="{x:Bind ViewModel.InputCommand}"
+                    CommandParameter="cmd_nav_up"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="14" Glyph="&#xE70E;" />
+                </Button>
+                <Button
+                    Height="{StaticResource BarKeyHeight}"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_nav_right"
                     Style="{StaticResource SubtleBarButtonStyle}">
@@ -199,9 +189,7 @@
 
             <StackPanel Orientation="Horizontal" Spacing="4">
 
-                <Button
-                    Height="{StaticResource BarKeyHeight}"
-                    Style="{StaticResource SubtleBarButtonStyle}">
+                <Button Height="{StaticResource BarKeyHeight}" Style="{StaticResource SubtleBarButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock
                             VerticalAlignment="Center"
@@ -228,7 +216,7 @@
                             ShouldConstrainToRootBounds="False">
                             <Flyout.FlyoutPresenterStyle>
                                 <Style TargetType="FlyoutPresenter">
-                                    <Setter Property="Padding" Value="8" />
+                                    <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
                                 </Style>
@@ -239,42 +227,63 @@
                                 right, of which exactly one is ever visible; six slots times four
                                 layers is the whole trigonometric family in one panel
                             -->
-                            <Grid ColumnSpacing="8">
+                            <Grid ColumnSpacing="2.5">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
 
-                                <StackPanel Grid.Column="0" Spacing="2.5">
+                                <!--  a latch is two buttons in one cell, the same way the shift key on the pad is built  -->
+                                <Grid Grid.Column="0" RowSpacing="2.5">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
                                     <Button
+                                        Grid.Row="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_trig_inv"
-                                        Style="{StaticResource FlyoutKeyStyle}"
+                                        Style="{StaticResource OperatorButtonStyle}"
                                         Visibility="{x:Bind ViewModel.IsTrigInverseUnlatched, Mode=OneWay}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="Inv" />
                                     </Button>
                                     <Button
+                                        Grid.Row="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_trig_inv"
-                                        Style="{StaticResource FlyoutKeyLatchedStyle}"
+                                        Style="{ThemeResource AccentButtonStyle}"
                                         Visibility="{x:Bind ViewModel.IsTrigInverseLatched, Mode=OneWay}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="Inv" />
                                     </Button>
                                     <Button
+                                        Grid.Row="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_trig_hyp"
-                                        Style="{StaticResource FlyoutKeyStyle}"
+                                        Style="{StaticResource OperatorButtonStyle}"
                                         Visibility="{x:Bind ViewModel.IsTrigHyperbolicUnlatched, Mode=OneWay}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="hyp" />
                                     </Button>
                                     <Button
+                                        Grid.Row="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_trig_hyp"
-                                        Style="{StaticResource FlyoutKeyLatchedStyle}"
+                                        Style="{ThemeResource AccentButtonStyle}"
                                         Visibility="{x:Bind ViewModel.IsTrigHyperbolicLatched, Mode=OneWay}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="hyp" />
                                     </Button>
-                                </StackPanel>
+                                </Grid>
 
                                 <!--  plain  -->
                                 <Grid
@@ -295,55 +304,67 @@
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_sin"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_cos"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_tan"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_sec"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sec" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_csc"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="csc" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_cot"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cot" />
                                     </Button>
                                 </Grid>
@@ -367,55 +388,67 @@
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_asin"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sin⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acos"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cos⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_atan"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tan⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_asec"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sec⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acsc"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="csc⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acot"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cot⁻¹" />
                                     </Button>
                                 </Grid>
@@ -439,55 +472,67 @@
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_sinh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_cosh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_tanh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_sech"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sech" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_csch"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="csch" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_coth"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="coth" />
                                     </Button>
                                 </Grid>
@@ -511,55 +556,67 @@
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_asinh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sinh⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acosh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="cosh⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="0"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_atanh"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="tanh⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_asech"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="sech⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acsch"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="csch⁻¹" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
                                         Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_acoth"
-                                        Style="{StaticResource FlyoutKeyStyle}">
+                                        Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="coth⁻¹" />
                                     </Button>
                                 </Grid>
@@ -568,9 +625,7 @@
                     </Button.Flyout>
                 </Button>
 
-                <Button
-                    Height="{StaticResource BarKeyHeight}"
-                    Style="{StaticResource SubtleBarButtonStyle}">
+                <Button Height="{StaticResource BarKeyHeight}" Style="{StaticResource SubtleBarButtonStyle}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <TextBlock
                             VerticalAlignment="Center"
@@ -590,7 +645,7 @@
                             ShouldConstrainToRootBounds="False">
                             <Flyout.FlyoutPresenterStyle>
                                 <Style TargetType="FlyoutPresenter">
-                                    <Setter Property="Padding" Value="8" />
+                                    <Setter Property="Padding" Value="4" />
                                     <Setter Property="MinWidth" Value="0" />
                                     <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
                                 </Style>
@@ -611,55 +666,67 @@
                                 <Button
                                     Grid.Row="0"
                                     Grid.Column="0"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_abs"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="|x|" />
                                 </Button>
                                 <Button
                                     Grid.Row="0"
                                     Grid.Column="1"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_floor"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="⌊x⌋" />
                                 </Button>
                                 <Button
                                     Grid.Row="0"
                                     Grid.Column="2"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_ceil"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="⌈x⌉" />
                                 </Button>
                                 <Button
                                     Grid.Row="1"
                                     Grid.Column="0"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_rand"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="rand" />
                                 </Button>
                                 <Button
                                     Grid.Row="1"
                                     Grid.Column="1"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_dms"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="dms" />
                                 </Button>
                                 <Button
                                     Grid.Row="1"
                                     Grid.Column="2"
+                                    Width="{StaticResource PanelKeyWidth}"
+                                    Height="{StaticResource PanelKeyHeight}"
                                     Click="FlyoutKey_Click"
                                     Command="{x:Bind ViewModel.InputCommand}"
                                     CommandParameter="cmd_degrees"
-                                    Style="{StaticResource FlyoutKeyStyle}">
+                                    Style="{StaticResource NumberPadButtonStyle}">
                                     <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="deg" />
                                 </Button>
                             </Grid>
