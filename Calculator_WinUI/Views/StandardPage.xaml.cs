@@ -81,6 +81,8 @@ namespace Calculator_WinUI.Views
             FunctionFlyout.Hide();
             NumberTheoryFlyout.Hide();
             ProbabilityFlyout.Hide();
+            CoordinatesFlyout.Hide();
+            PrefixesFlyout.Hide();
         }
 
         // the two latches belong to the open panel and not to the app, so they come back to the plain

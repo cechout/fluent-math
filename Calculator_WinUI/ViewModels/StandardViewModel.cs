@@ -577,6 +577,8 @@ namespace Calculator_WinUI.ViewModels
             "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
             "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
             "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
+            "cmd_pol", "cmd_rec", "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
+            "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa",
             "cmd_frac_mixed",
             "cmd_history", "cmd_memory"
         };
