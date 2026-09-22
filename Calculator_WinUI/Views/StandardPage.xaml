@@ -103,10 +103,10 @@
         </Grid>
 
 
-        <!--  caret band  -->
+        <!--  caret bar  -->
         <!--
             the arrow keys move the caret rather than write anything, so they sit with the display
-            instead of on the pad; the five columns are the keypads, which is what lines the band up
+            instead of on the pad; the five columns are the keypads, which is what lines the bar up
             with the keys below it
             the angle unit rides along because it is the other thing that is a mode and not an input,
             and the button shows the unit it is currently in
@@ -179,10 +179,10 @@
         </Grid>
 
 
-        <!--  operator panel  -->
+        <!--  panel bar  -->
         <!--
             a function that comes in a family gets a panel here rather than a key below; the keypad
-            holds what a physical calculator prints on a key, this row holds what one hides behind a
+            holds what a physical calculator prints on a key, this bar holds what one hides behind a
             menu, and it takes another button whenever the next family arrives
             the keys inside carry the same InputCommand as the pad, the Click handler only closes the
             panel behind them so it reads as a menu
@@ -191,7 +191,7 @@
 
             <!--
                 the negative sides cancel the pages own 4px inset, so the line reaches the window
-                edge rather than stopping where the keys stop; it separates two bands and a band runs
+                edge rather than stopping where the keys stop; it separates two bars and a bar runs
                 the full width
             -->
             <Rectangle

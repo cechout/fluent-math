@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
 
@@ -31,7 +31,7 @@ namespace Calculator_WinUI.Tests
 
         // handled by the ViewModel but with no button anywhere
         //
-        // the selector button beside the arrow keys sends cmd_angle_cycle, because a button that shows
+        // the selector in the caret bar sends cmd_angle_cycle, because a button that shows
         // the current unit can only offer the next one; these three set a unit outright and are waiting
         // on a settings page that lists all three
         public static readonly string[] Parked =
@@ -42,7 +42,7 @@ namespace Calculator_WinUI.Tests
         // drawn on a key but computing nothing yet; mirrors StandardViewModel.NotImplementedKeys and
         // the revisit tag above it
         //
-        // the flyouts were laid out against the Windows Calculator and the keypad against a Casio, so
+        // the panels were laid out against the Windows Calculator and the keypad against a Casio, so
         // both carry keys ahead of the engine; a name leaves this list as it lands
         public static readonly string[] NotImplemented =
         {

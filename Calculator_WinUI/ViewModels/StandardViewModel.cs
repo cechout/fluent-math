@@ -120,8 +120,8 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
-        // the three letters a Casio prints for the unit; the button beside the arrow keys carries them,
-        // so the label is what the user reads off the selector rather than an indicator next to it
+        // the three letters a Casio prints for the unit; the selector in the caret bar carries them, so
+        // the label is what the user reads off the selector rather than an indicator next to it
         public string AngleModeLabel
         {
             get
@@ -168,9 +168,9 @@ namespace Calculator_WinUI.ViewModels
         public bool IsShiftLayer => _isShiftLayer;
 
 
-        // === trigonometry flyout layers ===
+        // === trig panel layers ===
 
-        // the flyout carries four grids of the same six keys and shows one of them; these two latches
+        // the trig panel carries four grids of the same six keys and shows one of them; these two latches
         // pick which, exactly the way the shift key picks a keypad layer, and they are plain bools for
         // the same reason
         //
@@ -197,7 +197,7 @@ namespace Calculator_WinUI.ViewModels
 
         public bool ShowTrigInverseHyperbolic => _isTrigInverseLatched && _isTrigHyperbolicLatched;
 
-        // the page calls this when the flyout closes, whether a function was pressed or the panel was
+        // the page calls this when the panel closes, whether a function was pressed or the panel was
         // dismissed; a latch that outlived its panel would open the next one on a layer nobody chose
         public void ResetTrigLatches()
         {
@@ -261,8 +261,8 @@ namespace Calculator_WinUI.ViewModels
         // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
         // and anything else, which is treated as a digit or a decimal point
         //
-        // the two flyouts above the keypad send the same parameters as the keys below them, so nothing
-        // about a key being in a panel rather than on the pad reaches this far
+        // the panels send the same parameters as the keys below them, so nothing about a key being in a
+        // panel rather than on the pad reaches this far
         private void AddToTextBox(string sign)
         {
             // shift only swaps the keyboard layer, it must never disturb the input or a shown result
@@ -272,7 +272,7 @@ namespace Calculator_WinUI.ViewModels
                 return;
             }
 
-            // the same holds for the two latches inside the trigonometry flyout
+            // the same holds for the two latches inside the trig panel
             if (sign == "cmd_trig_inv" || sign == "cmd_trig_hyp")
             {
                 ToggleTrigLatch(sign);
@@ -288,7 +288,7 @@ namespace Calculator_WinUI.ViewModels
             }
 
             // --- revisit: keys drawn before they compute ---
-            // the flyouts were laid out against the Windows Calculator and the keypad against a Casio,
+            // the panels were laid out against the Windows Calculator and the keypad against a Casio,
             // so both carry keys this engine has no token for yet
             // they return here rather than falling out of the switch below, because the fall-through
             // reaches BeginInputAfterResult first, which clears a shown result and leaves the display as
@@ -566,7 +566,7 @@ namespace Calculator_WinUI.ViewModels
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
         // sec, csc and cot across the four trigonometry layers; floor, ceil, rand, the sexagesimal key
-        // and the angle unit postfix in the function flyout; the mixed fraction on the keypad
+        // and the angle unit postfix in the function panel; the mixed fraction on the keypad
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_sec", "cmd_csc", "cmd_cot",

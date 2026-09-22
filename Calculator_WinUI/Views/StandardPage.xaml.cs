@@ -68,7 +68,7 @@ namespace Calculator_WinUI.Views
 
 
 
-        // === operator panel flyouts ===
+        // === panel bar ===
 
         // the keys in both panels carry their own Command, so this only closes the panel behind them;
         // without it it would stay open over the keypad after every function
