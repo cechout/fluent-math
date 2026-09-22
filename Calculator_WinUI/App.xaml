@@ -257,6 +257,9 @@
                 <Setter Property="BorderBrush" Value="{ThemeResource SubtleButtonBorderBrush}" />
                 <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
                 <Setter Property="Padding" Value="{StaticResource ButtonPadding}" />
+                <!--  the style carries its own template and no BasedOn, so the two content alignments the platform button relies on are set here rather than inherited  -->
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}" />
                 <Setter Property="FontWeight" Value="Normal" />
                 <Setter Property="FontSize" Value="{ThemeResource ControlContentThemeFontSize}" />

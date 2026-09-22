@@ -110,6 +110,8 @@
             with the keys below it
             the angle unit rides along because it is the other thing that is a mode and not an input,
             and the button shows the unit it is currently in
+            the keys are flat, like the panel buttons below them: everything above the divider is a
+            band the pad is read from, and the raised fill is what marks a key that writes something
         -->
         <Grid
             Grid.Row="2"
@@ -126,47 +128,52 @@
 
             <Button
                 Grid.Column="0"
+                Padding="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_angle_cycle"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource SubtleBarButtonStyle}">
                 <TextBlock Style="{ThemeResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.AngleModeLabel, Mode=OneWay}" />
             </Button>
             <Button
                 Grid.Column="1"
+                Padding="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_nav_left"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource SubtleBarButtonStyle}">
                 <FontIcon FontSize="14" Glyph="&#xE76B;" />
             </Button>
             <Button
                 Grid.Column="2"
+                Padding="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_nav_up"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource SubtleBarButtonStyle}">
                 <FontIcon FontSize="14" Glyph="&#xE70E;" />
             </Button>
             <Button
                 Grid.Column="3"
+                Padding="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_nav_down"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource SubtleBarButtonStyle}">
                 <FontIcon FontSize="14" Glyph="&#xE70D;" />
             </Button>
             <Button
                 Grid.Column="4"
+                Padding="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_nav_right"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource SubtleBarButtonStyle}">
                 <FontIcon FontSize="14" Glyph="&#xE76C;" />
             </Button>
         </Grid>
@@ -182,9 +189,14 @@
         -->
         <StackPanel Grid.Row="3" Margin="0,0,0,4">
 
+            <!--
+                the negative sides cancel the pages own 4px inset, so the line reaches the window
+                edge rather than stopping where the keys stop; it separates two bands and a band runs
+                the full width
+            -->
             <Rectangle
                 Height="1"
-                Margin="0,0,0,4"
+                Margin="-4,0,-4,4"
                 HorizontalAlignment="Stretch"
                 Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
                 RadiusX="0.5"
