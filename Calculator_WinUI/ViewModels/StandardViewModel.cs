@@ -120,7 +120,8 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
-        // the three letters a Casio shows above the formula
+        // the three letters a Casio prints for the unit; the button beside the arrow keys carries them,
+        // so the label is what the user reads off the selector rather than an indicator next to it
         public string AngleModeLabel
         {
             get
@@ -132,16 +133,24 @@ namespace Calculator_WinUI.ViewModels
             }
         }
 
-        // --- revisit: angle unit selector ---
-        // the three keys below have no button anywhere yet; they were in the extra functions flyout and
-        // came back out because the unit is a mode rather than a function and wants a place of its own
-        // the evaluator and the header indicator are finished and stay, so the selector is markup plus
-        // three CommandParameters whenever that place is decided
+        // cycle is what the single selector button sends, since a button that shows the current unit can
+        // only offer the next one; the three direct keys stay handled for a settings page that lists all
+        // three at once, and for the tests that press them
         private void SetAngleMode(string sign)
         {
-            if (sign == "cmd_angle_rad") { CurrentAngleMode = AngleMode.Radians; }
+            if (sign == "cmd_angle_cycle") { CurrentAngleMode = NextAngleMode(CurrentAngleMode); }
+            else if (sign == "cmd_angle_rad") { CurrentAngleMode = AngleMode.Radians; }
             else if (sign == "cmd_angle_gra") { CurrentAngleMode = AngleMode.Gradians; }
             else { CurrentAngleMode = AngleMode.Degrees; }
+        }
+
+        // degrees, radians, gradians and round again, the order the units are listed in on a Casio setup
+        private static AngleMode NextAngleMode(AngleMode current)
+        {
+            if (current == AngleMode.Degrees) return AngleMode.Radians;
+            if (current == AngleMode.Radians) return AngleMode.Gradians;
+
+            return AngleMode.Degrees;
         }
 
 
@@ -157,6 +166,69 @@ namespace Calculator_WinUI.ViewModels
         public bool IsNormalLayer => !_isShiftLayer;
 
         public bool IsShiftLayer => _isShiftLayer;
+
+
+        // === trigonometry flyout layers ===
+
+        // the flyout carries four grids of the same six keys and shows one of them; these two latches
+        // pick which, exactly the way the shift key picks a keypad layer, and they are plain bools for
+        // the same reason
+        //
+        // --- latches ---
+        private bool _isTrigInverseLatched;      // sin becomes sin to the minus one
+        private bool _isTrigHyperbolicLatched;   // sin becomes sinh
+
+        public bool IsTrigInverseLatched => _isTrigInverseLatched;
+
+        public bool IsTrigInverseUnlatched => !_isTrigInverseLatched;
+
+        public bool IsTrigHyperbolicLatched => _isTrigHyperbolicLatched;
+
+        public bool IsTrigHyperbolicUnlatched => !_isTrigHyperbolicLatched;
+
+        // --- which grid is up ---
+        // one property per grid rather than one binding that reads both latches, because a function
+        // binding does not reliably re-evaluate when the second property it reads is the one that moved
+        public bool ShowTrigPlain => !_isTrigInverseLatched && !_isTrigHyperbolicLatched;
+
+        public bool ShowTrigInverse => _isTrigInverseLatched && !_isTrigHyperbolicLatched;
+
+        public bool ShowTrigHyperbolic => !_isTrigInverseLatched && _isTrigHyperbolicLatched;
+
+        public bool ShowTrigInverseHyperbolic => _isTrigInverseLatched && _isTrigHyperbolicLatched;
+
+        // the page calls this when the flyout closes, whether a function was pressed or the panel was
+        // dismissed; a latch that outlived its panel would open the next one on a layer nobody chose
+        public void ResetTrigLatches()
+        {
+            if (!_isTrigInverseLatched && !_isTrigHyperbolicLatched) return;
+
+            _isTrigInverseLatched = false;
+            _isTrigHyperbolicLatched = false;
+
+            PublishTrigLayers();
+        }
+
+        private void ToggleTrigLatch(string sign)
+        {
+            if (sign == "cmd_trig_inv") { _isTrigInverseLatched = !_isTrigInverseLatched; }
+            else { _isTrigHyperbolicLatched = !_isTrigHyperbolicLatched; }
+
+            PublishTrigLayers();
+        }
+
+        private void PublishTrigLayers()
+        {
+            OnPropertyChanged(nameof(IsTrigInverseLatched));
+            OnPropertyChanged(nameof(IsTrigInverseUnlatched));
+            OnPropertyChanged(nameof(IsTrigHyperbolicLatched));
+            OnPropertyChanged(nameof(IsTrigHyperbolicUnlatched));
+
+            OnPropertyChanged(nameof(ShowTrigPlain));
+            OnPropertyChanged(nameof(ShowTrigInverse));
+            OnPropertyChanged(nameof(ShowTrigHyperbolic));
+            OnPropertyChanged(nameof(ShowTrigInverseHyperbolic));
+        }
 
 
         // === commands ===
@@ -189,14 +261,21 @@ namespace Calculator_WinUI.ViewModels
         // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
         // and anything else, which is treated as a digit or a decimal point
         //
-        // the extra functions flyout on the keypad sends the same parameters as the keys around it, so
-        // nothing about it reaches this far
+        // the two flyouts above the keypad send the same parameters as the keys below them, so nothing
+        // about a key being in a panel rather than on the pad reaches this far
         private void AddToTextBox(string sign)
         {
             // shift only swaps the keyboard layer, it must never disturb the input or a shown result
             if (sign == "cmd_shift")
             {
                 ToggleShift();
+                return;
+            }
+
+            // the same holds for the two latches inside the trigonometry flyout
+            if (sign == "cmd_trig_inv" || sign == "cmd_trig_hyp")
+            {
+                ToggleTrigLatch(sign);
                 return;
             }
 
@@ -207,6 +286,16 @@ namespace Calculator_WinUI.ViewModels
                 SetAngleMode(sign);
                 return;
             }
+
+            // --- revisit: keys drawn before they compute ---
+            // the flyouts were laid out against the Windows Calculator and the keypad against a Casio,
+            // so both carry keys this engine has no token for yet
+            // they return here rather than falling out of the switch below, because the fall-through
+            // reaches BeginInputAfterResult first, which clears a shown result and leaves the display as
+            // a bare 0 with the formula gone
+            // the trigger is the branch that implements them; a name leaves this set as it lands, and
+            // Vocabulary.NotImplemented in the test project is held against it
+            if (NotImplementedKeys.Contains(sign)) return;
 
             if (_isShowingResult) BeginInputAfterResult(sign);
 
@@ -473,6 +562,20 @@ namespace Calculator_WinUI.ViewModels
         {
             return sign == "+" || sign == "-" || sign == "*" || sign == "/";
         }
+
+        // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
+        //
+        // sec, csc and cot across the four trigonometry layers; floor, ceil, rand, the sexagesimal key
+        // and the angle unit postfix in the function flyout; the mixed fraction on the keypad
+        private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
+        {
+            "cmd_sec", "cmd_csc", "cmd_cot",
+            "cmd_asec", "cmd_acsc", "cmd_acot",
+            "cmd_sech", "cmd_csch", "cmd_coth",
+            "cmd_asech", "cmd_acsch", "cmd_acoth",
+            "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
+            "cmd_frac_mixed"
+        };
 
         // the second keyboard layer is two buttons stacked in the same cell, so switching layers is
         // purely a matter of which of the two is visible

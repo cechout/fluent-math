@@ -179,6 +179,48 @@ namespace Calculator_WinUI.Tests
             Assert.Equal(before, viewModel.InputAndResultText);
         }
 
+        // the two latches in the trigonometry flyout pick one of four grids, and exactly one of the four
+        // has to be up at any time or the panel shows nothing or shows two layers at once
+        [Fact]
+        public void PicksOneTrigonometryGridForEveryCombinationOfTheTwoLatches()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "+", "1");
+
+            string before = viewModel.InputAndResultText;
+
+            AssertOneTrigGrid(viewModel, plain: true);
+
+            Press(viewModel, "cmd_trig_inv");
+            AssertOneTrigGrid(viewModel, inverse: true);
+            Assert.True(viewModel.IsTrigInverseLatched);
+
+            Press(viewModel, "cmd_trig_hyp");
+            AssertOneTrigGrid(viewModel, inverseHyperbolic: true);
+
+            Press(viewModel, "cmd_trig_inv");
+            AssertOneTrigGrid(viewModel, hyperbolic: true);
+
+            // the panel closing is what takes the latches with it, whether a key was pressed or not
+            viewModel.ResetTrigLatches();
+            AssertOneTrigGrid(viewModel, plain: true);
+            Assert.False(viewModel.IsTrigHyperbolicLatched);
+
+            Assert.Equal(before, viewModel.InputAndResultText);
+        }
+
+        private static void AssertOneTrigGrid(StandardViewModel viewModel,
+                                              bool plain = false,
+                                              bool inverse = false,
+                                              bool hyperbolic = false,
+                                              bool inverseHyperbolic = false)
+        {
+            Assert.Equal(plain, viewModel.ShowTrigPlain);
+            Assert.Equal(inverse, viewModel.ShowTrigInverse);
+            Assert.Equal(hyperbolic, viewModel.ShowTrigHyperbolic);
+            Assert.Equal(inverseHyperbolic, viewModel.ShowTrigInverseHyperbolic);
+        }
+
         [Fact]
         public void LeavesAShownResultAloneWhenTheAngleUnitChanges()
         {
@@ -192,6 +234,25 @@ namespace Calculator_WinUI.Tests
             Assert.Equal("GRA", viewModel.AngleModeLabel);
 
             Press(viewModel, "cmd_angle_deg");
+            Assert.Equal("DEG", viewModel.AngleModeLabel);
+            Assert.Equal("2", viewModel.InputAndResultText);
+        }
+
+        // the selector button shows one unit and offers the next, so the cycle is the only way the
+        // keypad reaches radians and gradians at all
+        [Fact]
+        public void CyclesTheAngleUnitInOneDirectionAndComesBack()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Assert.Equal("DEG", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
+            Assert.Equal("RAD", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
+            Assert.Equal("GRA", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
             Assert.Equal("DEG", viewModel.AngleModeLabel);
             Assert.Equal("2", viewModel.InputAndResultText);
         }

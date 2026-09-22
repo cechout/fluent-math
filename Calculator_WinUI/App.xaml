@@ -214,6 +214,33 @@
                 </Setter>
             </Style>
 
+            <!--  flyout key  -->
+            <!--
+                the keypad style at a fixed size, because a flyout gives no grid cell to stretch into
+            -->
+            <Style
+                x:Key="FlyoutKeyStyle"
+                BasedOn="{StaticResource OperatorButtonStyle}"
+                TargetType="Button">
+                <Setter Property="Width" Value="56" />
+                <Setter Property="Height" Value="40" />
+            </Style>
+
+            <!--  flyout key, latched  -->
+            <!--
+                the on half of a latch inside a flyout; a latch is two buttons in one cell whose
+                Visibility swaps, so this is the accent twin of FlyoutKeyStyle rather than a state on
+                it, exactly the way the shift key on the keypad is built
+            -->
+            <Style
+                x:Key="FlyoutKeyLatchedStyle"
+                BasedOn="{StaticResource AccentButtonStyle}"
+                TargetType="Button">
+                <Setter Property="Width" Value="56" />
+                <Setter Property="Height" Value="40" />
+                <Setter Property="Padding" Value="0" />
+            </Style>
+
             <!--  subtle button  -->
             <!--
                 the platform SubtleButtonStyle fades its fill in over 83 ms but swaps the border

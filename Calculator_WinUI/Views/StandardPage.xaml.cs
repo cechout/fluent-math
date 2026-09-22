@@ -68,13 +68,25 @@ namespace Calculator_WinUI.Views
 
 
 
-        // === extra functions flyout ===
+        // === operator panel flyouts ===
 
-        // the keys in the flyout carry their own Command, so this only closes the flyout behind them;
-        // without it the panel would stay open over the display after every function
-        private void ExtraFunction_Click(object sender, RoutedEventArgs e)
+        // the keys in both panels carry their own Command, so this only closes the panel behind them;
+        // without it it would stay open over the keypad after every function
+        //
+        // one handler for both, because a key only ever sits in the panel that is open and hiding the
+        // other one costs nothing
+        private void FlyoutKey_Click(object sender, RoutedEventArgs e)
         {
-            ExtraFunctionsFlyout.Hide();
+            TrigonometryFlyout.Hide();
+            FunctionFlyout.Hide();
+        }
+
+        // the two latches belong to the open panel and not to the app, so they come back to the plain
+        // grid with it; this fires for a function key and for a dismissal alike, since the key hides the
+        // panel rather than resetting anything itself
+        private void TrigonometryFlyout_Closed(object sender, object e)
+        {
+            ViewModel.ResetTrigLatches();
         }
 
 

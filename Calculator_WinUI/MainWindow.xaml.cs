@@ -45,10 +45,13 @@ namespace Calculator_WinUI
             }
 
             // start size, plus a floor that keeps the keypad from being squeezed out of the window
-            this.SetWindowSize(330, 480);
+            //
+            // the floor carries two fixed bands on the standard page above the keypad, the arrow keys
+            // and the operator panel, which together are about 80px that cannot shrink
+            this.SetWindowSize(330, 560);
             var manager = WindowManager.Get(this);
             manager.MinWidth = 300;
-            manager.MinHeight = 450;
+            manager.MinHeight = 530;
         }
 
 

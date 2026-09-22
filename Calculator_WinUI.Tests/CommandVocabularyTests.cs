@@ -71,7 +71,7 @@ namespace Calculator_WinUI.Tests
         }
 
 
-        // === no key is dead ===
+        // === no key is dead, except the ones that are declared to be ===
 
         [Theory]
         [MemberData(nameof(EveryKey))]
@@ -79,6 +79,7 @@ namespace Calculator_WinUI.Tests
         {
             if (Vocabulary.ModeOnly.Contains(key)) return;
             if (Vocabulary.Navigation.Contains(key)) return;
+            if (Vocabulary.NotImplemented.Contains(key)) return;
 
             var viewModel = new StandardViewModel();
             StandardViewModelTests.Press(viewModel, "5");
@@ -87,6 +88,34 @@ namespace Calculator_WinUI.Tests
             StandardViewModelTests.Press(viewModel, key);
 
             Assert.NotEqual(before, viewModel.InputAndResultText);
+        }
+
+        // the skip above is a hole, so this closes it from the other side: a key on the list has to do
+        // nothing at all rather than something nobody looked at
+        //
+        // the second half is the one that matters, since an unguarded key would reach
+        // BeginInputAfterResult, clear the tree and leave the display as a bare 0
+        [Theory]
+        [MemberData(nameof(NotImplementedKey))]
+        public void ANotImplementedKeyLeavesEverythingWhereItIs(string key)
+        {
+            var viewModel = new StandardViewModel();
+            StandardViewModelTests.Press(viewModel, "5");
+
+            string afterInput = viewModel.InputAndResultText;
+            StandardViewModelTests.Press(viewModel, key);
+
+            Assert.Equal(afterInput, viewModel.InputAndResultText);
+
+            StandardViewModel onAResult = WithAShownResult();
+            StandardViewModelTests.Press(onAResult, key);
+
+            Assert.Equal("2", onAResult.InputAndResultText);
+        }
+
+        public static IEnumerable<object[]> NotImplementedKey()
+        {
+            foreach (string key in Vocabulary.NotImplemented) yield return new object[] { key };
         }
 
 
