@@ -139,7 +139,9 @@
                     Margin="0,0,0,4"
                     Background="Transparent"
                     CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                    Ink="{ThemeResource TextFillColorPrimaryBrush}" />
+                    Ink="{ThemeResource TextFillColorPrimaryBrush}"
+                    PreviewCaretInk="{ThemeResource TextFillColorSecondaryBrush}"
+                    PreviewCaretPressedInk="{ThemeResource TextFillColorTertiaryBrush}" />
             </ScrollViewer>
 
             <!--  caret bar  -->

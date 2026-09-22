@@ -38,6 +38,7 @@ namespace Calculator_WinUI.Views
             RebuildStyles();
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
+            HookCaretPreview();
 
             this.Loaded += StandardPage_Loaded;
             this.ActualThemeChanged += StandardPage_ActualThemeChanged;
@@ -69,6 +70,65 @@ namespace Calculator_WinUI.Views
             if (address == null) return;
 
             ViewModel.PlaceCursor(address);
+        }
+
+
+        // === caret preview ===
+
+        // hovering the input line shows where a click would leave the caret
+        //
+        // the handlers sit on the scroller and not on the panel, exactly the way the tap does: the panel
+        // is only as wide as the formula, and the line is the whole strip, so aiming at the air beside a
+        // short formula has to count for the preview as much as it does for the click
+        //
+        // they are hooked through AddHandler with handledEventsToo rather than named in the markup,
+        // because a ScrollViewer marks pointer input handled for its own manipulation and a handler in
+        // the markup would never run
+        private bool _isPreviewPressed;
+
+        private void HookCaretPreview()
+        {
+            InputScroller.AddHandler(PointerMovedEvent, new PointerEventHandler(InputDisplay_PointerMoved), true);
+            InputScroller.AddHandler(PointerPressedEvent, new PointerEventHandler(InputDisplay_PointerPressed), true);
+            InputScroller.AddHandler(PointerReleasedEvent, new PointerEventHandler(InputDisplay_PointerReleased), true);
+            InputScroller.AddHandler(PointerExitedEvent, new PointerEventHandler(InputDisplay_PointerLeft), true);
+            InputScroller.AddHandler(PointerCanceledEvent, new PointerEventHandler(InputDisplay_PointerLeft), true);
+        }
+
+        // a finger has no hover: it would drag a preview along behind it, so only the two devices that
+        // can point at something without pressing it get one
+        private static bool Hovers(PointerRoutedEventArgs e)
+        {
+            return e.Pointer.PointerDeviceType != Microsoft.UI.Input.PointerDeviceType.Touch;
+        }
+
+        private void InputDisplay_PointerMoved(object sender, PointerRoutedEventArgs e)
+        {
+            if (!Hovers(e)) return;
+
+            MathDisplay2.ShowPreviewCaret(e.GetCurrentPoint(MathDisplay2).Position, _isPreviewPressed);
+        }
+
+        private void InputDisplay_PointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            if (!Hovers(e)) return;
+
+            _isPreviewPressed = true;
+            MathDisplay2.ShowPreviewCaret(e.GetCurrentPoint(MathDisplay2).Position, true);
+        }
+
+        private void InputDisplay_PointerReleased(object sender, PointerRoutedEventArgs e)
+        {
+            if (!Hovers(e)) return;
+
+            _isPreviewPressed = false;
+            MathDisplay2.ShowPreviewCaret(e.GetCurrentPoint(MathDisplay2).Position, false);
+        }
+
+        private void InputDisplay_PointerLeft(object sender, PointerRoutedEventArgs e)
+        {
+            _isPreviewPressed = false;
+            MathDisplay2.HidePreviewCaret();
         }
 
 

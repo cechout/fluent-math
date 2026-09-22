@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models.Layout
@@ -102,6 +102,13 @@ namespace Calculator_WinUI.Models.Layout
 
         // the position after the last token, which no child stands in front of
         public string EndAddress { get; internal set; }
+
+        // the size a caret standing in this row is drawn at
+        //
+        // a row is the thing that owns a baseline, so it is also the thing that knows how tall the bar
+        // in it should be; only a row the cursor can stand in carries it, which is the same set that
+        // carries an EndAddress
+        public double FontSize { get; internal set; }
 
         public RowBox(IReadOnlyList<MathBox> children)
         {
@@ -279,6 +286,10 @@ namespace Calculator_WinUI.Models.Layout
     {
         public double Side { get; }
         public double Thickness { get; }
+
+        // a slot is a line of its own with one position in it, so it carries the caret size the same
+        // way a row does
+        public double FontSize { get; internal set; }
 
         // the two reaches are those of the text that would fill the slot, not those of the square
         //

@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -99,6 +99,8 @@ namespace Calculator_WinUI.Models.Layout
             {
                 row = new RowBox(children) { EndAddress = Address(path, tokens.Count) };
             }
+
+            row.FontSize = fontSize;
 
             // past the last token there is no box to hang off, so it hangs off the row itself
             if (carriesCaret && _caret.Index >= tokens.Count)
@@ -378,6 +380,7 @@ namespace Calculator_WinUI.Models.Layout
                 _measurer.Measure(StrutText, fontSize));
 
             placeholder.CursorAddress = Address(path, 0);
+            placeholder.FontSize = fontSize;
 
             if (CaretIsIn(tokens)) Caret = new CaretPlacement(placeholder, 0, placeholder, fontSize);
 

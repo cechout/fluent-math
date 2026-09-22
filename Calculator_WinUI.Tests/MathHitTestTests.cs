@@ -1,4 +1,4 @@
-using Calculator_WinUI.Engines;
+﻿using Calculator_WinUI.Engines;
 using Calculator_WinUI.Models;
 using Calculator_WinUI.Models.Layout;
 using System.Collections.Generic;
@@ -282,8 +282,9 @@ namespace Calculator_WinUI.Tests
 
         // === the caret and a click agree ===
 
-        // where the caret is drawn for the cursor the manager is holding, and the row it was drawn in
-        private static (RowBox Row, double X, double Baseline) CaretPoint(MathInputManager manager)
+        // the caret the layout reports for the cursor the manager is holding, and the row it was
+        // drawn in
+        private static (RowBox Row, CaretPlacement Caret) CaretOf(MathInputManager manager)
         {
             MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(),
                 new MathLayoutStyle { FontSizePx = FontSize },
@@ -292,7 +293,13 @@ namespace Calculator_WinUI.Tests
             RowBox row = engine.BuildRow(manager.RootTokens);
             row.Place(0, row.Ascent);
 
-            CaretPlacement caret = engine.Caret.Value;
+            return (row, engine.Caret.Value);
+        }
+
+        // where the caret is drawn for the cursor the manager is holding, and the row it was drawn in
+        private static (RowBox Row, double X, double Baseline) CaretPoint(MathInputManager manager)
+        {
+            (RowBox row, CaretPlacement caret) = CaretOf(manager);
 
             return (row, caret.Box.X + caret.Offset, caret.Line.Baseline);
         }
@@ -334,6 +341,54 @@ namespace Calculator_WinUI.Tests
 
                 Assert.Equal(x, clickedX, 6);
                 Assert.Equal(baseline, clickedBaseline, 6);
+            }
+        }
+
+
+        // === a preview and the caret it previews ===
+
+        // hovering the display draws the caret a click would leave behind, and it is drawn from
+        // NearestCaret while the real one is drawn from what the engine reports after the click
+        //
+        // MathPanel puts both through one piece of geometry, so the whole promise rests on these two
+        // agreeing: the moment they do not, the preview stands somewhere the click does not
+        //
+        // every sample point over the formula is tried rather than a chosen few, which is what covers
+        // an exponent and an empty slot; a caret in a script is drawn smaller, and that size rides on
+        // the row rather than on the position
+        [Theory]
+        [InlineData("1", "+", "2")]
+        [InlineData("1", "frac", "2", "down", "3")]
+        [InlineData("2", "pow", "3")]
+        [InlineData("sqrt", "9")]
+        [InlineData("root", "3", "right", "8")]
+        [InlineData("fn:sin", "9")]
+        [InlineData("frac", "down", "2")]
+        public void APreviewStandsExactlyWhereAClickPutsTheCaret(params string[] keys)
+        {
+            RowBox laid = Laid(Keys.Press(keys).RootTokens);
+
+            double across = FontSize / 2;
+            double down = (laid.Bottom - laid.Top) / 3;
+
+            for (double x = laid.X - across; x <= laid.X + laid.Width + across; x += across)
+            {
+                for (double y = laid.Top; y <= laid.Bottom; y += down)
+                {
+                    CaretPlacement? previewed = MathHitTest.NearestCaret(laid, x, y);
+                    Assert.NotNull(previewed);
+
+                    MathInputManager manager = Keys.Press(keys);
+                    string address = MathHitTest.NearestAddress(laid, x, y);
+                    Assert.True(manager.SetCursorPosition(address), "the input manager refused " + address);
+
+                    CaretPlacement preview = previewed.Value;
+                    CaretPlacement landed = CaretOf(manager).Caret;
+
+                    Assert.Equal(preview.Box.X + preview.Offset, landed.Box.X + landed.Offset, 6);
+                    Assert.Equal(preview.Line.Baseline, landed.Line.Baseline, 6);
+                    Assert.Equal(preview.FontSize, landed.FontSize, 6);
+                }
             }
         }
     }

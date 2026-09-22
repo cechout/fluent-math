@@ -1,4 +1,4 @@
-using Calculator_WinUI.Models;
+﻿using Calculator_WinUI.Models;
 using Calculator_WinUI.Models.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -36,6 +36,7 @@ namespace Calculator_WinUI.Controls
         public Rect? CaretViewport { get; private set; }
 
         private Rect? _caretLocal;
+        private Rect? _previewLocal;
         private double _caretPad;
         private double _fitScale = 1;
         private double _offsetX;
@@ -83,6 +84,30 @@ namespace Calculator_WinUI.Controls
         {
             get => (Brush)GetValue(CaretInkProperty);
             set => SetValue(CaretInkProperty, value);
+        }
+
+        // the caret a click would leave behind, one step down from the text rather than in the accent:
+        // it has to read as a promise and not as the thing itself
+        public static readonly DependencyProperty PreviewCaretInkProperty = DependencyProperty.Register(
+            nameof(PreviewCaretInk), typeof(Brush), typeof(MathPanel),
+            new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
+
+        public Brush PreviewCaretInk
+        {
+            get => (Brush)GetValue(PreviewCaretInkProperty);
+            set => SetValue(PreviewCaretInkProperty, value);
+        }
+
+        // and one step down again while the button is held, which is the direction a press takes
+        // everything else in this app: the keypad answers a press by fading rather than by brightening
+        public static readonly DependencyProperty PreviewCaretPressedInkProperty = DependencyProperty.Register(
+            nameof(PreviewCaretPressedInk), typeof(Brush), typeof(MathPanel),
+            new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
+
+        public Brush PreviewCaretPressedInk
+        {
+            get => (Brush)GetValue(PreviewCaretPressedInkProperty);
+            set => SetValue(PreviewCaretPressedInkProperty, value);
         }
 
         public FontFamily TextFont
@@ -153,6 +178,10 @@ namespace Calculator_WinUI.Controls
             // overlap the digit beside it and never to move it
             RealizeCaret(caret);
 
+            // the tree it was aimed at is gone, so the preview is worked out again from the point the
+            // pointer is still resting on
+            RealizePreview();
+
             InvalidateMeasure();
         }
 
@@ -164,6 +193,14 @@ namespace Calculator_WinUI.Controls
             foreach (PlacedElement placed in _placed)
             {
                 placed.Element.Measure(new Size(placed.Bounds.Width, placed.Bounds.Height));
+            }
+
+            // the preview is not one of the placed elements: it moves with the pointer rather than with
+            // the formula, and rebuilding the tree for a mouse move is what this whole arrangement is
+            // there to avoid
+            if (_preview != null && _previewLocal is Rect preview)
+            {
+                _preview.Measure(new Size(preview.Width, preview.Height));
             }
 
             if (_root == null) return new Size(0, 0);
@@ -213,6 +250,13 @@ namespace Calculator_WinUI.Controls
                     caret.Width * _fitScale,
                     caret.Height * _fitScale)
                 : null;
+
+            if (_preview != null)
+            {
+                _preview.Arrange(_previewLocal is Rect preview
+                    ? new Rect(preview.X + offsetX, preview.Y + offsetY, preview.Width, preview.Height)
+                    : new Rect(0, 0, 0, 0));
+            }
 
             return finalSize;
         }
@@ -293,18 +337,8 @@ namespace Calculator_WinUI.Controls
         {
             if (placement is not CaretPlacement caret) return;
 
-            double size = caret.FontSize;
-            double width = size * LayoutStyle.CursorWidth;
-            double height = size * LayoutStyle.CursorHeight;
-            double radius = size * LayoutStyle.CursorCornerRadius;
-
-            // the baseline of the line it stands in, never the one of the box it hangs off: an operator
-            // rides above the baseline of its row, and taking the height from it would stand the caret
-            // higher in front of a plus than in front of a digit
-            double bottom = caret.Line.Baseline - size * LayoutStyle.CursorShift;
-
-            Rect caretRect = new Rect(
-                caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);
+            Rect caretRect = CaretRect(caret);
+            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
 
             _caretLocal = caretRect;
 
@@ -315,6 +349,98 @@ namespace Calculator_WinUI.Controls
                 RadiusY = radius
             }, caretRect);
         }
+
+        // the box a caret fills, for the one being typed in and for a preview of one alike
+        //
+        // the baseline is the one of the line it stands in and never the one of the box it hangs off: an
+        // operator rides above the baseline of its row, and taking the height from it would stand the
+        // caret higher in front of a plus than in front of a digit
+        private Rect CaretRect(CaretPlacement caret)
+        {
+            double size = caret.FontSize;
+            double width = size * LayoutStyle.CursorWidth;
+            double height = size * LayoutStyle.CursorHeight;
+            double bottom = caret.Line.Baseline - size * LayoutStyle.CursorShift;
+
+            return new Rect(caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);
+        }
+
+        // === caret preview ===
+
+        // the caret a click would leave behind, drawn under the pointer rather than where the cursor is
+        //
+        // it goes through the hit test a tap goes through and comes back as the same CaretPlacement the
+        // layout reports the real caret in, so the two are drawn by one piece of geometry and the
+        // promise cannot drift away from what the click does
+        //
+        // what is kept is the pointer position and not the rectangle: a keystroke rebuilds the tree
+        // under a pointer that never moved, and the preview has to answer for the new one
+        private Rectangle _preview;
+        private Point? _previewPoint;
+        private bool _previewPressed;
+
+        public void ShowPreviewCaret(Point point, bool pressed)
+        {
+            _previewPoint = point;
+            _previewPressed = pressed;
+
+            RealizePreview();
+        }
+
+        public void HidePreviewCaret()
+        {
+            _previewPoint = null;
+
+            CollapsePreview();
+        }
+
+        private void RealizePreview()
+        {
+            // a line with no caret target is not the one being typed in: after = the display holds the
+            // result rather than the formula, and a click in it does nothing either
+            if (_previewPoint is not Point point || _root == null || _text != null || _caret.Tokens == null)
+            {
+                CollapsePreview();
+                return;
+            }
+
+            CaretPlacement? nearest = MathHitTest.NearestCaret(_root, point.X - _offsetX, point.Y - _offsetY);
+            if (nearest is not CaretPlacement caret)
+            {
+                CollapsePreview();
+                return;
+            }
+
+            Rect rect = CaretRect(caret);
+            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
+
+            _preview ??= new Rectangle();
+
+            _preview.Fill = (_previewPressed ? PreviewCaretPressedInk : PreviewCaretInk) ?? Ink;
+            _preview.RadiusX = radius;
+            _preview.RadiusY = radius;
+            _preview.Width = rect.Width;
+            _preview.Height = rect.Height;
+            _preview.Visibility = Visibility.Visible;
+
+            // added last, so it is drawn over the caret it is a preview of rather than under it; a
+            // rebuild empties the panel, which is what puts it back on top again afterwards
+            if (!Children.Contains(_preview)) Children.Add(_preview);
+
+            _previewLocal = rect;
+
+            InvalidateArrange();
+        }
+
+        private void CollapsePreview()
+        {
+            _previewLocal = null;
+
+            if (_preview != null) _preview.Visibility = Visibility.Collapsed;
+        }
+
+
+        // === realising boxes ===
 
         private void RealizeRun(TextRunBox run)
         {
