@@ -339,6 +339,33 @@
                                         </VisualState>
 
                                     </VisualStateGroup>
+
+                                    <!--
+                                        a Button raises no visual state for the flyout it carries
+                                        being open; the platform only tracks it for automation, and
+                                        DropDownButton does the same and no more, so a bar button is
+                                        told by the page that opened it
+                                        it is a group of its own and not a state in CommonStates,
+                                        because the pointer states go on being driven by the button
+                                        underneath; an open flyout takes the pointer with it, so the
+                                        two never reach for the foreground in the same frame
+                                        every bar button carries the group and only the ones with a
+                                        panel ever enter it, which is cheaper than a second copy of
+                                        the whole style
+                                    -->
+                                    <VisualStateGroup x:Name="FlyoutStates">
+
+                                        <VisualState x:Name="FlyoutClosed" />
+
+                                        <VisualState x:Name="FlyoutOpen">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+
+                                    </VisualStateGroup>
                                 </VisualStateManager.VisualStateGroups>
                             </ContentPresenter>
                         </ControlTemplate>

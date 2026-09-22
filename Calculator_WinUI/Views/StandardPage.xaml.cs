@@ -8,6 +8,7 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Input;
 using System;
 using System.ComponentModel;
+using System.Linq;
 using Windows.Foundation;
 using Windows.UI;
 
@@ -36,6 +37,7 @@ namespace Calculator_WinUI.Views
 
             RebuildStyles();
             ApplyPanelBarFade();
+            AccentPanelButtonsWhileOpen();
 
             this.Loaded += StandardPage_Loaded;
             this.ActualThemeChanged += StandardPage_ActualThemeChanged;
@@ -246,6 +248,23 @@ namespace Calculator_WinUI.Views
             ProbabilityFlyout.Hide();
             CoordinatesFlyout.Hide();
             PrefixesFlyout.Hide();
+        }
+
+        // a button whose panel is open reads as the accent color, which is the only thing that says
+        // which of the six is showing; a Button raises nothing for it, so the state is entered from
+        // here and the look of it lives in the FlyoutStates group of SubtleBarButtonStyle
+        //
+        // the handler closes over the button it belongs to rather than reading FlyoutBase.Target,
+        // which the framework fills in when it shows an attached flyout and is not ours to lean on
+        private void AccentPanelButtonsWhileOpen()
+        {
+            foreach (Button button in PanelStrip.Children.OfType<Button>())
+            {
+                if (button.Flyout == null) continue;
+
+                button.Flyout.Opened += (_, _) => VisualStateManager.GoToState(button, "FlyoutOpen", false);
+                button.Flyout.Closed += (_, _) => VisualStateManager.GoToState(button, "FlyoutClosed", false);
+            }
         }
 
         // the two latches belong to the open panel and not to the app, so they come back to the plain
