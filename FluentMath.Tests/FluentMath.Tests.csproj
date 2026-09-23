@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>FluentMath.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <!--
+    the engine and the ViewModel are linked in rather than referenced: the app is a WinExe on a Windows
+    target framework and cannot be referenced from a plain net8.0 library, while everything under test
+    here is ordinary C# and runs on any dotnet runner
+    the ViewModel only got here at all once its two Visibility properties became bools
+  -->
+  <ItemGroup>
+    <Compile Include="..\FluentMath\Engines\*.cs" />
+    <Compile Include="..\FluentMath\Models\MathToken.cs" />
+    <Compile Include="..\FluentMath\Models\Layout\*.cs" />
+    <Compile Include="..\FluentMath\Models\NavigationMetadata.cs" />
+    <Compile Include="..\FluentMath\Models\EvaluationMetadata.cs" />
+    <Compile Include="..\FluentMath\Models\ResultFormatter.cs" />
+    <Compile Include="..\FluentMath\ViewModels\StandardViewModel.cs" />
+    <Compile Include="..\FluentMath\ViewModels\RelayCommand.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<Page
+    x:Class="FluentMath.Views.CurrencyPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:FluentMath.Views"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid
+        Margin="4"
+        ColumnSpacing="2.5"
+        RowSpacing="2.5">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="40" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" MinHeight="40" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="5*" />
+        </Grid.RowDefinitions>
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+
+        <!--  page header  -->
+        <!--  (the left margin clears the navigation views hamburger button)  -->
+        <Grid
+            Grid.Row="0"
+            Grid.ColumnSpan="4"
+            Height="38"
+            Margin="45,0,0,0"
+            Background="Transparent">
+            <StackPanel
+                HorizontalAlignment="Left"
+                Orientation="Horizontal"
+                Spacing="8">
+
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    Text="Currency" />
+
+                <!--  planned: compact mode toggle  -->
+                <!--<Button
+                    Width="32"
+                    Height="32"
+                    Padding="0"
+                    Style="{ThemeResource SubtleButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xE81C;" />
+                </Button>-->
+            </StackPanel>
+
+            <!--  planned: history flyout  -->
+            <!--<Button
+                Width="32"
+                Height="32"
+                Padding="0"
+                HorizontalAlignment="Right"
+                Style="{ThemeResource SubtleButtonStyle}">
+                <FontIcon FontSize="16" Glyph="&#xE8A7;" />
+            </Button>-->
+        </Grid>
+
+
+        <!--  currency 1 selection  -->
+        <DropDownButton
+            Grid.Row="1"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Height="26"
+            Margin="0"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Right"
+            Background="Transparent"
+            BorderThickness="0"
+            Content="{x:Bind ViewModel.SelectedCurrency1.DisplayName, Mode=OneWay}"
+            FontSize="12"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+
+            <DropDownButton.Flyout>
+                <Flyout
+                    x:Name="FlyoutCurrency1"
+                    Placement="BottomEdgeAlignedRight"
+                    ShouldConstrainToRootBounds="False">
+
+                    <Flyout.FlyoutPresenterStyle>
+                        <Style TargetType="FlyoutPresenter">
+                            <Setter Property="MaxWidth" Value="250" />
+                            <Setter Property="MaxHeight" Value="450" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-200" />
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Flyout.FlyoutPresenterStyle>
+
+                    <ListView
+                        DisplayMemberPath="DisplayName"
+                        ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                        SelectedItem="{x:Bind ViewModel.SelectedCurrency1, Mode=TwoWay}"
+                        SelectionChanged="ListView1_SelectionChanged"
+                        SelectionMode="Single" />
+
+                </Flyout>
+            </DropDownButton.Flyout>
+        </DropDownButton>
+
+        <!--  amount being typed  -->
+        <!--  (scrolls sideways because a long number must not resize the layout)  -->
+        <ScrollViewer
+            Grid.Row="2"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Margin="4,0,4,0"
+            Padding="0"
+            Background="Transparent"
+            HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Disabled">
+            <TextBlock
+                x:Name="TextBlock_Currency1"
+                Margin="0,-12,0,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Style="{ThemeResource TitleLargeTextBlockStyle}"
+                Text="{x:Bind ViewModel.InputText, Mode=OneWay}" />
+        </ScrollViewer>
+
+
+        <!--  currency 2 selection  -->
+        <!--  (same picker as currency 1)  -->
+        <DropDownButton
+            Grid.Row="3"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Height="26"
+            Margin="0"
+            HorizontalAlignment="Stretch"
+            HorizontalContentAlignment="Right"
+            Background="Transparent"
+            BorderThickness="0"
+            Content="{x:Bind ViewModel.SelectedCurrency2.DisplayName, Mode=OneWay}"
+            FontSize="12"
+            Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+
+            <DropDownButton.Flyout>
+                <Flyout
+                    x:Name="FlyoutCurrency2"
+                    Placement="BottomEdgeAlignedRight"
+                    ShouldConstrainToRootBounds="False">
+
+                    <Flyout.FlyoutPresenterStyle>
+                        <Style TargetType="FlyoutPresenter">
+                            <Setter Property="MaxWidth" Value="250" />
+                            <Setter Property="MaxHeight" Value="450" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
+
+                            <Setter Property="RenderTransform">
+                                <Setter.Value>
+                                    <TranslateTransform Y="-200" />
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Flyout.FlyoutPresenterStyle>
+
+                    <ListView
+                        DisplayMemberPath="DisplayName"
+                        ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                        SelectedItem="{x:Bind ViewModel.SelectedCurrency2, Mode=TwoWay}"
+                        SelectionChanged="ListView2_SelectionChanged"
+                        SelectionMode="Single" />
+
+                </Flyout>
+            </DropDownButton.Flyout>
+        </DropDownButton>
+
+        <!--  converted result  -->
+        <ScrollViewer
+            Grid.Row="4"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Margin="4,0,4,0"
+            Background="Transparent"
+            HorizontalScrollBarVisibility="Auto"
+            VerticalScrollBarVisibility="Disabled">
+            <TextBlock
+                x:Name="TextBlock_Currency2"
+                Margin="0,-12,0,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Style="{ThemeResource TitleLargeTextBlockStyle}"
+                Text="{x:Bind ViewModel.ResultText, Mode=OneWay}" />
+        </ScrollViewer>
+
+        <!--  rate line  -->
+        <!--  (e.g. "1 EUR = 1.0842 USD"; updates on every picker change)  -->
+        <Border
+            Grid.Row="5"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            Height="26"
+            Margin="0"
+            Background="Transparent">
+            <TextBlock
+                x:Name="TextBlock_CurrencyRate"
+                Margin="0,0,7,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                Style="{ThemeResource CaptionTextBlockStyle}"
+                Text="{x:Bind ViewModel.RateText, Mode=OneWay}" />
+        </Border>
+
+
+        <!--  input buttons  -->
+        <Grid
+            Grid.Row="6"
+            Grid.Column="0"
+            Grid.ColumnSpan="3"
+            ColumnSpacing="2.5"
+            RowSpacing="2.5">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Button
+                Grid.Row="0"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.RefreshCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="16" Glyph="&#xE895;" />
+            </Button>
+            <Button
+                Grid.Row="0"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.ClearCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock
+                    FontSize="16"
+                    Style="{ThemeResource BodyLargeTextBlockStyle}"
+                    Text="CE" />
+            </Button>
+            <Button
+                Grid.Row="0"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.BackspaceCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="16" Glyph="&#xE750;" />
+            </Button>
+
+            <Button
+                Grid.Row="1"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="7"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="7" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="8"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="8" />
+            </Button>
+            <Button
+                Grid.Row="1"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="9"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="9" />
+            </Button>
+
+            <Button
+                Grid.Row="2"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="4"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="4" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="5"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="5" />
+            </Button>
+            <Button
+                Grid.Row="2"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="6"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="6" />
+            </Button>
+
+            <Button
+                Grid.Row="3"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="1"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="1" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="2"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="2" />
+            </Button>
+            <Button
+                Grid.Row="3"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="3"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="3" />
+            </Button>
+
+            <Button
+                Grid.Row="4"
+                Grid.Column="0"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="."
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="." />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="0"
+                Style="{StaticResource NumberPadButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="0" />
+            </Button>
+            <Button
+                Grid.Row="4"
+                Grid.Column="2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.CalculateCommand}"
+                Style="{ThemeResource AccentButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="=" />
+            </Button>
+        </Grid>
+    </Grid>
+</Page>

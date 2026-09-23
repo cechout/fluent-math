@@ -8,7 +8,7 @@ body:
     attributes:
       value: |
         > [!TIP]
-        > Please search the [existing issues](https://github.com/cechout/simple-calculator/issues?q=is%3Aissue) first. Someone may have run into the same thing already.
+        > Please search the [existing issues](https://github.com/cechout/fluent-math/issues?q=is%3Aissue) first. Someone may have run into the same thing already.
 
   - type: textarea
     id: description
@@ -34,7 +34,7 @@ body:
     id: app-version
     attributes:
       label: App version
-      description: Shown in Windows Settings under Apps > Installed apps, next to "Simple Calculator".
+      description: Shown in Windows Settings under Apps > Installed apps, next to "Fluent Math".
       placeholder: "v2.0.0"
     validations:
       required: true

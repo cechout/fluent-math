@@ -68,31 +68,31 @@ jobs:
         with:
           dotnet-version: "8.0.x"
           cache: true
-          cache-dependency-path: Calculator_WinUI/Calculator_WinUI.csproj
+          cache-dependency-path: FluentMath/FluentMath.csproj
 
-      # always the project, never Calculator.slnx; the solution also contains the frozen
+      # always the project, never FluentMath.slnx; the solution also contains the frozen
       # WPF v1 (net472, packages.config) which does not build on a dotnet-only runner
       - name: restore
-        run: dotnet restore Calculator_WinUI/Calculator_WinUI.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
+        run: dotnet restore FluentMath/FluentMath.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
       # same build command release.yml relies on, a single full build pass feeds both the publish below
       # and the size report
       - name: build win-x64
-        run: dotnet build Calculator_WinUI/Calculator_WinUI.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
+        run: dotnet build FluentMath/FluentMath.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
       # publish is what makes the size number mean anything, the build output still carries payload the
       # app never ships; it also proves the publish path works before a release tag depends on it, which is
       # where the WMC1509/WMC9999 failures used to surface
       # --no-build reuses the pass above, so it is cheap
       - name: publish win-x64
-        run: dotnet publish Calculator_WinUI/Calculator_WinUI.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
+        run: dotnet publish FluentMath/FluentMath.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 
       # absolute numbers only, diffing against main would mean building main too
       # the ten largest files are there so a jump can be attributed without downloading anything
       - name: report publish size
         shell: pwsh
         run: |
-          $publishDir = "Calculator_WinUI/bin/x64/Release/net8.0-windows10.0.19041.0/publish/win-x64"
+          $publishDir = "FluentMath/bin/x64/Release/net8.0-windows10.0.19041.0/publish/win-x64"
           $root = (Resolve-Path $publishDir).Path
           $files = Get-ChildItem $root -Recurse -File
           $total = ($files | Measure-Object -Property Length -Sum).Sum
@@ -128,12 +128,12 @@ jobs:
         with:
           dotnet-version: "8.0.x"
           cache: true
-          cache-dependency-path: Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
+          cache-dependency-path: FluentMath.Tests/FluentMath.Tests.csproj
 
       # the test project links the engine and ViewModel sources rather than referencing the app, so it
       # is plain net8.0 and needs neither a platform nor a runtime identifier here
       - name: engine tests
-        run: dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj -c Release
+        run: dotnet test FluentMath.Tests/FluentMath.Tests.csproj -c Release
 
   format:
     needs: changes
@@ -158,9 +158,9 @@ jobs:
       # end_of_line = lf only holds because .gitattributes pins the checkout to lf; without it the
       # runner default core.autocrlf=true hands out a crlf tree and every line fails
       - name: dotnet format whitespace check
-        run: dotnet format whitespace Calculator_WinUI/Calculator_WinUI.csproj --verify-no-changes --verbosity diagnostic
+        run: dotnet format whitespace FluentMath/FluentMath.csproj --verify-no-changes --verbosity diagnostic
 
       # the test sources are held to the same editorconfig; the engine files it links are already
       # covered by the run above, checking them twice costs nothing
       - name: dotnet format whitespace check, tests
-        run: dotnet format whitespace Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj --verify-no-changes --verbosity diagnostic
+        run: dotnet format whitespace FluentMath.Tests/FluentMath.Tests.csproj --verify-no-changes --verbosity diagnostic

@@ -1,14 +1,14 @@
-# Contributing to Simple Calculator
+# Contributing to Fluent Math
 
-Thanks for wanting to contribute. Simple Calculator is a solo hobby project, so response times may vary. For anything beyond a small fix, open an issue first to talk through the approach before writing code, saves everyone rework.
+Thanks for wanting to contribute. Fluent Math is a solo hobby project, so response times may vary. For anything beyond a small fix, open an issue first to talk through the approach before writing code, saves everyone rework.
 
 ## Getting set up
 
-1. [Fork](https://github.com/cechout/simple-calculator/fork) the repository
+1. [Fork](https://github.com/cechout/fluent-math/fork) the repository
 2. Clone your fork
 
 ```
-git clone https://github.com/<your-username>/simple-calculator.git
+git clone https://github.com/<your-username>/fluent-math.git
 ```
 
 3. Create a branch off `main`, named `feature/xxx`, `fix/xxx`, or `chore/xxx`
@@ -17,11 +17,11 @@ git clone https://github.com/<your-username>/simple-calculator.git
 git checkout -b feature/your-feature-name
 ```
 
-4. Make your changes, then push and [open a pull request](https://github.com/cechout/simple-calculator/compare) against `main`
+4. Make your changes, then push and [open a pull request](https://github.com/cechout/fluent-math/compare) against `main`
 
-See the "How to Run" section in the [README](https://github.com/cechout/simple-calculator/blob/main/.github/README.md) for build prerequisites.
+See the "How to Run" section in the [README](https://github.com/cechout/fluent-math/blob/main/.github/README.md) for build prerequisites.
 
-`Calculator_WinUI` is the project that is being developed. `Calculator` is the original WPF version 1.0.0 and is kept for history only, changes to it are not accepted.
+`FluentMath` is the project that is being developed. `Calculator` is the original WPF version 1.0.0 and is kept for history only, changes to it are not accepted.
 
 ## What we accept
 

@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "FluentMath (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "FluentMath (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
