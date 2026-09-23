@@ -40,6 +40,22 @@ namespace FluentMath.Tests
             Assert.DoesNotContain("10^", ResultFormatter.ToLatex(1e-9));
         }
 
+        // a small number needs more decimals than Math.Round takes, and still gets all twelve digits
+        [Fact]
+        public void KeepsTwelveDigitsOfASmallPlainNumber()
+        {
+            Assert.Equal("0.0000000123456789012", ResultFormatter.ToPlainString(1.2345678901234e-8));
+            Assert.Equal("0.00000000123456789012", ResultFormatter.ToPlainString(1.2345678901234e-9));
+        }
+
+        [Fact]
+        public void RoundsToSignificantDigitsAtAnyMagnitude()
+        {
+            Assert.Equal(1.23456789012346, ResultFormatter.RoundToSignificantDigits(1.234567890123456e-20, 15) * 1e20, 14);
+            Assert.Equal(0.5, ResultFormatter.RoundToSignificantDigits(0.49999999999999994, 15));
+            Assert.Equal(123460000, ResultFormatter.RoundToSignificantDigits(123456789, 5));
+        }
+
 
         // === fractions ===
 

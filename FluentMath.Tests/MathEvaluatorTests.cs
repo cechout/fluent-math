@@ -374,15 +374,57 @@ namespace FluentMath.Tests
             Assert.Equal(EvaluationError.Domain, Error(AngleMode.Gradians, "fn:tan", "300"));
         }
 
+        // no double lands exactly on pi over two, but the cosine there is nothing but rounding noise, and a
+        // Casio answers tan(pi/2) with a Math ERROR
         [Fact]
-        public void HasNoTangentPoleToFindInRadians()
+        public void FindsTheTangentPoleInRadiansToo()
         {
-            // no double lands exactly on pi over two, so there is nothing to catch and the huge value
-            // it produces is the honest answer
-            EvaluationResult result = new MathEvaluator(AngleMode.Radians)
-                .Evaluate(Keys.Press("fn:tan", "pi", "/", "2").RootTokens);
+            Assert.Equal(EvaluationError.Domain, Error(AngleMode.Radians, "fn:tan", "pi", "/", "2"));
+            Assert.Equal(EvaluationError.Domain, Error(AngleMode.Radians, "fn:tan", "3", "pi", "/", "2"));
+        }
 
-            Assert.True(result.IsSuccess);
+        [Fact]
+        public void LandsOnAnExactZeroAtEveryZeroOfSineAndCosine()
+        {
+            Assert.Equal(0, Value(AngleMode.Degrees, "fn:cos", "90"));
+            Assert.Equal(0, Value(AngleMode.Degrees, "fn:cos", "270"));
+            Assert.Equal(0, Value(AngleMode.Degrees, "fn:tan", "180"));
+            Assert.Equal(0, Value(AngleMode.Degrees, "fn:sin", "-", "180"));
+            Assert.Equal(0, Value(AngleMode.Degrees, "fn:sin", "180000000"));
+            Assert.Equal(0, Value(AngleMode.Radians, "fn:sin", "pi"));
+            Assert.Equal(0, Value(AngleMode.Radians, "fn:sin", "3", "pi"));
+            Assert.Equal(0, Value(AngleMode.Radians, "fn:cos", "pi", "/", "2"));
+        }
+
+        // the noise that is snapped to zero is the size of the angle times the precision of a double, and
+        // a result of a very small angle is far above that however small it is
+        [Fact]
+        public void KeepsEveryDigitOfAVerySmallTrigResult()
+        {
+            double sine = Value(AngleMode.Degrees, "fn:sin", "0.0000001");
+            Assert.Equal(1.74532925199433, sine * 1e9, 13);
+
+            double tangent = Value(AngleMode.Radians, "fn:tan", "0.000000000001");
+            Assert.Equal(1, tangent * 1e12, 13);
+        }
+
+        // twelve digits of pi are not pi, and the difference is a real result rather than noise
+        [Fact]
+        public void KeepsASmallResultBesideAZeroThatWasNotQuiteHit()
+        {
+            double sine = Value(AngleMode.Radians, "fn:sin", "3.14159265359");
+
+            Assert.Equal(-2.06823107, sine * 1e13, 8);
+        }
+
+        // cut to fifteen digits, sin 30 is exactly one half and the difference is a real zero
+        [Fact]
+        public void LetsAnExactTrigValueCompareEqual()
+        {
+            Assert.Equal(1, Value(AngleMode.Degrees, "fn:tan", "45"));
+            Assert.Equal(0.5, Value(AngleMode.Degrees, "fn:cos", "60"));
+            Assert.Equal(EvaluationError.DivideByZero,
+                Error("1", "/", "(", "fn:sin", "30", "right", "-", "0.5", ")"));
         }
 
         [Fact]

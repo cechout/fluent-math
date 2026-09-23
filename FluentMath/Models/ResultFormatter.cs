@@ -25,7 +25,7 @@ namespace FluentMath.Models
         // enough placeholders to spell out the smallest number that still avoids scientific notation
         private const string PlainNumberFormat = "0.####################";
 
-        // Math.Round refuses more than 15 decimals, and past that there is nothing left to round anyway
+        // Math.Round refuses more than 15 decimals
         private const int MaxRoundingDecimals = 15;
 
         // largest denominator a result may come back as
@@ -283,7 +283,8 @@ namespace FluentMath.Models
             return (mantissa.ToString(PlainNumberFormat, CultureInfo.InvariantCulture), exponent);
         }
 
-        private static double RoundToSignificantDigits(double value, int digits)
+        // public because the evaluator cuts a trigonometric result with it as well
+        public static double RoundToSignificantDigits(double value, int digits)
         {
             if (value == 0 || double.IsNaN(value) || double.IsInfinity(value)) return value;
 
@@ -298,8 +299,12 @@ namespace FluentMath.Models
                 return Math.Round(value / scale, MidpointRounding.AwayFromZero) * scale;
             }
 
-            if (decimals > MaxRoundingDecimals) decimals = MaxRoundingDecimals;
-            return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
+            if (decimals <= MaxRoundingDecimals) return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
+
+            // a small number needs more decimals than Math.Round takes, so its mantissa is rounded and
+            // scaled back; capping the decimals instead cost 1.2345678901234e-8 four of its twelve digits
+            double unit = Math.Pow(10, magnitude);
+            return Math.Round(value / unit, digits - 1, MidpointRounding.AwayFromZero) * unit;
         }
     }
 }
