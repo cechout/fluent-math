@@ -293,6 +293,71 @@ namespace FluentMath.Tests
         }
 
 
+        // === mixed fractions ===
+
+        [Fact]
+        public void AddsTheWholePartToTheFraction()
+        {
+            Assert.Equal(7.0 / 3.0, Value("2", "mixed", "1", "right", "3"), 12);
+            Assert.Equal(1.5, Value("mixed", "1", "right", "1", "right", "2"));
+        }
+
+        // measured on the Casio: minus, 1 1/2, plus 1 is −1/2
+        [Fact]
+        public void TakesALeadingMinusAsTheSignOfTheWholeMixedNumber()
+        {
+            Assert.Equal(-0.5, Value("-", "1", "mixed", "1", "right", "2", "right", "+", "1"));
+        }
+
+        // measured on the Casio: a whole part of 1 with −1 over 2 is −3/2, not 1/2
+        [Fact]
+        public void MakesTheWholeNumberNegativeWhenOnePartIs()
+        {
+            Assert.Equal(-1.5, Value("1", "mixed", "-", "1", "right", "2"));
+            Assert.Equal(-1.5, Value("1", "mixed", "1", "right", "-", "2"));
+            Assert.Equal(-1.5, Value("mixed", "-", "1", "right", "1", "right", "2"));
+        }
+
+        [Fact]
+        public void CancelsTwoNegativeParts()
+        {
+            Assert.Equal(1.5, Value("mixed", "-", "1", "right", "-", "1", "right", "2"));
+        }
+
+        [Fact]
+        public void RefusesAPartThatIsNotAWholeNumber()
+        {
+            Assert.Equal(EvaluationError.Syntax, Error("1.5", "mixed", "1", "right", "2"));
+            Assert.Equal(EvaluationError.Syntax, Error("1", "mixed", "0.5", "right", "2"));
+            Assert.Equal(EvaluationError.Syntax, Error("1", "mixed", "1", "right", "2.5"));
+        }
+
+        // a part is an expression like any slot, judged whole at the precision a Casio computes with
+        [Fact]
+        public void JudgesAComputedPartAtCasioPrecision()
+        {
+            Assert.Equal(3.5, Value("mixed", "0.1", "*", "30", "right", "1", "right", "2"));
+        }
+
+        [Fact]
+        public void FailsOnAZeroDenominatorOrAnEmptyPart()
+        {
+            Assert.Equal(EvaluationError.DivideByZero, Error("1", "mixed", "1", "right", "0"));
+            Assert.Equal(EvaluationError.Syntax, Error("1", "mixed", "1"));
+            Assert.Equal(EvaluationError.Syntax, Error("mixed", "right", "1", "right", "2"));
+        }
+
+        [Fact]
+        public void IsOneOperandToTheKeysAfterIt()
+        {
+            Assert.Equal(2.25, Value("1", "mixed", "1", "right", "2", "right", "pow", "2"));
+            Assert.Equal(3, Value("1", "mixed", "1", "right", "2", "right", "(", "2", ")"));
+
+            // the token has no text of its own, so what is left is the bracket pair around it and the (2)
+            Assert.Equal("6/((2))", Read("6", "/", "1", "mixed", "1", "right", "2", "right", "(", "2", ")"));
+        }
+
+
         // === postfix ===
 
         [Fact]

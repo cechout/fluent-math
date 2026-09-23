@@ -1,5 +1,6 @@
 ﻿using FluentMath.Engines;
 using FluentMath.Models;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -303,7 +304,10 @@ namespace FluentMath.ViewModels
             // there; without this the 0 on screen has nothing behind it and x squared opens on an empty
             // box instead, which reads as the 0 having been deleted
             // only at the root, since an empty slot shows a box rather than a 0 and promises nothing
-            if (ContinuesFromResult(sign) && _inputManager.RootTokens.Count == 0)
+            //
+            // the mixed fraction is the exception: its empty template is what the key is there for, and a
+            // 0 lifted into the whole part would put the cursor past the slot that is typed first
+            if (ContinuesFromResult(sign) && sign != "cmd_frac_mixed" && _inputManager.RootTokens.Count == 0)
             {
                 _inputManager.AddNumber("0");
             }
@@ -539,6 +543,10 @@ namespace FluentMath.ViewModels
                         _inputManager.StartFraction();
                         break;
 
+                    case "cmd_frac_mixed":
+                        _inputManager.StartMixedFraction();
+                        break;
+
                     case "cmd_pow_e":
                         _inputManager.StartPowerOfE();
                         break;
@@ -655,6 +663,13 @@ namespace FluentMath.ViewModels
             double value = _evaluator.LastAnswer;
             bool hasFraction = ResultFormatter.TryToFraction(value, out long numerator, out long denominator);
 
+            if (_answerForm == AnswerForm.Mixed && ResultFormatter.HasMixedForm(value))
+            {
+                _inputManager.SeedWithMixedFraction(numerator / denominator,
+                    Math.Abs(numerator % denominator), denominator);
+                return;
+            }
+
             if (_answerForm != AnswerForm.Decimal && hasFraction && denominator > 1)
             {
                 _inputManager.SeedWithFraction(numerator, denominator);
@@ -680,6 +695,7 @@ namespace FluentMath.ViewModels
                 || sign == "cmd_pow_2"
                 || sign == "cmd_pow_n"
                 || sign == "cmd_frac"
+                || sign == "cmd_frac_mixed"
                 || sign == "cmd_exp"
                 || sign.StartsWith(PrefixCommand);
         }
@@ -699,15 +715,14 @@ namespace FluentMath.ViewModels
         //
         // dms and deg on the function panel; divide with remainder and FACT, which show a result of their
         // own; Rnd, which rounds to a display format there is no setting for yet; the coordinates panel;
-        // the mixed fraction on the keypad; the two header keys, which are waiting on a history list and a
-        // variable store rather than on a token
+        // the two header keys, which are waiting on a history list and a variable store rather than on a
+        // token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_dms", "cmd_degrees",
             "cmd_div_r", "cmd_prime",
             "cmd_rnd",
             "cmd_pol", "cmd_rec",
-            "cmd_frac_mixed",
             "cmd_history", "cmd_memory"
         };
 

@@ -17,7 +17,8 @@ namespace FluentMath.Models
         Logarithm,
         Postfix,
         Answer,
-        Random
+        Random,
+        MixedFraction
     }
 
 
@@ -445,6 +446,30 @@ namespace FluentMath.Models
         }
     }
 
+    // the mixed number of the Casio key: a whole part, a numerator and a denominator in one token
+    //
+    // a number followed by a plain fraction reads as their product, which is why the whole part is a
+    // slot of this token rather than the digits standing in front of it
+    public class MixedFractionToken : MathToken
+    {
+        public List<MathToken> WholeTokens { get; } = new List<MathToken>();
+        public List<MathToken> NumeratorTokens { get; } = new List<MathToken>();
+        public List<MathToken> DenominatorTokens { get; } = new List<MathToken>();
+
+        public MixedFractionToken() : base(TokenType.MixedFraction) { }
+
+        public override string ToLatex(LatexRenderContext context)
+        {
+            string wholeStr = LatexHelper.GetSlotLatex(WholeTokens, context, 0);
+            string numStr = LatexHelper.GetSlotLatex(NumeratorTokens, context, 1);
+            string denStr = LatexHelper.GetSlotLatex(DenominatorTokens, context, 2);
+
+            string command = context.DisplayFractions ? "dfrac" : "frac";
+
+            return LatexHelper.Tagged("m-mixed", $"{{{wholeStr}}}\\{command}{{{numStr}}}{{{denStr}}}");
+        }
+    }
+
 
     // walks a token list and concatenates the LaTeX of every node; the recursion into nested lists
     // happens through the ToLatex overrides above, which call back in here
@@ -606,6 +631,13 @@ namespace FluentMath.Models
                     fractionCopy.NumeratorTokens.AddRange(CloneList(fraction.NumeratorTokens));
                     fractionCopy.DenominatorTokens.AddRange(CloneList(fraction.DenominatorTokens));
                     return fractionCopy;
+
+                case MixedFractionToken mixed:
+                    MixedFractionToken mixedCopy = new MixedFractionToken();
+                    mixedCopy.WholeTokens.AddRange(CloneList(mixed.WholeTokens));
+                    mixedCopy.NumeratorTokens.AddRange(CloneList(mixed.NumeratorTokens));
+                    mixedCopy.DenominatorTokens.AddRange(CloneList(mixed.DenominatorTokens));
+                    return mixedCopy;
 
                 case PowerToken power:
                     PowerToken powerCopy = new PowerToken();

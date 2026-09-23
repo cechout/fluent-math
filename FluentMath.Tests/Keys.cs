@@ -20,7 +20,7 @@ namespace FluentMath.Tests
             "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",
             "+", "-", "*", "/", "(", ")",
             "!", "inv", "%", "pi", "e", "ans",
-            "frac", "pow", "powe", "sqrt", "root", "log", "logb", "exp",
+            "frac", "mixed", "pow", "powe", "sqrt", "root", "log", "logb", "exp",
             "left", "right", "up", "down", "back",
             "fn:sin", "fn:cos", "fn:tan", "fn:arcsin", "fn:arccos", "fn:arctan",
             "fn:sinh", "fn:cosh", "fn:tanh", "fn:arsinh", "fn:arcosh", "fn:artanh",
@@ -91,6 +91,10 @@ namespace FluentMath.Tests
 
                 case "frac":
                     manager.StartFraction();
+                    return;
+
+                case "mixed":
+                    manager.StartMixedFraction();
                     return;
 
                 case "pow":

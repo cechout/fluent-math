@@ -142,9 +142,10 @@ namespace FluentMath.Engines
         // there, a bar with the numerator centred over it, a radical sign, or a name
         //
         // `MathLayoutEngine.BuildPower` is what makes that true, and the two have to move together
+        // a mixed fraction is the same case with its whole part, see `MathLayoutEngine.BuildMixedFraction`
         private static bool BeginsWithItsFirstSlot(MathToken token)
         {
-            return token is PowerToken;
+            return token is PowerToken || token is MixedFractionToken;
         }
 
         // the cursor never stands in front of such a token, it stands in the slot instead
@@ -204,7 +205,10 @@ namespace FluentMath.Engines
 
             switch (context.ParentToken)
             {
+                // the whole part of a mixed fraction has nothing above or below it, the same as the number
+                // in front of a plain fraction
                 case FractionToken:
+                case MixedFractionToken:
                     upper = ScopeRole.Numerator;
                     lower = ScopeRole.Denominator;
                     break;
@@ -260,6 +264,14 @@ namespace FluentMath.Engines
                     {
                         new TokenSlot(fraction.NumeratorTokens, ScopeRole.Numerator),
                         new TokenSlot(fraction.DenominatorTokens, ScopeRole.Denominator)
+                    };
+
+                case MixedFractionToken mixed:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(mixed.WholeTokens, ScopeRole.WholePart),
+                        new TokenSlot(mixed.NumeratorTokens, ScopeRole.Numerator),
+                        new TokenSlot(mixed.DenominatorTokens, ScopeRole.Denominator)
                     };
 
                 case PowerToken power:
@@ -628,6 +640,30 @@ namespace FluentMath.Engines
             _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
         }
 
+        // the mixed fraction continues the same way: 2 followed by the key makes the 2 the whole part and
+        // drops the cursor into the empty numerator, which is where a Casio puts it
+        //
+        // a minus in front stays outside, since the operand stops at it, and negates the whole mixed
+        // number; with nothing to lift the template opens in the whole part
+        public void StartMixedFraction()
+        {
+            var ctx = CurrentContext;
+            var mixedToken = new MixedFractionToken();
+
+            bool captured = MoveOperandIntoSlot(ctx, mixedToken.WholeTokens);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, mixedToken);
+            ctx.CursorIndex++;
+
+            if (captured)
+            {
+                _scopeStack.Push(new ScopeContext(mixedToken.NumeratorTokens, mixedToken, ScopeRole.Numerator));
+                return;
+            }
+
+            _scopeStack.Push(new ScopeContext(mixedToken.WholeTokens, mixedToken, ScopeRole.WholePart));
+        }
+
         // customBase starts in the subscript for log_b(x), otherwise straight in the argument
         public void StartLogarithm(bool customBase)
         {
@@ -827,8 +863,7 @@ namespace FluentMath.Engines
         }
 
         // the same for a result the S to D key is showing as a fraction, so the display keeps the shape
-        // it had; always the improper form, a mixed number put back as tokens would read as the whole
-        // part multiplied by the remainder
+        // it had
         public void SeedWithFraction(long numerator, long denominator)
         {
             Clear();
@@ -838,6 +873,24 @@ namespace FluentMath.Engines
             FillWithDigits(fraction.DenominatorTokens, denominator.ToString(CultureInfo.InvariantCulture));
 
             _rootTokens.Add(fraction);
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // and as a mixed number, which goes back in as the structure it is drawn as
+        //
+        // the sign rides on the whole part, where the sign rule of the mixed fraction makes it the sign of
+        // the whole number; a minus in front of the token would do the same until x squared lifts only
+        // the token and leaves the minus behind
+        public void SeedWithMixedFraction(long whole, long numerator, long denominator)
+        {
+            Clear();
+
+            var mixed = new MixedFractionToken();
+            FillWithDigits(mixed.WholeTokens, whole.ToString(CultureInfo.InvariantCulture));
+            FillWithDigits(mixed.NumeratorTokens, numerator.ToString(CultureInfo.InvariantCulture));
+            FillWithDigits(mixed.DenominatorTokens, denominator.ToString(CultureInfo.InvariantCulture));
+
+            _rootTokens.Add(mixed);
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 

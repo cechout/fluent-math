@@ -200,6 +200,70 @@ namespace FluentMath.Tests
         }
 
 
+        // === mixed fractions ===
+
+        private static MixedFractionToken Mixed(string whole, string numerator, string denominator)
+        {
+            MixedFractionToken mixed = new MixedFractionToken();
+            mixed.WholeTokens.Add(Digit(whole));
+            mixed.NumeratorTokens.Add(Digit(numerator));
+            mixed.DenominatorTokens.Add(Digit(denominator));
+
+            return mixed;
+        }
+
+        // nothing is drawn in front of the whole part, which is what lets the cursor skip the place in front
+        // of the token the way it skips the one in front of a power
+        [Fact]
+        public void AMixedFractionIsItsWholePartAtFullSizeBesideAnOrdinaryFraction()
+        {
+            RowBox box = Assert.IsType<RowBox>(Row(Mixed("2", "1", "3")).Children.Single());
+
+            Assert.Equal(2, box.Children.Count);
+
+            RowBox whole = Assert.IsType<RowBox>(box.Children[0]);
+            Assert.Equal("2", ((TextRunBox)whole.Children.Single()).Text);
+            Assert.Equal(FontSize, whole.FontSize);
+
+            FractionBox fraction = Assert.IsType<FractionBox>(box.Children[1]);
+            Assert.Equal(FontSize * 0.5, ((RowBox)fraction.Numerator).FontSize);
+        }
+
+        [Fact]
+        public void TheWholePartStandsItsGapAwayFromTheBar()
+        {
+            MathLayoutStyle style = Style();
+            style.MixedFractionGap = 0.3;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Mixed("2", "1", "3") });
+            RowBox box = (RowBox)row.Children.Single();
+
+            Assert.Equal(FontSize * 0.3, box.Children[0].TrailingGap);
+        }
+
+        [Fact]
+        public void TheThreePartsCarryTheSlotAddressesInReadingOrder()
+        {
+            RowBox box = (RowBox)Row(Mixed("2", "1", "3")).Children.Single();
+            FractionBox fraction = (FractionBox)box.Children[1];
+
+            Assert.Equal("0.0@1", ((RowBox)box.Children[0]).EndAddress);
+            Assert.Equal("0.1@1", ((RowBox)fraction.Numerator).EndAddress);
+            Assert.Equal("0.2@1", ((RowBox)fraction.Denominator).EndAddress);
+        }
+
+        [Fact]
+        public void AnEmptyTemplateHoldsAPlaceholderInEachPart()
+        {
+            RowBox box = (RowBox)Row(new MixedFractionToken()).Children.Single();
+            FractionBox fraction = (FractionBox)box.Children[1];
+
+            Assert.IsType<PlaceholderBox>(box.Children[0]);
+            Assert.IsType<PlaceholderBox>(fraction.Numerator);
+            Assert.IsType<PlaceholderBox>(fraction.Denominator);
+        }
+
+
         // === powers and the scientific form ===
 
         [Fact]

@@ -104,6 +104,8 @@ namespace FluentMath.Tests
         [InlineData("fn:gcd", "12", "right", "18")]
         [InlineData("fn:ranint", "right")]
         [InlineData("5", "pre:kilo", "+", "rand")]
+        [InlineData("2", "mixed", "1", "right", "3")]
+        [InlineData("5", "+", "mixed")]
         public void EveryAddressTheLayoutWritesIsOneTheInputManagerAccepts(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);
@@ -333,6 +335,8 @@ namespace FluentMath.Tests
         [InlineData("fn:gcd", "12", "right", "18")]
         [InlineData("fn:floor", "9")]
         [InlineData("5", "ncr", "2")]
+        [InlineData("12", "mixed", "1", "right", "34")]
+        [InlineData("5", "+", "mixed", "right", "right")]
         public void AClickOnTheCaretLeavesItExactlyWhereItStands(params string[] keys)
         {
             // every position the cursor reaches walking left out of the formula it just typed

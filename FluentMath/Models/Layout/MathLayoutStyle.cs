@@ -110,6 +110,7 @@ namespace FluentMath.Models.Layout
         public double FractionNumeratorGap { get; set; } = 0.04; // between the bar and the numerator
         public double FractionDenominatorGap { get; set; } = 0.03; // between the bar and the denominator
         public double FractionSidePadding { get; set; } = 0.05; // how far the bar reaches past its content
+        public double MixedFractionGap { get; set; } = 0.1; // between the whole part of a mixed number and its bar
 
 
         // === scripts ===
