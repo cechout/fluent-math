@@ -5,7 +5,7 @@
 
     <!-- only place the version gets bumped, AssemblyVersion/FileVersion/InformationalVersion derive from this automatically -->
     <!-- release.yml reads it from here and hands it to Inno Setup, so the installer can never drift out of sync -->
-    <Version>2.1.0</Version>
+    <Version>2.2.0</Version>
 
     <Authors>Daniel Čech</Authors>
     <Product>Fluent Math</Product>
