@@ -408,9 +408,16 @@ namespace Calculator_WinUI.Models.Layout
 
             (double ascent, double descent) = DelimiterReach(content.Ascent, content.Descent, fontSize);
 
-            parts.Add(new DelimiterBox(open, width, ascent, descent, thickness));
+            DelimiterBox opening = new DelimiterBox(open, width, ascent, descent, thickness);
+            DelimiterBox closing = new DelimiterBox(close, width, ascent, descent, thickness);
+
+            double air = fontSize * _style.DelimiterSidePadding;
+            opening.TrailingGap = air;
+            closing.LeadingGap = air;
+
+            parts.Add(opening);
             parts.Add(content);
-            parts.Add(new DelimiterBox(close, width, ascent, descent, thickness));
+            parts.Add(closing);
         }
 
         // how far a delimiter reaches around a content of this size, for a function and for a typed
@@ -437,8 +444,15 @@ namespace Calculator_WinUI.Models.Layout
 
             (double ascent, double descent) = DelimiterReach(0, 0, fontSize);
 
-            return new DelimiterBox(kind, fontSize * _style.DelimiterWidth, ascent, descent,
-                fontSize * _style.DelimiterThickness);
+            DelimiterBox bracket = new DelimiterBox(kind, fontSize * _style.DelimiterWidth,
+                ascent, descent, fontSize * _style.DelimiterThickness);
+
+            // the air goes on the side the content is on, which is the only side it has one
+            double air = fontSize * _style.DelimiterSidePadding;
+            if (kind == DelimiterKind.ParenthesisOpen) bracket.TrailingGap = air;
+            else bracket.LeadingGap = air;
+
+            return bracket;
         }
 
         // every typed bracket takes its height from what stands between it and its partner

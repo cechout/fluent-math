@@ -170,13 +170,7 @@
                     HorizontalAlignment="Right"
                     Orientation="Horizontal"
                     Spacing="{StaticResource KeySpacing}">
-                    <Button
-                        Height="{StaticResource BarKeyHeight}"
-                        Command="{x:Bind ViewModel.InputCommand}"
-                        CommandParameter="cmd_nav_left"
-                        Style="{StaticResource SubtleBarButtonStyle}">
-                        <FontIcon FontSize="14" Glyph="&#xE76B;" />
-                    </Button>
+
                     <Button
                         Height="{StaticResource BarKeyHeight}"
                         Command="{x:Bind ViewModel.InputCommand}"
@@ -190,6 +184,13 @@
                         CommandParameter="cmd_nav_up"
                         Style="{StaticResource SubtleBarButtonStyle}">
                         <FontIcon FontSize="14" Glyph="&#xE70E;" />
+                    </Button>
+                    <Button
+                        Height="{StaticResource BarKeyHeight}"
+                        Command="{x:Bind ViewModel.InputCommand}"
+                        CommandParameter="cmd_nav_left"
+                        Style="{StaticResource SubtleBarButtonStyle}">
+                        <FontIcon FontSize="14" Glyph="&#xE76B;" />
                     </Button>
                     <Button
                         Height="{StaticResource BarKeyHeight}"

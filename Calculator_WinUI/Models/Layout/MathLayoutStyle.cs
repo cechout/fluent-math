@@ -167,6 +167,15 @@ namespace Calculator_WinUI.Models.Layout
         public double DelimiterPadding { get; set; } = 0.05;
         public double DelimiterThickness { get; set; } = 0.06; // em of the stroke it is drawn with
 
+        // em, the air a delimiter keeps between itself and what it encloses
+        //
+        // it rides on the gaps a row already honours, the same ones an operator asks for, so it costs
+        // the layout nothing and reaches a typed bracket and the bracket of a function alike
+        //
+        // DelimiterWidth is the other horizontal number and a different one: that is how wide the
+        // bracket itself is drawn, which is how far its curve bulges rather than how far it stands off
+        public double DelimiterSidePadding { get; set; } = 0.0;
+
         // how much of the reach of what it encloses a delimiter takes
         //
         // a single digit hands over the whole line ascent of the face, the room it keeps for accents

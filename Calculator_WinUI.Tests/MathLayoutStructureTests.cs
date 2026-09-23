@@ -546,6 +546,22 @@ namespace Calculator_WinUI.Tests
         }
 
         [Fact]
+        public void ADelimiterKeepsItsSidePaddingBetweenItselfAndWhatItEncloses()
+        {
+            MathLayoutStyle style = Style();
+            style.DelimiterSidePadding = 0.2;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Open(), Digit("1"), Close() });
+
+            double air = FontSize * 0.2;
+            double bracket = FontSize * 0.4; // DelimiterWidth
+
+            Assert.Equal(air, row.Children[0].TrailingGap);
+            Assert.Equal(air, row.Children[2].LeadingGap);
+            Assert.Equal(bracket + air + FontSize + air + bracket, row.Width);
+        }
+
+        [Fact]
         public void ADelimiterTakesOnlyTheShareOfTheReachItsScaleSays()
         {
             MathLayoutStyle style = Style();
