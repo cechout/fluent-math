@@ -30,6 +30,7 @@ namespace FluentMath.Models.Layout
 
         // signs the display draws that no token carries as its value
         private const string MinusOne = "−1"; // the reciprocal and the inverse hyperbolics
+        private const string ArgumentSeparator = ","; // between the two arguments of GCD, RanInt# and the like
 
 
         // === construction ===
@@ -220,6 +221,17 @@ namespace FluentMath.Models.Layout
 
         private TextRunBox BuildOperator(MathToken token, double fontSize)
         {
+            if (IsLetterOperator(token.Value))
+            {
+                TextRunBox letter = TextRun(token.Value, fontSize, token);
+
+                double letterGap = GapAt(fontSize, _style.FontSizePx, _style.OperatorGapScaling) * _style.OperatorGap;
+                letter.LeadingGap = letterGap;
+                letter.TrailingGap = letterGap;
+
+                return letter;
+            }
+
             double operatorSize = fontSize * _style.OperatorScale;
             TextRunBox box = TextRun(OperatorSymbol(token.Value), operatorSize, token);
 
@@ -332,20 +344,28 @@ namespace FluentMath.Models.Layout
         private RowBox BuildFunction(FunctionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.FunctionScale;
-            MathBox parameter = BuildSlot(token.ParameterTokens, size, scriptLevel, SlotPath(path, tokenIndex, 0));
+            MathBox parameter = BuildArguments(token, size, scriptLevel, path, tokenIndex);
             List<MathBox> parts = new List<MathBox>();
 
-            if (token.DrawsAsBars)
+            switch (token.Shape)
             {
-                AddDelimited(parts, parameter, DelimiterKind.Bar, DelimiterKind.Bar, size);
-                return new RowBox(parts);
+                case FunctionShape.Bars:
+                    AddDelimited(parts, parameter, DelimiterKind.Bar, DelimiterKind.Bar, size);
+                    return new RowBox(parts);
+
+                case FunctionShape.Floor:
+                    AddDelimited(parts, parameter, DelimiterKind.FloorOpen, DelimiterKind.FloorClose, size);
+                    return new RowBox(parts);
+
+                case FunctionShape.Ceiling:
+                    AddDelimited(parts, parameter, DelimiterKind.CeilingOpen, DelimiterKind.CeilingClose, size);
+                    return new RowBox(parts);
             }
 
-            (string name, bool inverse) = FunctionParts(token.Value);
-            TextRunBox nameRun = TextRun(name, size, token);
+            TextRunBox nameRun = TextRun(token.DisplayName, size, token);
             parts.Add(nameRun);
 
-            if (inverse)
+            if (token.IsInverse)
             {
                 TextRunBox raised = TextRun(MinusOne, ScriptSize(size, scriptLevel), token);
                 raised.Raise = nameRun.Ascent * _style.SuperscriptShift;
@@ -356,6 +376,34 @@ namespace FluentMath.Models.Layout
                 DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, size);
 
             return new RowBox(parts);
+        }
+
+        // what stands between the brackets: the one slot, or the slots in a row with the separator drawn
+        // between them, since it is never typed and no token carries it
+        //
+        // the separator is what keeps the end of one argument and the start of the next from being drawn
+        // on the same pixel, so a press of Right from one to the other moves the caret somewhere visible
+        private MathBox BuildArguments(FunctionToken token, double size, int scriptLevel, string path, int tokenIndex)
+        {
+            if (token.Arguments.Count == 1)
+            {
+                return BuildSlot(token.ParameterTokens, size, scriptLevel, SlotPath(path, tokenIndex, 0));
+            }
+
+            List<MathBox> arguments = new List<MathBox>();
+            for (int index = 0; index < token.Arguments.Count; index++)
+            {
+                if (index > 0)
+                {
+                    TextRunBox separator = TextRun(ArgumentSeparator, size, token);
+                    separator.TrailingGap = size * _style.ArgumentSeparatorGap;
+                    arguments.Add(separator);
+                }
+
+                arguments.Add(BuildSlot(token.Arguments[index], size, scriptLevel, SlotPath(path, tokenIndex, index)));
+            }
+
+            return new RowBox(arguments);
         }
 
         // the factorial and the percent stand behind their operand as plain signs; the reciprocal is a
@@ -577,10 +625,11 @@ namespace FluentMath.Models.Layout
 
         private static string AtomText(MathToken token)
         {
-            return token.Type switch
+            return token switch
             {
-                TokenType.Constant => token.Value == "pi" ? "π" : token.Value,
-                TokenType.Answer => "Ans",
+                PostfixToken postfix => postfix.Symbol, // a prefix is written as its symbol, k rather than kilo
+                _ when token.Type == TokenType.Constant => token.Value == "pi" ? "π" : token.Value,
+                _ when token.Type == TokenType.Answer => "Ans",
                 _ => token.Value
             };
         }
@@ -597,18 +646,11 @@ namespace FluentMath.Models.Layout
             };
         }
 
-        // the inverse hyperbolics print as the plain function carrying a raised minus one, the way a Casio
-        // does; FunctionToken spells the same thing out for the latex path as sinh^{-1}, so the two lists
-        // have to move together
-        private static (string Name, bool Inverse) FunctionParts(string functionName)
+        // nPr and nCr are written with a letter, which stands on the baseline like the digits around it
+        // rather than on the axis the arithmetic signs are lifted to
+        private static bool IsLetterOperator(string value)
         {
-            return functionName switch
-            {
-                "arsinh" => ("sinh", true),
-                "arcosh" => ("cosh", true),
-                "artanh" => ("tanh", true),
-                _ => (functionName, false)
-            };
+            return value == "P" || value == "C";
         }
     }
 }

@@ -24,7 +24,12 @@ namespace FluentMath.Tests
             "left", "right", "up", "down", "back",
             "fn:sin", "fn:cos", "fn:tan", "fn:arcsin", "fn:arccos", "fn:arctan",
             "fn:sinh", "fn:cosh", "fn:tanh", "fn:arsinh", "fn:arcosh", "fn:artanh",
-            "fn:ln", "fn:abs"
+            "fn:ln", "fn:abs",
+            "fn:sec", "fn:csc", "fn:cot", "fn:arcsec", "fn:arccsc", "fn:arccot",
+            "fn:sech", "fn:csch", "fn:coth", "fn:arsech", "fn:arcsch", "fn:arcoth",
+            "fn:floor", "fn:ceil", "fn:int", "fn:intg",
+            "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix",
+            "npr", "ncr", "rand", "pre:kilo", "pre:micro"
         };
 
         public static MathInputManager Press(params string[] keys)
@@ -70,6 +75,18 @@ namespace FluentMath.Tests
 
                 case "ans":
                     manager.AddAns();
+                    return;
+
+                case "rand":
+                    manager.AddRandom();
+                    return;
+
+                case "npr":
+                    manager.AddOperator("P");
+                    return;
+
+                case "ncr":
+                    manager.AddOperator("C");
                     return;
 
                 case "frac":
@@ -128,6 +145,13 @@ namespace FluentMath.Tests
             if (key.StartsWith("fn:", StringComparison.Ordinal))
             {
                 manager.StartFunction(key.Substring(3));
+                return;
+            }
+
+            // a decimal prefix by the name of the prefix, pre:kilo
+            if (key.StartsWith("pre:", StringComparison.Ordinal))
+            {
+                manager.AddPostfix(key.Substring(4));
                 return;
             }
 

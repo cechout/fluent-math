@@ -215,6 +215,41 @@ namespace FluentMath.Tests
             Assert.Equal(2, Value(manager), 10);
         }
 
+        // the two arguments of a function sit side by side, so Right walks from the first into the second
+        // and out of the second behind the whole function
+        [Fact]
+        public void WalksFromOneArgumentIntoTheNext()
+        {
+            MathInputManager manager = Keys.Press("fn:gcd", "12", "right", "18", "right", "+", "1");
+            FunctionToken gcd = (FunctionToken)manager.RootTokens[0];
+
+            Assert.Equal(2, gcd.Arguments[0].Count);
+            Assert.Equal(2, gcd.Arguments[1].Count);
+            Assert.Equal(7, Value(manager));
+        }
+
+        [Fact]
+        public void WalksBackFromTheSecondArgumentIntoTheEndOfTheFirst()
+        {
+            MathInputManager manager = Keys.Press("fn:gcd", "12", "right", "left", "3");
+            FunctionToken gcd = (FunctionToken)manager.RootTokens[0];
+
+            Assert.Same(gcd.Arguments[0], manager.ActiveTokens);
+            Assert.Equal(3, gcd.Arguments[0].Count);
+            Assert.Empty(gcd.Arguments[1]);
+        }
+
+        // both arguments stay standing where the function stood, with the caret where the second one began
+        [Fact]
+        public void DissolvesATwoArgumentFunctionFromItsSecondArgument()
+        {
+            MathInputManager manager = Keys.Press("fn:gcd", "12", "right", "18", "left", "left", "back");
+
+            Assert.Equal(1218, Value(manager));
+            Assert.Same(manager.RootTokens, manager.ActiveTokens);
+            Assert.Equal(2, manager.ActiveCursorIndex);
+        }
+
 
         // === click addresses ===
 
@@ -357,6 +392,11 @@ namespace FluentMath.Tests
             Assert.True(scientific.SetCursorPosition("2.1@0"));
             scientific.AddNumber("1");
             Assert.Equal(3e15, Value(scientific));
+
+            MathInputManager gcd = Keys.Press("fn:gcd", "4", "right", "6");
+            Assert.True(gcd.SetCursorPosition("0.1@0"));
+            gcd.AddNumber("1");
+            Assert.Equal(4, Value(gcd));
         }
 
         [Fact]

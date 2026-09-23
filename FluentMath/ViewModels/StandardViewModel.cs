@@ -413,8 +413,110 @@ namespace FluentMath.ViewModels
                         _inputManager.StartFunction("artanh");
                         break;
 
+                    case "cmd_sec":
+                        _inputManager.StartFunction("sec");
+                        break;
+
+                    case "cmd_csc":
+                        _inputManager.StartFunction("csc");
+                        break;
+
+                    case "cmd_cot":
+                        _inputManager.StartFunction("cot");
+                        break;
+
+                    case "cmd_asec":
+                        _inputManager.StartFunction("arcsec");
+                        break;
+
+                    case "cmd_acsc":
+                        _inputManager.StartFunction("arccsc");
+                        break;
+
+                    case "cmd_acot":
+                        _inputManager.StartFunction("arccot");
+                        break;
+
+                    case "cmd_sech":
+                        _inputManager.StartFunction("sech");
+                        break;
+
+                    case "cmd_csch":
+                        _inputManager.StartFunction("csch");
+                        break;
+
+                    case "cmd_coth":
+                        _inputManager.StartFunction("coth");
+                        break;
+
+                    case "cmd_asech":
+                        _inputManager.StartFunction("arsech");
+                        break;
+
+                    case "cmd_acsch":
+                        _inputManager.StartFunction("arcsch");
+                        break;
+
+                    case "cmd_acoth":
+                        _inputManager.StartFunction("arcoth");
+                        break;
+
                     case "cmd_abs":
                         _inputManager.StartFunction("abs");
+                        break;
+
+                    case "cmd_floor":
+                        _inputManager.StartFunction("floor");
+                        break;
+
+                    case "cmd_ceil":
+                        _inputManager.StartFunction("ceil");
+                        break;
+
+                    case "cmd_int":
+                        _inputManager.StartFunction("int");
+                        break;
+
+                    case "cmd_intg":
+                        _inputManager.StartFunction("intg");
+                        break;
+
+                    // the functions of two arguments open in the first; Right walks on into the second
+                    case "cmd_gcd":
+                        _inputManager.StartFunction("gcd");
+                        break;
+
+                    case "cmd_lcm":
+                        _inputManager.StartFunction("lcm");
+                        break;
+
+                    case "cmd_ranint":
+                        _inputManager.StartFunction("ranint");
+                        break;
+
+                    case "cmd_rndfix":
+                        _inputManager.StartFunction("rndfix");
+                        break;
+
+                    case "cmd_rand":
+                        _inputManager.AddRandom();
+                        break;
+
+                    // nPr and nCr stand between n and r as an operator, written with the letter a Casio uses
+                    case "cmd_npr":
+                        _inputManager.AddOperator("P");
+                        break;
+
+                    case "cmd_ncr":
+                        _inputManager.AddOperator("C");
+                        break;
+
+                    // the eleven decimal prefixes, each a postfix under the name its key carries
+                    default:
+                        if (sign.StartsWith(PrefixCommand))
+                        {
+                            _inputManager.AddPostfix(sign.Substring(PrefixCommand.Length));
+                        }
                         break;
 
                     case "cmd_pi":
@@ -578,30 +680,33 @@ namespace FluentMath.ViewModels
                 || sign == "cmd_pow_2"
                 || sign == "cmd_pow_n"
                 || sign == "cmd_frac"
-                || sign == "cmd_exp";
+                || sign == "cmd_exp"
+                || sign.StartsWith(PrefixCommand);
         }
 
+        // what every decimal prefix key sends, followed by the name of its prefix
+        private const string PrefixCommand = "cmd_prefix_";
+
+        // nPr and nCr stand between two operands the way the arithmetic signs do, so a shown result is
+        // carried on as their n, the way a Casio writes AnsC
         private static bool IsOperator(string sign)
         {
-            return sign == "+" || sign == "-" || sign == "*" || sign == "/";
+            return sign == "+" || sign == "-" || sign == "*" || sign == "/"
+                || sign == "cmd_npr" || sign == "cmd_ncr";
         }
 
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
-        // sec, csc and cot across the four trig panel layers; the five function panel keys; the whole
-        // number theory and probability panels; the mixed fraction on the keypad; the two header keys,
-        // which are waiting on a history list and a variable store rather than on a token
+        // dms and deg on the function panel; divide with remainder and FACT, which show a result of their
+        // own; Rnd, which rounds to a display format there is no setting for yet; the coordinates panel;
+        // the mixed fraction on the keypad; the two header keys, which are waiting on a history list and a
+        // variable store rather than on a token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
-            "cmd_sec", "cmd_csc", "cmd_cot",
-            "cmd_asec", "cmd_acsc", "cmd_acot",
-            "cmd_sech", "cmd_csch", "cmd_coth",
-            "cmd_asech", "cmd_acsch", "cmd_acoth",
-            "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
-            "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
-            "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
-            "cmd_pol", "cmd_rec", "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
-            "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa",
+            "cmd_dms", "cmd_degrees",
+            "cmd_div_r", "cmd_prime",
+            "cmd_rnd",
+            "cmd_pol", "cmd_rec",
             "cmd_frac_mixed",
             "cmd_history", "cmd_memory"
         };

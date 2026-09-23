@@ -412,6 +412,225 @@ namespace FluentMath.Tests
         }
 
 
+        // === reciprocal trigonometry ===
+
+        [Fact]
+        public void EvaluatesTheReciprocalsOfTheTrigFunctions()
+        {
+            Assert.Equal(2, Value("fn:sec", "60"));
+            Assert.Equal(2, Value("fn:csc", "30"));
+            Assert.Equal(1, Value("fn:cot", "45"));
+            Assert.Equal(0, Value("fn:cot", "90"));
+            Assert.Equal(2, Value(AngleMode.Gradians, "fn:csc", "100", "/", "3"), 12);
+        }
+
+        [Fact]
+        public void FindsThePolesOfTheReciprocals()
+        {
+            Assert.Equal(EvaluationError.Domain, Error("fn:sec", "90"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:csc", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:csc", "180"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:cot", "0"));
+            Assert.Equal(EvaluationError.Domain, Error(AngleMode.Radians, "fn:sec", "pi", "/", "2"));
+            Assert.Equal(EvaluationError.Domain, Error(AngleMode.Radians, "fn:cot", "pi"));
+        }
+
+        [Fact]
+        public void InvertsTheReciprocalsInTheSelectedUnit()
+        {
+            Assert.Equal(60, Value("fn:arcsec", "2"), 10);
+            Assert.Equal(30, Value("fn:arccsc", "2"), 10);
+            Assert.Equal(45, Value("fn:arccot", "1"), 10);
+            Assert.Equal(Math.PI / 3, Value(AngleMode.Radians, "fn:arcsec", "2"), 12);
+            Assert.Equal(EvaluationError.Domain, Error("fn:arcsec", "0.5"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:arccsc", "-", "0.5"));
+        }
+
+        // between 0° and 180°, so it runs on through zero rather than jumping from 90° to −90°
+        [Fact]
+        public void AnswersTheInverseCotangentFromAHalfTurnAboveZero()
+        {
+            Assert.Equal(90, Value("fn:arccot", "0"), 10);
+            Assert.Equal(135, Value("fn:arccot", "-", "1"), 10);
+            Assert.Equal(Math.PI / 2, Value(AngleMode.Radians, "fn:arccot", "0"), 12);
+        }
+
+        [Fact]
+        public void EvaluatesTheHyperbolicReciprocalsAndTheirInverses()
+        {
+            Assert.Equal(1, Value("fn:sech", "0"));
+            Assert.Equal(1 / Math.Sinh(1), Value("fn:csch", "1"), 14);
+            Assert.Equal(1 / Math.Tanh(1), Value("fn:coth", "1"), 14);
+            Assert.Equal(0, Value("fn:arsech", "1"));
+            Assert.Equal(Math.Asinh(1), Value("fn:arcsch", "1"), 14);
+            Assert.Equal(Math.Atanh(0.5), Value("fn:arcoth", "2"), 14);
+            Assert.Equal(Value(AngleMode.Degrees, "fn:coth", "2"), Value(AngleMode.Radians, "fn:coth", "2"));
+        }
+
+        [Fact]
+        public void KeepsTheHyperbolicReciprocalsInsideTheirDomains()
+        {
+            Assert.Equal(EvaluationError.Domain, Error("fn:csch", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:coth", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:arsech", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:arsech", "2"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:arcsch", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:arcoth", "1"));
+        }
+
+
+        // === whole numbers ===
+
+        [Fact]
+        public void CutsTowardsZeroForIntAndDownwardsForIntg()
+        {
+            Assert.Equal(-2, Value("fn:int", "-", "2.5"));
+            Assert.Equal(-3, Value("fn:intg", "-", "2.5"));
+            Assert.Equal(-3, Value("fn:floor", "-", "2.5"));
+            Assert.Equal(-2, Value("fn:ceil", "-", "2.5"));
+            Assert.Equal(3, Value("fn:ceil", "2.1"));
+        }
+
+        // 10(1−0.9) is 0.9999999999999998 as a double and a plain 1 at the fifteen digits a Casio holds
+        [Fact]
+        public void JudgesAWholeNumberAtTheDigitsACasioComputesWith()
+        {
+            Assert.Equal(1, Value("fn:int", "10", "(", "1", "-", "0.9", ")"));
+            Assert.Equal(3, Value("fn:gcd", "0.1", "*", "30", "right", "6"));
+        }
+
+        [Fact]
+        public void FindsTheGreatestCommonDivisorAndTheLeastCommonMultiple()
+        {
+            Assert.Equal(6, Value("fn:gcd", "-", "12", "right", "18"));
+            Assert.Equal(12, Value("fn:lcm", "4", "right", "6"));
+            Assert.Equal(0, Value("fn:lcm", "0", "right", "5"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:gcd", "12.5", "right", "5"));
+        }
+
+        [Fact]
+        public void CountsPermutationsAndCombinations()
+        {
+            Assert.Equal(20, Value("5", "npr", "2"));
+            Assert.Equal(10, Value("5", "ncr", "2"));
+            Assert.Equal(1, Value("0", "ncr", "0"));
+            Assert.Equal(118264581564861424, Value("60", "ncr", "30"), 0);
+        }
+
+        // what a Casio answers for each of them: C binds tighter than divided by and looser than a sign
+        [Fact]
+        public void RanksACombinationTheWayACasioDoes()
+        {
+            Assert.Equal(12, Value("12", "/", "2", "ncr", "2"));
+            Assert.Equal(20, Value("2", "*", "5", "ncr", "2"));
+            Assert.Equal(10, Value("5", "ncr", "2", "!"));
+            Assert.Equal(EvaluationError.Domain, Error("-", "5", "ncr", "2"));
+        }
+
+        [Fact]
+        public void CountsNothingForAnImpossibleSelection()
+        {
+            Assert.Equal(EvaluationError.Domain, Error("5", "ncr", "7"));
+            Assert.Equal(EvaluationError.Domain, Error("2.5", "ncr", "2"));
+            Assert.Equal(EvaluationError.Domain, Error("5", "npr", "-", "1"));
+            Assert.Equal(EvaluationError.Overflow, Error("200", "npr", "200"));
+        }
+
+        [Fact]
+        public void BracketsACombinationThatADivisionTakesWhole()
+        {
+            Assert.Equal("12/(2C2)", Read("12", "/", "2", "ncr", "2"));
+            Assert.Equal("12/(2(3)C2)", Read("12", "/", "2", "(", "3", ")", "ncr", "2"));
+        }
+
+
+        // === random numbers ===
+
+        private static MathEvaluator Seeded()
+        {
+            return new MathEvaluator { RandomSource = new Random(7) };
+        }
+
+        // three decimals from 0.000 to 0.999, the way a Casio draws Ran#
+        [Fact]
+        public void DrawsRanAsThreeDecimalsBelowOne()
+        {
+            MathEvaluator evaluator = Seeded();
+
+            for (int draw = 0; draw < 200; draw++)
+            {
+                double value = evaluator.Evaluate(Keys.Press("rand").RootTokens).Value;
+
+                Assert.InRange(value, 0, 0.999);
+                Assert.Equal(Math.Round(value, 3), value);
+            }
+        }
+
+        [Fact]
+        public void DrawsAWholeNumberBetweenBothBoundsIncluded()
+        {
+            MathEvaluator evaluator = Seeded();
+            var seen = new HashSet<double>();
+
+            for (int draw = 0; draw < 200; draw++)
+            {
+                EvaluationResult result = evaluator.Evaluate(Keys.Press("fn:ranint", "1", "right", "6").RootTokens);
+                seen.Add(result.Value);
+            }
+
+            Assert.Equal(new double[] { 1, 2, 3, 4, 5, 6 }, seen.OrderBy(value => value));
+        }
+
+        // RanInt#(6,1) is the Argument ERROR a Casio gives
+        [Fact]
+        public void RefusesBoundsThatAreTheWrongWayRoundOrNotWhole()
+        {
+            Assert.Equal(EvaluationError.Argument, Error("fn:ranint", "6", "right", "1"));
+            Assert.Equal(EvaluationError.Argument, Error("fn:ranint", "1", "right", "1"));
+            Assert.Equal(EvaluationError.Argument, Error("fn:ranint", "1.5", "right", "3"));
+        }
+
+
+        // === rounding to decimals ===
+
+        // 2.675 is a hair below itself as a double, and still rounds up the way it reads
+        [Fact]
+        public void RoundsToAWholeNumberOfDecimalsTheWayTheNumberReads()
+        {
+            Assert.Equal(2.68, Value("fn:rndfix", "2.675", "right", "2"));
+            Assert.Equal(-3, Value("fn:rndfix", "-", "2.5", "right", "0"));
+            Assert.Equal(0.333, Value("fn:rndfix", "1", "/", "3", "right", "3"));
+        }
+
+        [Fact]
+        public void TakesNoMoreDecimalsThanFixDoes()
+        {
+            Assert.Equal(EvaluationError.Argument, Error("fn:rndfix", "1", "right", "10"));
+            Assert.Equal(EvaluationError.Argument, Error("fn:rndfix", "1", "right", "1.5"));
+            Assert.Equal(EvaluationError.Argument, Error("fn:rndfix", "1", "right", "-", "1"));
+        }
+
+
+        // === decimal prefixes ===
+
+        [Fact]
+        public void ScalesByTheDecimalPrefix()
+        {
+            Assert.Equal(5000, Value("5", "pre:kilo"));
+            Assert.Equal(0.005, Value("5", "pre:milli"));
+            Assert.Equal(3e-6, Value("3", "pre:micro"));
+            Assert.Equal(1e18, Value("1", "pre:exa"));
+            Assert.Equal(500000, Value("2", "pre:kilo", "/", "4", "pre:milli"));
+        }
+
+        // a prefix is part of its operand, so the square key lifts 2k whole into the base
+        [Fact]
+        public void BindsAPrefixAsTightlyAsAFactorial()
+        {
+            Assert.Equal(4000000, Value("2", "pre:kilo", "pow", "2"));
+        }
+
+
         // === Ans ===
 
         [Fact]

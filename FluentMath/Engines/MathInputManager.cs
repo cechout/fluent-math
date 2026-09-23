@@ -283,11 +283,15 @@ namespace FluentMath.Engines
                         new TokenSlot(logarithm.ParameterTokens, ScopeRole.LogParameter)
                     };
 
+                // one slot per argument, side by side; Left and Right walk them and Up and Down have
+                // nothing to cross
                 case FunctionToken function:
-                    return new List<TokenSlot>
+                    List<TokenSlot> arguments = new List<TokenSlot>();
+                    foreach (List<MathToken> argument in function.Arguments)
                     {
-                        new TokenSlot(function.ParameterTokens, ScopeRole.FunctionParameter)
-                    };
+                        arguments.Add(new TokenSlot(argument, ScopeRole.FunctionParameter));
+                    }
+                    return arguments;
             }
 
             return new List<TokenSlot>();
@@ -400,6 +404,14 @@ namespace FluentMath.Engines
             var ctx = CurrentContext;
 
             ctx.Tokens.Insert(ctx.CursorIndex, new AnsToken());
+            ctx.CursorIndex++;
+        }
+
+        public void AddRandom()
+        {
+            var ctx = CurrentContext;
+
+            ctx.Tokens.Insert(ctx.CursorIndex, new RandomToken());
             ctx.CursorIndex++;
         }
 
@@ -578,7 +590,8 @@ namespace FluentMath.Engines
             StartPower();
         }
 
-        // sin, cos, tan, ln; the name is passed straight through to LaTeX as a command
+        // sin, cos, tan, ln and every other named function; the cursor opens in the first argument, and
+        // FunctionToken decides from the name how many there are and how the function is drawn
         public void StartFunction(string name)
         {
             var ctx = CurrentContext;

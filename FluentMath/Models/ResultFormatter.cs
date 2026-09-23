@@ -98,6 +98,7 @@ namespace FluentMath.Models
         public static string ErrorToText(EvaluationError error)
         {
             if (error == EvaluationError.Syntax) return "Syntax ERROR";
+            if (error == EvaluationError.Argument) return "Argument ERROR";
 
             return "Math ERROR";
         }

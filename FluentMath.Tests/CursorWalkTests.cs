@@ -81,6 +81,12 @@ namespace FluentMath.Tests
         [InlineData("5", "!")]
         [InlineData("(", "1", "+", "2", ")")]
         [InlineData("1", "frac", "2", "pow", "3")]     // a power nested in a numerator
+        [InlineData("fn:gcd", "12", "right", "18")]    // two arguments, where the comma keeps the seam visible
+        [InlineData("fn:ranint", "right")]             // both of them empty
+        [InlineData("fn:floor", "9")]
+        [InlineData("fn:arcoth", "2")]
+        [InlineData("5", "ncr", "2")]
+        [InlineData("5", "pre:kilo", "rand")]
         public void EveryPressOfAnArrowKeyMovesTheCaretSomewhereTheEyeCanFollow(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);

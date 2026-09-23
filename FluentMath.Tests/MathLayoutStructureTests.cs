@@ -429,6 +429,98 @@ namespace FluentMath.Tests
             Assert.Equal(DelimiterKind.Bar, ((DelimiterBox)box.Children[2]).Kind);
         }
 
+        [Theory]
+        [InlineData("floor", DelimiterKind.FloorOpen, DelimiterKind.FloorClose)]
+        [InlineData("ceil", DelimiterKind.CeilingOpen, DelimiterKind.CeilingClose)]
+        public void FloorAndCeilingDrawTheirOwnBrackets(string name, DelimiterKind open, DelimiterKind close)
+        {
+            FunctionToken function = new FunctionToken(name);
+            function.ParameterTokens.Add(Digit("9"));
+
+            RowBox box = (RowBox)Row(function).Children.Single();
+
+            Assert.Equal(3, box.Children.Count);
+            Assert.Equal(open, ((DelimiterBox)box.Children[0]).Kind);
+            Assert.Equal(close, ((DelimiterBox)box.Children[2]).Kind);
+        }
+
+        // the comma is drawn rather than typed, and it is what keeps the end of the first argument and the
+        // start of the second apart on screen
+        [Fact]
+        public void ATwoArgumentFunctionDrawsACommaBetweenItsArguments()
+        {
+            FunctionToken function = new FunctionToken("gcd");
+            function.Arguments[0].Add(Digit("4"));
+            function.Arguments[1].Add(Digit("6"));
+
+            RowBox box = (RowBox)Row(function).Children.Single();
+            RowBox arguments = Assert.IsType<RowBox>(box.Children[2]);
+
+            Assert.Equal("GCD", ((TextRunBox)box.Children[0]).Text);
+            Assert.Equal(3, arguments.Children.Count);
+            Assert.Equal(",", ((TextRunBox)arguments.Children[1]).Text);
+            Assert.Equal("0.0@1", ((RowBox)arguments.Children[0]).EndAddress);
+            Assert.Equal("0.1@1", ((RowBox)arguments.Children[2]).EndAddress);
+        }
+
+        [Fact]
+        public void AnEmptySecondArgumentStillHoldsItsPlace()
+        {
+            FunctionToken function = new FunctionToken("ranint");
+
+            RowBox box = (RowBox)Row(function).Children.Single();
+            RowBox arguments = (RowBox)box.Children[2];
+
+            Assert.IsType<PlaceholderBox>(arguments.Children[0]);
+            Assert.IsType<PlaceholderBox>(arguments.Children[2]);
+        }
+
+        // the way a Casio prints them and the way their keys are labelled, sin⁻¹ rather than arcsin
+        [Theory]
+        [InlineData("arcsin", "sin")]
+        [InlineData("arccot", "cot")]
+        [InlineData("arcoth", "coth")]
+        public void EveryInverseDrawsThePlainFunctionCarryingARaisedMinusOne(string name, string drawn)
+        {
+            FunctionToken function = new FunctionToken(name);
+            function.ParameterTokens.Add(Digit("1"));
+
+            RowBox box = (RowBox)Row(function).Children.Single();
+
+            Assert.Equal(drawn, ((TextRunBox)box.Children[0]).Text);
+            Assert.Equal("−1", ((TextRunBox)box.Children[1]).Text);
+        }
+
+        // a letter stands on the baseline beside the digits, where a plus is lifted to the math axis
+        [Fact]
+        public void TheLetterOfACombinationStandsOnTheBaseline()
+        {
+            MathLayoutStyle style = Style();
+            style.MathAxisRaise = 0.3;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken>
+            {
+                Digit("5"), new MathToken(TokenType.Operator, "C"), Digit("2"),
+                new MathToken(TokenType.Operator, "+"), Digit("1")
+            });
+
+            TextRunBox letter = (TextRunBox)row.Children[1];
+
+            Assert.Equal("C", letter.Text);
+            Assert.Equal(0, letter.Raise);
+            Assert.True(letter.LeadingGap > 0);
+            Assert.True(row.Children[3].Raise > 0);
+        }
+
+        [Fact]
+        public void APrefixIsWrittenAsItsSymbolAndRanAsItsName()
+        {
+            RowBox row = Row(Digit("5"), new PostfixToken("micro"), new RandomToken());
+
+            Assert.Equal("μ", ((TextRunBox)row.Children[1]).Text);
+            Assert.Equal("Ran#", ((TextRunBox)row.Children[2]).Text);
+        }
+
         [Fact]
         public void ADelimiterTakesItsHeightFromWhatItEncloses()
         {
