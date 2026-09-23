@@ -122,7 +122,11 @@ namespace Calculator_WinUI.Controls
         // line is one of those and holds a single position, so the hit test would happily answer with
         // the other side of it while the caret stays put; the page turns this off for that state and
         // neither the preview nor a tap offers a place that is not one
-        public bool CaretIsPlaceable { get; set; } = true;
+        //
+        // it is off by default and the page turns it on for the line being typed in, which leaves the
+        // history line out of it without having to say so; the trailing room below is read from it at
+        // every rebuild, so it is set before the line is shown and not after
+        public bool CaretIsPlaceable { get; set; }
 
 
         // === content ===
@@ -172,9 +176,16 @@ namespace Calculator_WinUI.Controls
                 caret = engine.Caret;
             }
 
-            // a line that carries a caret keeps room for the half of it that stands right of the last
-            // position, or the edge of the display cuts it in two
-            _caretPad = caret == null ? 0 : LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace;
+            // a line that can carry a caret keeps room for the half of one that stands right of the
+            // last position, or the edge of the display cuts it in two
+            //
+            // reserved for a line that could show a caret and not only for one that does: a result
+            // carries none and is still aimed at, and room that came and went with it would step the
+            // whole formula sideways the moment = replaced it. That is the very shift the trailing
+            // space exists to prevent, one state further out than it was written for
+            _caretPad = caret != null || CaretIsPlaceable
+                ? LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace
+                : 0;
 
             // placed against its own top edge, so every bound below is already in the space this panel
             // arranges in

@@ -386,14 +386,16 @@ namespace Calculator_WinUI.Views
         // an error message is a line of text rather than a formula, so it does not go through the layout
         private void ShowInputLine()
         {
+            // set before the redraw, because rebuilding the line is what works the preview and the
+            // room kept for a caret out again; an error message is a line of text with nothing in it
+            // to aim at
+            MathDisplay2.CaretIsPlaceable = ViewModel.InputErrorText == null && ViewModel.CanPlaceCursor;
+
             if (ViewModel.InputErrorText != null)
             {
                 MathDisplay2.ShowText(ViewModel.InputErrorText);
                 return;
             }
-
-            // set before the redraw, because rebuilding the line is what works the preview out again
-            MathDisplay2.CaretIsPlaceable = ViewModel.CanPlaceCursor;
 
             MathDisplay2.Show(ViewModel.InputTokens,
                 new CaretTarget(ViewModel.CaretTokens, ViewModel.CaretIndex));
