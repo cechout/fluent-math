@@ -38,6 +38,10 @@ namespace FluentMath.Engines
         // the display happened to show
         public double LastAnswer { get; set; }
 
+        // --- trigonometric results ---
+        private const double TrigNoisePerRadian = 1e-14; // the most a zero of sin or cos comes out as, per radian of angle
+        private const int TrigDigits = 15;               // significant digits a trigonometric result is kept to
+
 
         // === constructor ===
 
@@ -397,14 +401,9 @@ namespace FluentMath.Engines
             switch (function.Value)
             {
                 case "sin":
-                    return CleanTrigResult(Math.Sin(ToRadians(parameter)));
-
                 case "cos":
-                    return CleanTrigResult(Math.Cos(ToRadians(parameter)));
-
                 case "tan":
-                    if (IsTangentPole(parameter)) return Fail(EvaluationError.Domain);
-                    return CleanTrigResult(Math.Tan(ToRadians(parameter)));
+                    return Trigonometric(function.Value, parameter);
 
                 case "arcsin":
                     if (parameter < -1 || parameter > 1) return Fail(EvaluationError.Domain);
@@ -479,24 +478,35 @@ namespace FluentMath.Engines
             return angle * HalfTurn() / Math.PI;
         }
 
-        // sin(180) comes out as 1.2e-16 rather than 0, because the degree to radian conversion can never
-        // be exact; rounding the result is what makes the display agree with the textbook
-        private static double CleanTrigResult(double value)
+        // tan is a pole wherever the cosine is an exact zero, which CleanTrigResult makes it at every odd
+        // quarter turn; that holds in radians too, where no double lands on pi/2 itself, and it is what
+        // makes tan(pi/2) the Math ERROR a Casio gives
+        private double Trigonometric(string name, double angle)
         {
-            return Math.Round(value, 12);
+            double radians = ToRadians(angle);
+            double sine = CleanTrigResult(Math.Sin(radians), radians);
+            double cosine = CleanTrigResult(Math.Cos(radians), radians);
+
+            if (name == "sin") return sine;
+            if (name == "cos") return cosine;
+
+            if (cosine == 0) return Fail(EvaluationError.Domain);
+            return CleanTrigResult(sine / cosine, radians);
         }
 
-        // tan has a pole every half turn offset by a quarter, and floating point never lands exactly on
-        // it, so the check is on the angle rather than on an infinite result
-        // in radians no double hits pi/2 exactly, so there is nothing to catch there
-        private bool IsTangentPole(double angle)
+        // sin(180) comes out as 1.2e-16 rather than 0, because the degree to radian conversion can never
+        // be exact; rounding the result is what makes the display agree with the textbook
+        //
+        // only that noise is snapped to 0, and it grows with the angle; a result above it is real however
+        // small it is, where rounding to twelve decimals turned sin of a ten-millionth of a degree into
+        // 1.745e-9
+        // the rest is cut to fifteen significant digits, about what a Casio computes with, which is what
+        // lets sin 30 compare equal to 0.5 inside a formula
+        private static double CleanTrigResult(double value, double radians)
         {
-            if (AngleMode == AngleMode.Radians) return false;
+            if (Math.Abs(value) <= Math.Abs(radians) * TrigNoisePerRadian) return 0;
 
-            double halfTurn = HalfTurn();
-            double normalized = Math.Abs(angle % halfTurn);
-
-            return Math.Abs(normalized - halfTurn / 2) < 1e-9;
+            return ResultFormatter.RoundToSignificantDigits(value, TrigDigits);
         }
 
 
