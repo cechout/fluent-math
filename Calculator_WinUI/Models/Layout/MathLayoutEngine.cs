@@ -215,8 +215,10 @@ namespace Calculator_WinUI.Models.Layout
             double operatorSize = fontSize * _style.OperatorScale;
             TextRunBox box = TextRun(OperatorSymbol(token.Value), operatorSize, token);
 
-            // the raise is em of the operator, so it shrinks with it rather than with the text around it
-            box.Raise = operatorSize * _style.OperatorRaise;
+            // the raise is em of the operator, so it shrinks with it rather than with the text around
+            // it; the axis on top of it is em of the text, which is what makes it the very lift the
+            // fraction bar beside it gets
+            box.Raise = operatorSize * _style.OperatorRaise + fontSize * _style.MathAxisRaise;
 
             // the gap follows the size only as far as OperatorGapScaling says, because a gap that is
             // fully proportional shrinks twice inside a fraction and closes up
@@ -251,7 +253,7 @@ namespace Calculator_WinUI.Models.Layout
                 BuildSlot(token.NumeratorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 0)),
                 BuildSlot(token.DenominatorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 1)),
                 size * _style.FractionBarThickness,
-                size * _style.MathAxisHeight,
+                size * (_style.MathAxisHeight + _style.MathAxisRaise),
                 size * _style.FractionNumeratorGap,
                 size * _style.FractionDenominatorGap,
                 size * _style.FractionSidePadding);
@@ -292,6 +294,7 @@ namespace Calculator_WinUI.Models.Layout
                 BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1)),
                 size * _style.RadicalHookWidth,
                 size * _style.RadicalRuleThickness,
+                size * _style.RadicalHookThickness,
                 size * _style.RadicalVerticalGap,
                 _style.RadicalIndexRaise,
                 padSize * _style.RadicalLeadingPad,

@@ -49,7 +49,13 @@ namespace Calculator_WinUI.Models.Layout
         // a slot and the row around it often share an edge exactly, and the two coordinates are sums of
         // the same lengths added in a different order, so one of them can come out a rounding step short;
         // without the slack, a click on the bottom edge of a denominator would answer above the fraction
-        private const double SamePlace = 0.5;
+        //
+        // it is a floating point epsilon and not a fraction of a pixel, which is what it used to be: the
+        // gaps it is weighed against are em of a font size, so half a pixel is a real distance inside a
+        // script and swallowing it hands the click to the wrong line. At a fraction side padding of
+        // 0.05 em the two met exactly at a 10px font, and a click on the caret in front of a fraction
+        // answered with the position inside its numerator
+        private const double SamePlace = 1e-9;
 
         public static string NearestAddress(MathBox root, double x, double y)
         {

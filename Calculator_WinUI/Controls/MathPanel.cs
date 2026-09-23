@@ -486,18 +486,28 @@ namespace Calculator_WinUI.Controls
             double bottom = bounds.Height;
             double drop = bottom - ruleY;
 
-            PathFigure figure = new PathFigure
+            // two strokes and not one: the sign is a letter stroke and the bar over the radicand is a
+            // rule, and they carry their own weights
+            //
+            // they meet at the top of the hook, which both figures name as the same point; the round
+            // joins StrokedPath draws with are what closes the step when the two weights differ
+            Point shoulder = new Point(hookLeft + root.HookWidth, ruleY);
+
+            PathFigure hook = new PathFigure
             {
                 StartPoint = new Point(hookLeft, ruleY + drop * 0.55),
                 IsClosed = false
             };
 
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.28, ruleY + drop * 0.45) });
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.5, bottom) });
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth, ruleY) });
-            figure.Segments.Add(new LineSegment { Point = new Point(bounds.Width, ruleY) });
+            hook.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.28, ruleY + drop * 0.45) });
+            hook.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.5, bottom) });
+            hook.Segments.Add(new LineSegment { Point = shoulder });
 
-            Add(StrokedPath(figure, root.RuleThickness), bounds);
+            PathFigure rule = new PathFigure { StartPoint = shoulder, IsClosed = false };
+            rule.Segments.Add(new LineSegment { Point = new Point(bounds.Width, ruleY) });
+
+            Add(StrokedPath(hook, root.HookThickness), bounds);
+            Add(StrokedPath(rule, root.RuleThickness), bounds);
         }
 
         private void RealizeDelimiter(DelimiterBox delimiter)

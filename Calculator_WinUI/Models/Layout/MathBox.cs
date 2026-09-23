@@ -211,7 +211,8 @@ namespace Calculator_WinUI.Models.Layout
         public MathBox Radicand { get; }
 
         public double HookWidth { get; }
-        public double RuleThickness { get; }
+        public double RuleThickness { get; }   // the bar over the radicand
+        public double HookThickness { get; }   // the sign in front of it
 
         // how tall the sign itself is, which is less than Ascent whenever an index reaches higher
         public double SignAscent { get; }
@@ -222,13 +223,16 @@ namespace Calculator_WinUI.Models.Layout
         private readonly double _leadingPad;
 
         public RootBox(MathBox index, MathBox radicand, double hookWidth, double ruleThickness,
-            double verticalGap, double indexRaise, double leadingPad, double trailingPad)
+            double hookThickness, double verticalGap, double indexRaise, double leadingPad,
+            double trailingPad)
         {
             Index = index;
             Radicand = radicand;
             HookWidth = hookWidth;
             RuleThickness = ruleThickness;
+            HookThickness = hookThickness;
 
+            // the bar is what stands on top, so it is the bar that sets how high the sign reaches
             SignAscent = radicand.Ascent + verticalGap + ruleThickness;
 
             // the bar runs the full width of the box, so it covers both pads: the one that keeps the

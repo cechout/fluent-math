@@ -74,10 +74,10 @@ namespace Calculator_WinUI.Models.Layout
         // the raise exists because a plus and a minus are centred on the math axis, and the height of that
         // axis scales with the font size; shrinking an operator therefore also drops it, and this puts it
         // back up where it reads level with the digits
-        public double OperatorScale { get; set; } = 0.8;
-        public double OperatorGap { get; set; } = 0.15;
-        public double OperatorRaise { get; set; } = 0.16;
-        public int OperatorWeight { get; set; } = 600; // 400 normal, 600 semibold, 700 bold
+        public double OperatorScale { get; set; } = 0.9;
+        public double OperatorGap { get; set; } = 0.10;
+        public double OperatorRaise { get; set; } = 0.0;
+        public int OperatorWeight { get; set; } = 500; // 400 normal, 600 semibold, 700 bold
 
         // how far the gap follows the size of the operator it belongs to
         //
@@ -92,10 +92,21 @@ namespace Calculator_WinUI.Models.Layout
         // the math axis is the line a fraction bar rests on, em above the baseline
         public double MathAxisHeight { get; set; } = 0.25;
 
+        // em, how much further the whole axis is lifted off the baseline
+        //
+        // a fraction bar and an operator glyph are the two things that hang from the axis, and they are
+        // only ever looked at against each other: a minus beside a half reads as wrong the moment the
+        // two are a pixel apart. So one number moves the pair, rather than two numbers in two units
+        // that have to be converted into each other by hand every time
+        //
+        // MathAxisHeight and OperatorRaise are what line the two up in the first place, each for its
+        // own side; this is what moves them once they are lined up
+        public double MathAxisRaise { get; set; } = 0.0;
+
         public double FractionBarThickness { get; set; } = 0.04;
-        public double FractionNumeratorGap { get; set; } = 0.06; // between the bar and the numerator
-        public double FractionDenominatorGap { get; set; } = 0.06; // between the bar and the denominator
-        public double FractionSidePadding { get; set; } = 0.06; // how far the bar reaches past its content
+        public double FractionNumeratorGap { get; set; } = 0.04; // between the bar and the numerator
+        public double FractionDenominatorGap { get; set; } = 0.03; // between the bar and the denominator
+        public double FractionSidePadding { get; set; } = 0.05; // how far the bar reaches past its content
 
 
         // === scripts ===
@@ -110,8 +121,16 @@ namespace Calculator_WinUI.Models.Layout
         // === roots ===
 
         public double RadicalHookWidth { get; set; } = 0.55; // em, the part in front of the radicand
-        public double RadicalRuleThickness { get; set; } = 0.05; // em, the bar over the radicand
-        public double RadicalVerticalGap { get; set; } = 0.02; // em between that bar and the radicand
+        public double RadicalRuleThickness { get; set; } = 0.08; // em, the bar over the radicand
+
+        // em, the stroke of the sign in front of that bar
+        //
+        // its own number and not the bars: the bar is a rule and the sign is a letter stroke, and a
+        // face that happens to set the two at one weight is no reason for us to tie them together.
+        // They are drawn as two paths that meet at the top of the hook, and the round joins there are
+        // what keeps the step between two weights from showing
+        public double RadicalHookThickness { get; set; } = 0.08;
+        public double RadicalVerticalGap { get; set; } = -0.18; // em between that bar and the radicand
 
         // air between the sign and the radicand
         //
