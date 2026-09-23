@@ -174,7 +174,7 @@ namespace Calculator_WinUI.Models.Layout
         //
         // DelimiterWidth is the other horizontal number and a different one: that is how wide the
         // bracket itself is drawn, which is how far its curve bulges rather than how far it stands off
-        public double DelimiterSidePadding { get; set; } = 0.0;
+        public double DelimiterSidePadding { get; set; } = 0.05;
 
         // how much of the reach of what it encloses a delimiter takes
         //
