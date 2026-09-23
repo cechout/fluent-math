@@ -1,4 +1,4 @@
-using Calculator_WinUI.Models;
+﻿using Calculator_WinUI.Models;
 using Calculator_WinUI.Models.Layout;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -36,6 +36,7 @@ namespace Calculator_WinUI.Controls
         public Rect? CaretViewport { get; private set; }
 
         private Rect? _caretLocal;
+        private Rect? _previewLocal;
         private double _caretPad;
         private double _fitScale = 1;
         private double _offsetX;
@@ -85,11 +86,47 @@ namespace Calculator_WinUI.Controls
             set => SetValue(CaretInkProperty, value);
         }
 
+        // the caret a click would leave behind, one step down from the text rather than in the accent:
+        // it has to read as a promise and not as the thing itself
+        public static readonly DependencyProperty PreviewCaretInkProperty = DependencyProperty.Register(
+            nameof(PreviewCaretInk), typeof(Brush), typeof(MathPanel),
+            new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
+
+        public Brush PreviewCaretInk
+        {
+            get => (Brush)GetValue(PreviewCaretInkProperty);
+            set => SetValue(PreviewCaretInkProperty, value);
+        }
+
+        // and one step down again while the button is held, which is the direction a press takes
+        // everything else in this app: the keypad answers a press by fading rather than by brightening
+        public static readonly DependencyProperty PreviewCaretPressedInkProperty = DependencyProperty.Register(
+            nameof(PreviewCaretPressedInk), typeof(Brush), typeof(MathPanel),
+            new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
+
+        public Brush PreviewCaretPressedInk
+        {
+            get => (Brush)GetValue(PreviewCaretPressedInkProperty);
+            set => SetValue(PreviewCaretPressedInkProperty, value);
+        }
+
         public FontFamily TextFont
         {
             get => _measurer.FontFamily;
             set => _measurer.FontFamily = value;
         }
+
+        // whether a point in this line is worth aiming at
+        //
+        // the display sometimes draws a formula the input manager does not hold. The zero on an empty
+        // line is one of those and holds a single position, so the hit test would happily answer with
+        // the other side of it while the caret stays put; the page turns this off for that state and
+        // neither the preview nor a tap offers a place that is not one
+        //
+        // it is off by default and the page turns it on for the line being typed in, which leaves the
+        // history line out of it without having to say so; the trailing room below is read from it at
+        // every rebuild, so it is set before the line is shown and not after
+        public bool CaretIsPlaceable { get; set; }
 
 
         // === content ===
@@ -139,9 +176,16 @@ namespace Calculator_WinUI.Controls
                 caret = engine.Caret;
             }
 
-            // a line that carries a caret keeps room for the half of it that stands right of the last
-            // position, or the edge of the display cuts it in two
-            _caretPad = caret == null ? 0 : LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace;
+            // a line that can carry a caret keeps room for the half of one that stands right of the
+            // last position, or the edge of the display cuts it in two
+            //
+            // reserved for a line that could show a caret and not only for one that does: a result
+            // carries none and is still aimed at, and room that came and went with it would step the
+            // whole formula sideways the moment = replaced it. That is the very shift the trailing
+            // space exists to prevent, one state further out than it was written for
+            _caretPad = caret != null || CaretIsPlaceable
+                ? LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace
+                : 0;
 
             // placed against its own top edge, so every bound below is already in the space this panel
             // arranges in
@@ -152,6 +196,10 @@ namespace Calculator_WinUI.Controls
             // last, so the bar is drawn over its neighbours rather than under them; it is allowed to
             // overlap the digit beside it and never to move it
             RealizeCaret(caret);
+
+            // the tree it was aimed at is gone, so the preview is worked out again from the point the
+            // pointer is still resting on
+            RealizePreview();
 
             InvalidateMeasure();
         }
@@ -164,6 +212,14 @@ namespace Calculator_WinUI.Controls
             foreach (PlacedElement placed in _placed)
             {
                 placed.Element.Measure(new Size(placed.Bounds.Width, placed.Bounds.Height));
+            }
+
+            // the preview is not one of the placed elements: it moves with the pointer rather than with
+            // the formula, and rebuilding the tree for a mouse move is what this whole arrangement is
+            // there to avoid
+            if (_preview != null && _previewLocal is Rect preview)
+            {
+                _preview.Measure(new Size(preview.Width, preview.Height));
             }
 
             if (_root == null) return new Size(0, 0);
@@ -214,6 +270,13 @@ namespace Calculator_WinUI.Controls
                     caret.Height * _fitScale)
                 : null;
 
+            if (_preview != null)
+            {
+                _preview.Arrange(_previewLocal is Rect preview
+                    ? new Rect(preview.X + offsetX, preview.Y + offsetY, preview.Width, preview.Height)
+                    : new Rect(0, 0, 0, 0));
+            }
+
             return finalSize;
         }
 
@@ -229,13 +292,12 @@ namespace Calculator_WinUI.Controls
         // the two arrange offsets are left to undo
         public string AddressAt(Point point)
         {
-            if (_root == null || _text != null) return null;
+            if (_root == null || _text != null || !CaretIsPlaceable) return null;
 
-            // a line drawn without a caret is not the one being typed in: after = the display holds the
-            // result rather than the formula that produced it, and the addresses a point in it works out
-            // to would be read against a tree that is no longer on screen
-            if (_caret.Tokens == null) return null;
-
+            // a line drawn without a caret is still one that can be clicked into: after = the display
+            // holds the result rather than the formula that produced it, and the ViewModel answers that
+            // by seeding the result, which puts the very tokens the address was worked out against into
+            // the manager
             return MathHitTest.NearestAddress(_root, point.X - _offsetX, point.Y - _offsetY);
         }
 
@@ -293,18 +355,8 @@ namespace Calculator_WinUI.Controls
         {
             if (placement is not CaretPlacement caret) return;
 
-            double size = caret.FontSize;
-            double width = size * LayoutStyle.CursorWidth;
-            double height = size * LayoutStyle.CursorHeight;
-            double radius = size * LayoutStyle.CursorCornerRadius;
-
-            // the baseline of the line it stands in, never the one of the box it hangs off: an operator
-            // rides above the baseline of its row, and taking the height from it would stand the caret
-            // higher in front of a plus than in front of a digit
-            double bottom = caret.Line.Baseline - size * LayoutStyle.CursorShift;
-
-            Rect caretRect = new Rect(
-                caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);
+            Rect caretRect = CaretRect(caret);
+            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
 
             _caretLocal = caretRect;
 
@@ -315,6 +367,99 @@ namespace Calculator_WinUI.Controls
                 RadiusY = radius
             }, caretRect);
         }
+
+        // the box a caret fills, for the one being typed in and for a preview of one alike
+        //
+        // the baseline is the one of the line it stands in and never the one of the box it hangs off: an
+        // operator rides above the baseline of its row, and taking the height from it would stand the
+        // caret higher in front of a plus than in front of a digit
+        private Rect CaretRect(CaretPlacement caret)
+        {
+            double size = caret.FontSize;
+            double width = size * LayoutStyle.CursorWidth;
+            double height = size * LayoutStyle.CursorHeight;
+            double bottom = caret.Line.Baseline - size * LayoutStyle.CursorShift;
+
+            return new Rect(caret.Box.X + caret.Offset - width / 2, bottom - height, width, height);
+        }
+
+        // === caret preview ===
+
+        // the caret a click would leave behind, drawn under the pointer rather than where the cursor is
+        //
+        // it goes through the hit test a tap goes through and comes back as the same CaretPlacement the
+        // layout reports the real caret in, so the two are drawn by one piece of geometry and the
+        // promise cannot drift away from what the click does
+        //
+        // what is kept is the pointer position and not the rectangle: a keystroke rebuilds the tree
+        // under a pointer that never moved, and the preview has to answer for the new one
+        private Rectangle _preview;
+        private Point? _previewPoint;
+        private bool _previewPressed;
+
+        public void ShowPreviewCaret(Point point, bool pressed)
+        {
+            _previewPoint = point;
+            _previewPressed = pressed;
+
+            RealizePreview();
+        }
+
+        public void HidePreviewCaret()
+        {
+            _previewPoint = null;
+
+            CollapsePreview();
+        }
+
+        private void RealizePreview()
+        {
+            // an error message is a line of text rather than a formula, and there is nothing in it to
+            // aim at; a result carries no caret either and is still clickable, so the caret target is
+            // not what decides this
+            if (_previewPoint is not Point point || _root == null || _text != null || !CaretIsPlaceable)
+            {
+                CollapsePreview();
+                return;
+            }
+
+            CaretPlacement? nearest = MathHitTest.NearestCaret(_root, point.X - _offsetX, point.Y - _offsetY);
+            if (nearest is not CaretPlacement caret)
+            {
+                CollapsePreview();
+                return;
+            }
+
+            Rect rect = CaretRect(caret);
+            double radius = caret.FontSize * LayoutStyle.CursorCornerRadius;
+
+            _preview ??= new Rectangle();
+
+            _preview.Fill = (_previewPressed ? PreviewCaretPressedInk : PreviewCaretInk) ?? Ink;
+            _preview.RadiusX = radius;
+            _preview.RadiusY = radius;
+            _preview.Width = rect.Width;
+            _preview.Height = rect.Height;
+            _preview.Visibility = Visibility.Visible;
+
+            // added last, so it is drawn over the caret it is a preview of rather than under it; a
+            // rebuild empties the panel, which is what puts it back on top again afterwards
+            if (!Children.Contains(_preview)) Children.Add(_preview);
+
+            _previewLocal = rect;
+
+            InvalidateArrange();
+        }
+
+        private void CollapsePreview()
+        {
+            _previewLocal = null;
+
+            if (_preview != null) _preview.Visibility = Visibility.Collapsed;
+        }
+
+
+        // === realising boxes ===
 
         private void RealizeRun(TextRunBox run)
         {
@@ -341,18 +486,28 @@ namespace Calculator_WinUI.Controls
             double bottom = bounds.Height;
             double drop = bottom - ruleY;
 
-            PathFigure figure = new PathFigure
+            // two strokes and not one: the sign is a letter stroke and the bar over the radicand is a
+            // rule, and they carry their own weights
+            //
+            // they meet at the top of the hook, which both figures name as the same point; the round
+            // joins StrokedPath draws with are what closes the step when the two weights differ
+            Point shoulder = new Point(hookLeft + root.HookWidth, ruleY);
+
+            PathFigure hook = new PathFigure
             {
                 StartPoint = new Point(hookLeft, ruleY + drop * 0.55),
                 IsClosed = false
             };
 
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.28, ruleY + drop * 0.45) });
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.5, bottom) });
-            figure.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth, ruleY) });
-            figure.Segments.Add(new LineSegment { Point = new Point(bounds.Width, ruleY) });
+            hook.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.28, ruleY + drop * 0.45) });
+            hook.Segments.Add(new LineSegment { Point = new Point(hookLeft + root.HookWidth * 0.5, bottom) });
+            hook.Segments.Add(new LineSegment { Point = shoulder });
 
-            Add(StrokedPath(figure, root.RuleThickness), bounds);
+            PathFigure rule = new PathFigure { StartPoint = shoulder, IsClosed = false };
+            rule.Segments.Add(new LineSegment { Point = new Point(bounds.Width, ruleY) });
+
+            Add(StrokedPath(hook, root.HookThickness), bounds);
+            Add(StrokedPath(rule, root.RuleThickness), bounds);
         }
 
         private void RealizeDelimiter(DelimiterBox delimiter)

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models.Layout
@@ -103,6 +103,13 @@ namespace Calculator_WinUI.Models.Layout
         // the position after the last token, which no child stands in front of
         public string EndAddress { get; internal set; }
 
+        // the size a caret standing in this row is drawn at
+        //
+        // a row is the thing that owns a baseline, so it is also the thing that knows how tall the bar
+        // in it should be; only a row the cursor can stand in carries it, which is the same set that
+        // carries an EndAddress
+        public double FontSize { get; internal set; }
+
         public RowBox(IReadOnlyList<MathBox> children)
         {
             Children = children;
@@ -204,7 +211,8 @@ namespace Calculator_WinUI.Models.Layout
         public MathBox Radicand { get; }
 
         public double HookWidth { get; }
-        public double RuleThickness { get; }
+        public double RuleThickness { get; }   // the bar over the radicand
+        public double HookThickness { get; }   // the sign in front of it
 
         // how tall the sign itself is, which is less than Ascent whenever an index reaches higher
         public double SignAscent { get; }
@@ -215,13 +223,16 @@ namespace Calculator_WinUI.Models.Layout
         private readonly double _leadingPad;
 
         public RootBox(MathBox index, MathBox radicand, double hookWidth, double ruleThickness,
-            double verticalGap, double indexRaise, double leadingPad, double trailingPad)
+            double hookThickness, double verticalGap, double indexRaise, double leadingPad,
+            double trailingPad)
         {
             Index = index;
             Radicand = radicand;
             HookWidth = hookWidth;
             RuleThickness = ruleThickness;
+            HookThickness = hookThickness;
 
+            // the bar is what stands on top, so it is the bar that sets how high the sign reaches
             SignAscent = radicand.Ascent + verticalGap + ruleThickness;
 
             // the bar runs the full width of the box, so it covers both pads: the one that keeps the
@@ -271,6 +282,17 @@ namespace Calculator_WinUI.Models.Layout
             Ascent = ascent;
             Descent = descent;
         }
+
+        // a typed bracket is built before the row around it is, since only the row knows what stands
+        // between it and its partner; the reach is filled in once that is known
+        //
+        // a delimiter belonging to a function needs none of this, because there the content is built
+        // first and handed over whole
+        internal void Stretch(double ascent, double descent)
+        {
+            Ascent = ascent;
+            Descent = descent;
+        }
     }
 
 
@@ -279,6 +301,10 @@ namespace Calculator_WinUI.Models.Layout
     {
         public double Side { get; }
         public double Thickness { get; }
+
+        // a slot is a line of its own with one position in it, so it carries the caret size the same
+        // way a row does
+        public double FontSize { get; internal set; }
 
         // the two reaches are those of the text that would fill the slot, not those of the square
         //

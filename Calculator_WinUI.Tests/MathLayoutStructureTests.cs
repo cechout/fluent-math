@@ -32,6 +32,7 @@ namespace Calculator_WinUI.Tests
                 ScriptScale = 0.5,
                 ScriptScriptScale = 0.25,
                 MathAxisHeight = 0.2,
+                MathAxisRaise = 0,
                 FractionBarThickness = 0.1,
                 FractionNumeratorGap = 0.1,
                 FractionDenominatorGap = 0.1,
@@ -40,6 +41,7 @@ namespace Calculator_WinUI.Tests
                 SubscriptShift = 0.3,
                 DelimiterWidth = 0.4,
                 DelimiterPadding = 0,
+                DelimiterHeightScale = 1,
                 PlaceholderSize = 0.6,
                 RadicalHookWidth = 0.5,
                 RadicalLeadingPad = 0.2,
@@ -443,6 +445,131 @@ namespace Calculator_WinUI.Tests
 
             Assert.Equal(content.Ascent, open.Ascent);
             Assert.Equal(content.Descent, open.Descent);
+        }
+
+        // === typed brackets ===
+
+        // a bracket that was typed grows with what it encloses exactly the way the bracket of a
+        // function does; it is the same box and the same reach, worked out one step later because only
+        // the row knows what stands between a bracket and its partner
+
+        private static MathToken Open() => new MathToken(TokenType.BracketOpen, "(");
+
+        private static MathToken Close() => new MathToken(TokenType.BracketClose, ")");
+
+        private static FractionToken Half()
+        {
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.Add(Digit("1"));
+            fraction.DenominatorTokens.Add(Digit("2"));
+
+            return fraction;
+        }
+
+        [Fact]
+        public void ATypedBracketIsADelimiterAndNotAGlyph()
+        {
+            RowBox row = Row(Open(), Digit("1"), Close());
+
+            Assert.Equal(DelimiterKind.ParenthesisOpen, ((DelimiterBox)row.Children[0]).Kind);
+            Assert.Equal(DelimiterKind.ParenthesisClose, ((DelimiterBox)row.Children[2]).Kind);
+        }
+
+        [Fact]
+        public void ATypedBracketTakesItsHeightFromWhatStandsBetweenItAndItsPartner()
+        {
+            RowBox row = Row(Open(), Half(), Close());
+
+            MathBox fraction = row.Children[1];
+            DelimiterBox open = (DelimiterBox)row.Children[0];
+            DelimiterBox close = (DelimiterBox)row.Children[2];
+
+            Assert.Equal(fraction.Ascent, open.Ascent);
+            Assert.Equal(fraction.Descent, open.Descent);
+            Assert.Equal(open.Ascent, close.Ascent);
+            Assert.Equal(open.Descent, close.Descent);
+        }
+
+        [Fact]
+        public void ATypedBracketAroundADigitStaysAsShortAsTheDigit()
+        {
+            RowBox tall = Row(Open(), Half(), Close());
+            RowBox flat = Row(Open(), Digit("1"), Close());
+
+            Assert.True(((DelimiterBox)flat.Children[0]).Ascent < ((DelimiterBox)tall.Children[0]).Ascent);
+        }
+
+        // the pairs resolve from the inside out, so an outer bracket is measured against an inner one
+        // that has already grown rather than against the one it was built at
+        [Fact]
+        public void AnOuterTypedBracketReachesPastTheOneInsideIt()
+        {
+            MathLayoutStyle style = Style();
+            style.DelimiterPadding = 0.1;
+
+            RowBox row = Engine(style).BuildRow(
+                new List<MathToken> { Open(), Open(), Half(), Close(), Close() });
+
+            DelimiterBox outer = (DelimiterBox)row.Children[0];
+            DelimiterBox inner = (DelimiterBox)row.Children[1];
+
+            Assert.True(outer.Ascent > inner.Ascent);
+            Assert.True(outer.Descent > inner.Descent);
+        }
+
+        [Fact]
+        public void AnOpeningBracketWithNothingToCloseItReachesToTheEndOfTheRow()
+        {
+            RowBox row = Row(Open(), Half());
+
+            Assert.Equal(row.Children[1].Ascent, ((DelimiterBox)row.Children[0]).Ascent);
+        }
+
+        [Fact]
+        public void AClosingBracketWithNothingToOpenItReachesBackToTheStart()
+        {
+            RowBox row = Row(Half(), Close());
+
+            Assert.Equal(row.Children[0].Ascent, ((DelimiterBox)row.Children[1]).Ascent);
+        }
+
+        // a pair around nothing has no content to measure, and a bracket of no height at all is not
+        // what an empty pair should look like
+        [Fact]
+        public void AnEmptyPairStandsAsTallAsOneAroundADigit()
+        {
+            RowBox empty = Row(Open(), Close());
+            RowBox digit = Row(Open(), Digit("1"), Close());
+
+            Assert.Equal(((DelimiterBox)digit.Children[0]).Ascent, ((DelimiterBox)empty.Children[0]).Ascent);
+            Assert.Equal(((DelimiterBox)digit.Children[0]).Descent, ((DelimiterBox)empty.Children[0]).Descent);
+        }
+
+        [Fact]
+        public void ADelimiterKeepsItsSidePaddingBetweenItselfAndWhatItEncloses()
+        {
+            MathLayoutStyle style = Style();
+            style.DelimiterSidePadding = 0.2;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Open(), Digit("1"), Close() });
+
+            double air = FontSize * 0.2;
+            double bracket = FontSize * 0.4; // DelimiterWidth
+
+            Assert.Equal(air, row.Children[0].TrailingGap);
+            Assert.Equal(air, row.Children[2].LeadingGap);
+            Assert.Equal(bracket + air + FontSize + air + bracket, row.Width);
+        }
+
+        [Fact]
+        public void ADelimiterTakesOnlyTheShareOfTheReachItsScaleSays()
+        {
+            MathLayoutStyle style = Style();
+            style.DelimiterHeightScale = 0.5;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Open(), Half(), Close() });
+
+            Assert.Equal(row.Children[1].Ascent * 0.5, ((DelimiterBox)row.Children[0]).Ascent, 9);
         }
 
 

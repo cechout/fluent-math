@@ -1,4 +1,4 @@
-using Calculator_WinUI.ViewModels;
+﻿using Calculator_WinUI.ViewModels;
 using Xunit;
 
 namespace Calculator_WinUI.Tests
@@ -179,6 +179,48 @@ namespace Calculator_WinUI.Tests
             Assert.Equal(before, viewModel.InputAndResultText);
         }
 
+        // the two latches in the trigonometry flyout pick one of four grids, and exactly one of the four
+        // has to be up at any time or the panel shows nothing or shows two layers at once
+        [Fact]
+        public void PicksOneTrigonometryGridForEveryCombinationOfTheTwoLatches()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "+", "1");
+
+            string before = viewModel.InputAndResultText;
+
+            AssertOneTrigGrid(viewModel, plain: true);
+
+            Press(viewModel, "cmd_trig_inv");
+            AssertOneTrigGrid(viewModel, inverse: true);
+            Assert.True(viewModel.IsTrigInverseLatched);
+
+            Press(viewModel, "cmd_trig_hyp");
+            AssertOneTrigGrid(viewModel, inverseHyperbolic: true);
+
+            Press(viewModel, "cmd_trig_inv");
+            AssertOneTrigGrid(viewModel, hyperbolic: true);
+
+            // the panel closing is what takes the latches with it, whether a key was pressed or not
+            viewModel.ResetTrigLatches();
+            AssertOneTrigGrid(viewModel, plain: true);
+            Assert.False(viewModel.IsTrigHyperbolicLatched);
+
+            Assert.Equal(before, viewModel.InputAndResultText);
+        }
+
+        private static void AssertOneTrigGrid(StandardViewModel viewModel,
+                                              bool plain = false,
+                                              bool inverse = false,
+                                              bool hyperbolic = false,
+                                              bool inverseHyperbolic = false)
+        {
+            Assert.Equal(plain, viewModel.ShowTrigPlain);
+            Assert.Equal(inverse, viewModel.ShowTrigInverse);
+            Assert.Equal(hyperbolic, viewModel.ShowTrigHyperbolic);
+            Assert.Equal(inverseHyperbolic, viewModel.ShowTrigInverseHyperbolic);
+        }
+
         [Fact]
         public void LeavesAShownResultAloneWhenTheAngleUnitChanges()
         {
@@ -192,6 +234,25 @@ namespace Calculator_WinUI.Tests
             Assert.Equal("GRA", viewModel.AngleModeLabel);
 
             Press(viewModel, "cmd_angle_deg");
+            Assert.Equal("DEG", viewModel.AngleModeLabel);
+            Assert.Equal("2", viewModel.InputAndResultText);
+        }
+
+        // the selector button shows one unit and offers the next, so the cycle is the only way the
+        // keypad reaches radians and gradians at all
+        [Fact]
+        public void CyclesTheAngleUnitInOneDirectionAndComesBack()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+            Assert.Equal("DEG", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
+            Assert.Equal("RAD", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
+            Assert.Equal("GRA", viewModel.AngleModeLabel);
+
+            Press(viewModel, "cmd_angle_cycle");
             Assert.Equal("DEG", viewModel.AngleModeLabel);
             Assert.Equal("2", viewModel.InputAndResultText);
         }
@@ -382,6 +443,56 @@ namespace Calculator_WinUI.Tests
             var carried = new StandardViewModel();
             Press(carried, "1", "/", "3", "=", "AC", "cmd_ans", "*", "3", "=");
             Assert.Equal("1", carried.InputAndResultText);
+        }
+
+
+        // === clicking into the display ===
+
+        // the zero on an empty formula is drawn rather than typed: there is one place the cursor can
+        // stand in it, and a click on the other side of it must not pretend otherwise
+        //
+        // the next digit is what proves it: a cursor that really had moved in front of the zero would
+        // leave a formula with the zero still in it, and the = is only there because the text while a
+        // formula is being typed is the whole LaTeX of it rather than the digits
+        [Fact]
+        public void AClickBesideTheZeroOnAnEmptyDisplayIsNotAPlace()
+        {
+            StandardViewModel viewModel = new StandardViewModel();
+
+            Assert.False(viewModel.CanPlaceCursor);
+
+            viewModel.PlaceCursor("@0");
+            Press(viewModel, "5", "=");
+
+            Assert.Equal("5", viewModel.InputAndResultText);
+        }
+
+        // a click on a shown result carries it into the next calculation the way an operator does, and
+        // lands the cursor at the place that was clicked
+        //
+        // the address was worked out against the result that is on screen, and seeding it is what puts
+        // those very tokens into the tree, which is what makes the address mean what it looked like
+        [Fact]
+        public void AClickOnAShownResultCarriesItAndTakesTheCursorWithIt()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+
+            // in front of the 2 the display is showing
+            viewModel.PlaceCursor("@0");
+            Press(viewModel, "3", "=");
+
+            Assert.Equal("32", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void AClickBehindAShownResultCarriesItAndWritesOnTheEnd()
+        {
+            StandardViewModel viewModel = AfterOnePlusOne();
+
+            viewModel.PlaceCursor("@1");
+            Press(viewModel, "3", "=");
+
+            Assert.Equal("23", viewModel.InputAndResultText);
         }
     }
 }

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Calculator_WinUI.Models.Layout
@@ -49,9 +49,45 @@ namespace Calculator_WinUI.Models.Layout
         // a slot and the row around it often share an edge exactly, and the two coordinates are sums of
         // the same lengths added in a different order, so one of them can come out a rounding step short;
         // without the slack, a click on the bottom edge of a denominator would answer above the fraction
-        private const double SamePlace = 0.5;
+        //
+        // it is a floating point epsilon and not a fraction of a pixel, which is what it used to be: the
+        // gaps it is weighed against are em of a font size, so half a pixel is a real distance inside a
+        // script and swallowing it hands the click to the wrong line. At a fraction side padding of
+        // 0.05 em the two met exactly at a 10px font, and a click on the caret in front of a fraction
+        // answered with the position inside its numerator
+        private const double SamePlace = 1e-9;
 
         public static string NearestAddress(MathBox root, double x, double y)
+        {
+            Line line = Target(root, ref x, ref y);
+
+            return line == null ? null : NearestStop(line, x)?.Address;
+        }
+
+        // the same walk, answering with where the caret would be drawn rather than with where it would
+        // be put
+        //
+        // it reports a CaretPlacement, the very type the layout reports the real caret in, so a preview
+        // and the caret it previews are drawn by one piece of geometry and cannot drift apart
+        public static CaretPlacement? NearestCaret(MathBox root, double x, double y)
+        {
+            Line line = Target(root, ref x, ref y);
+            if (line == null) return null;
+
+            if (NearestStop(line, x) is not Stop stop) return null;
+
+            double fontSize = line.Box switch
+            {
+                RowBox row => row.FontSize,
+                PlaceholderBox slot => slot.FontSize,
+                _ => 0
+            };
+
+            return new CaretPlacement(line.Box, stop.X - line.Box.X, line.Box, fontSize);
+        }
+
+        // the line a point was aimed at, with the point clamped into the formula on the way
+        private static Line Target(MathBox root, ref double x, ref double y)
         {
             if (root == null) return null;
 
@@ -92,7 +128,7 @@ namespace Calculator_WinUI.Models.Layout
                 targetGap = gap;
             }
 
-            return target == null ? null : NearestStop(target, x);
+            return target;
         }
 
         private static void Collect(MathBox box, int depth, List<Line> lines)
@@ -170,9 +206,9 @@ namespace Calculator_WinUI.Models.Layout
             return dx + dy;
         }
 
-        private static string NearestStop(Line line, double x)
+        private static Stop? NearestStop(Line line, double x)
         {
-            string best = null;
+            Stop? best = null;
             double bestDistance = double.MaxValue;
 
             foreach (Stop stop in line.Stops)
@@ -183,7 +219,7 @@ namespace Calculator_WinUI.Models.Layout
                 if (distance >= bestDistance) continue;
 
                 bestDistance = distance;
-                best = stop.Address;
+                best = stop;
             }
 
             return best;

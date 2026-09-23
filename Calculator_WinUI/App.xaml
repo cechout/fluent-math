@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <Application
     x:Class="Calculator_WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -214,6 +214,47 @@
                 </Setter>
             </Style>
 
+            <!--  bar key height  -->
+            <!--
+                the caret bar and the panel bar carry the same key height, so the two read as one
+                block between the display and the pad; it is one number rather than two so they
+                cannot drift apart
+            -->
+            <x:Double x:Key="BarKeyHeight">32</x:Double>
+
+            <!--  key spacing  -->
+            <!--
+                the one gap between two keys, on the pad and inside every panel alike; a panel is
+                meant to read as a piece of the pad that happens to float, and that only holds while
+                the two are spaced the same
+            -->
+            <x:Double x:Key="KeySpacing">2.5</x:Double>
+
+            <!--  panel key size  -->
+            <!--
+                a panel key runs the keypad styles, which carry no size because a key on the pad takes
+                the star sized cell it sits in; a panel grid has no such cell, so every key in a panel
+                carries these two instead
+                they sit on the key and not on the Row and ColumnDefinitions, because those take a
+                GridLength and a Double resource cannot be assigned to one; that mistake builds clean
+                and throws a XamlParseException the first time the page is loaded
+            -->
+            <x:Double x:Key="PanelKeyWidth">56</x:Double>
+            <x:Double x:Key="PanelKeyHeight">40</x:Double>
+
+            <!--  panel offset  -->
+            <!--
+                how far a panel stands off the button that opened it, counted from where the
+                placement drops it; negative lifts it toward the button
+                it moves through a render transform rather than a margin because a margin is
+                measured, and the popup is sized to what it measures: the panel would be shifted out
+                of its own window and lose the edge it was shifted past. A transform moves the
+                drawing and nothing else, so the window stays the size it always was
+                a Flyout carries no offset of its own. The gap is decided in the placement code
+                behind FlyoutBase and there is no resource anywhere that reaches it
+            -->
+            <x:Double x:Key="PanelFlyoutOffset">-5</x:Double>
+
             <!--  subtle button  -->
             <!--
                 the platform SubtleButtonStyle fades its fill in over 83 ms but swaps the border
@@ -230,6 +271,9 @@
                 <Setter Property="BorderBrush" Value="{ThemeResource SubtleButtonBorderBrush}" />
                 <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
                 <Setter Property="Padding" Value="{StaticResource ButtonPadding}" />
+                <!--  the style carries its own template and no BasedOn, so the two content alignments the platform button relies on are set here rather than inherited  -->
+                <Setter Property="HorizontalContentAlignment" Value="Center" />
+                <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}" />
                 <Setter Property="FontWeight" Value="Normal" />
                 <Setter Property="FontSize" Value="{ThemeResource ControlContentThemeFontSize}" />
@@ -255,7 +299,6 @@
                                 ContentTransitions="{TemplateBinding ContentTransitions}"
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Foreground="{TemplateBinding Foreground}">
-
                                 <!--  the value of ControlFasterAnimationDuration  -->
                                 <!--
                                     (spelled out because BrushTransition.Duration is a TimeSpan and
@@ -303,6 +346,33 @@
 
                                                 <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
                                                     <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource SubtleButtonForegroundDisabled}" />
+                                                </ObjectAnimationUsingKeyFrames>
+                                            </Storyboard>
+                                        </VisualState>
+
+                                    </VisualStateGroup>
+
+                                    <!--
+                                        a Button raises no visual state for the flyout it carries
+                                        being open; the platform only tracks it for automation, and
+                                        DropDownButton does the same and no more, so a bar button is
+                                        told by the page that opened it
+                                        it is a group of its own and not a state in CommonStates,
+                                        because the pointer states go on being driven by the button
+                                        underneath; an open flyout takes the pointer with it, so the
+                                        two never reach for the foreground in the same frame
+                                        every bar button carries the group and only the ones with a
+                                        panel ever enter it, which is cheaper than a second copy of
+                                        the whole style
+                                    -->
+                                    <VisualStateGroup x:Name="FlyoutStates">
+
+                                        <VisualState x:Name="FlyoutClosed" />
+
+                                        <VisualState x:Name="FlyoutOpen">
+                                            <Storyboard>
+                                                <ObjectAnimationUsingKeyFrames Storyboard.TargetName="ContentPresenter" Storyboard.TargetProperty="Foreground">
+                                                    <DiscreteObjectKeyFrame KeyTime="0" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
                                                 </ObjectAnimationUsingKeyFrames>
                                             </Storyboard>
                                         </VisualState>

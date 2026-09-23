@@ -30,18 +30,20 @@ namespace Calculator_WinUI.Tests
 
         private static MathLayoutStyle Style() => new MathLayoutStyle { FontSizePx = FontSize };
 
-        private static (RowBox Row, CaretPlacement? Caret) Lay(IReadOnlyList<MathToken> tokens, CaretTarget caret)
+        private static (RowBox Row, CaretPlacement? Caret) Lay(IReadOnlyList<MathToken> tokens,
+            CaretTarget caret, MathLayoutStyle style = null)
         {
-            MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(), Style(), caret);
+            MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(), style ?? Style(), caret);
             RowBox row = engine.BuildRow(tokens);
             row.Place(0, row.Ascent);
 
             return (row, engine.Caret);
         }
 
-        private static (RowBox Row, CaretPlacement? Caret) WithCaret(IReadOnlyList<MathToken> tokens, int index)
+        private static (RowBox Row, CaretPlacement? Caret) WithCaret(IReadOnlyList<MathToken> tokens,
+            int index, MathLayoutStyle style = null)
         {
-            return Lay(tokens, new CaretTarget(tokens, index));
+            return Lay(tokens, new CaretTarget(tokens, index), style);
         }
 
         private static RowBox WithoutCaret(IReadOnlyList<MathToken> tokens) => Lay(tokens, default).Row;
@@ -243,8 +245,15 @@ namespace Calculator_WinUI.Tests
                 Digit("1"), new MathToken(TokenType.Operator, "+"), Digit("1")
             };
 
-            (RowBox row, CaretPlacement? beforeOperator) = WithCaret(tokens, 1);
-            CaretPlacement? beforeDigit = WithCaret(tokens, 2).Caret;
+            // the raise is pinned here rather than read off the app, because this is about where the
+            // caret takes its baseline from and not about how high an operator happens to be tuned; at
+            // a raise of zero the row and the operator stand in the same place and the test asserts
+            // nothing at all
+            MathLayoutStyle raised = Style();
+            raised.OperatorRaise = 0.2;
+
+            (RowBox row, CaretPlacement? beforeOperator) = WithCaret(tokens, 1, raised);
+            CaretPlacement? beforeDigit = WithCaret(tokens, 2, raised).Caret;
 
             // the two hang off different boxes, and one of those sits higher than the other
             Assert.Same(row.Children[1], beforeOperator.Value.Box);
