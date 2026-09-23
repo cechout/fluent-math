@@ -609,6 +609,149 @@ namespace FluentMath.Tests
         }
 
 
+        // === division with remainder ===
+
+        private static EvaluationResult Result(AngleMode mode, params string[] keys)
+        {
+            EvaluationResult result = new MathEvaluator(mode).Evaluate(Keys.Press(keys).RootTokens);
+
+            Assert.True(result.IsSuccess, "expected a value but got " + result.Error);
+            return result;
+        }
+
+        private static EvaluationResult Result(params string[] keys) => Result(AngleMode.Degrees, keys);
+
+        [Fact]
+        public void ShowsTheQuotientAndTheRemainderOfAWholeCalculation()
+        {
+            EvaluationResult result = Result("17", "divr", "5");
+
+            Assert.Equal(ResultKind.QuotientRemainder, result.Kind);
+            Assert.Equal(3, result.Value);
+            Assert.Equal(2, result.Second);
+        }
+
+        // measured on the Casio: 10+17÷R6 and 17÷R6+10 are both 12
+        [Fact]
+        public void HandsOnOnlyTheQuotientInsideACalculation()
+        {
+            Assert.Equal(ResultKind.Single, Result("10", "+", "17", "divr", "6").Kind);
+            Assert.Equal(12, Value("10", "+", "17", "divr", "6"));
+            Assert.Equal(12, Value("17", "divr", "6", "+", "10"));
+            Assert.Equal(6, Value("17", "divr", "5", "*", "2"));
+            Assert.Equal(ResultKind.Single, Result("(", "17", "divr", "5", ")").Kind);
+        }
+
+        // the division is the last operation, so the remainder is the one of 34÷R5
+        [Fact]
+        public void KeepsTheRemainderOfTheLastOperation()
+        {
+            EvaluationResult result = Result("2", "*", "17", "divr", "5");
+
+            Assert.Equal(6, result.Value);
+            Assert.Equal(4, result.Second);
+        }
+
+        // measured on the Casio: −17÷R5 is −17/5
+        [Fact]
+        public void TurnsIntoAPlainDivisionForANegativeOrBrokenOperand()
+        {
+            Assert.Equal(-3.4, Value("-", "17", "divr", "5"), 12);
+            Assert.Equal(3.5, Value("17.5", "divr", "5"), 12);
+            Assert.Equal(ResultKind.Single, Result("17", "divr", "-", "5").Kind);
+            Assert.Equal(EvaluationError.DivideByZero, Error("17", "divr", "0"));
+        }
+
+        [Fact]
+        public void DividesWithRemainderByAWholeImplicitProduct()
+        {
+            EvaluationResult result = Result("17", "divr", "2", "(", "3", ")");
+
+            Assert.Equal(2, result.Value);
+            Assert.Equal(5, result.Second);
+            Assert.Equal("17÷R(2(3))", Read("17", "divr", "2", "(", "3", ")"));
+        }
+
+
+        // === coordinates ===
+
+        // measured on the Casio in Rad: r=5; θ=0.927295218
+        [Fact]
+        public void ConvertsToPolarInTheAngleUnitSelected()
+        {
+            EvaluationResult radians = Result(AngleMode.Radians, "fn:pol", "3", "right", "4");
+            Assert.Equal(ResultKind.Polar, radians.Kind);
+            Assert.Equal(5, radians.Value);
+            Assert.Equal(Math.Atan2(4, 3), radians.Second, 15);
+
+            Assert.Equal(53.13010235415598, Result("fn:pol", "3", "right", "4").Second, 12);
+        }
+
+        // measured on the Casio: Pol(−1,0) is π, and the origin is a Math ERROR
+        [Fact]
+        public void TakesTheHalfTurnItselfAndRefusesTheOrigin()
+        {
+            Assert.Equal(Math.PI, Result(AngleMode.Radians, "fn:pol", "-", "1", "right", "0").Second);
+            Assert.Equal(Math.PI, Result(AngleMode.Radians, "fn:pol", "-", "1", "right", "-", "0").Second);
+            Assert.Equal(EvaluationError.Domain, Error("fn:pol", "0", "right", "0"));
+        }
+
+        // measured on the Casio in Rad: x=0.3085028998; y=−1.976063248
+        [Fact]
+        public void ConvertsToRectangularThroughTheCleanedSineAndCosine()
+        {
+            EvaluationResult radians = Result(AngleMode.Radians, "fn:rec", "2", "right", "30");
+            Assert.Equal(ResultKind.Rectangular, radians.Kind);
+            Assert.Equal(0.3085028998, radians.Value, 10);
+            Assert.Equal(-1.976063248, radians.Second, 9);
+
+            EvaluationResult degrees = Result("fn:rec", "1", "right", "90");
+            Assert.Equal(0, degrees.Value);
+            Assert.Equal(1, degrees.Second);
+        }
+
+        // measured on the Casio: 1+Pol(3,4) and Pol(3,4)+1 are both 6
+        [Fact]
+        public void HandsOnTheFirstValueInsideACalculation()
+        {
+            Assert.Equal(6, Value("1", "+", "fn:pol", "3", "right", "4"));
+            Assert.Equal(6, Value("fn:pol", "3", "right", "4", "right", "+", "1"));
+            Assert.Equal(ResultKind.Single, Result("1", "+", "fn:pol", "3", "right", "4").Kind);
+        }
+
+
+        // === a result carried on ===
+
+        [Fact]
+        public void ReadsSeededDigitsAsTheFullValueUntilOneOfThemIsEdited()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithValue("0.333333333333", 1.0 / 3.0);
+            manager.AddOperator("*");
+            manager.AddNumber("3");
+
+            Assert.Equal(1, new MathEvaluator().Evaluate(manager.RootTokens).Value);
+
+            // one digit more is a different number, typed by hand
+            MathInputManager edited = new MathInputManager();
+            edited.SeedWithValue("0.333333333333", 1.0 / 3.0);
+            edited.AddNumber("3");
+
+            Assert.Equal(0.3333333333333, new MathEvaluator().Evaluate(edited.RootTokens).Value, 15);
+        }
+
+        [Fact]
+        public void KeepsTheSignOfASeededNegativeValueOutsideItsDigits()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithValue("-0.333333333333", -1.0 / 3.0);
+            manager.AddOperator("*");
+            manager.AddNumber("3");
+
+            Assert.Equal(-1, new MathEvaluator().Evaluate(manager.RootTokens).Value);
+        }
+
+
         // === random numbers ===
 
         private static MathEvaluator Seeded()

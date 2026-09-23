@@ -27,6 +27,9 @@ namespace FluentMath.ViewModels
         // which shape the shown result is in; the S to D key cycles it, every = starts over at decimal
         private AnswerForm _answerForm;
 
+        // the result on screen, a pair included; LastAnswer on the evaluator only keeps its first value
+        private EvaluationResult _result;
+
 
         // === display properties ===
 
@@ -298,6 +301,14 @@ namespace FluentMath.ViewModels
             // Vocabulary.NotImplemented in the test project is held against it
             if (NotImplementedKeys.Contains(sign)) return;
 
+            // a view key changes how the result is shown and leaves the formula behind it alone, so it is
+            // handled before BeginInputAfterResult the way the mode keys are
+            if (sign == "cmd_prime")
+            {
+                ShowPrimeFactors();
+                return;
+            }
+
             if (_isShowingResult) BeginInputAfterResult(sign);
 
             // an empty formula is shown as a 0, so a key that reads an operand has to find one standing
@@ -511,6 +522,18 @@ namespace FluentMath.ViewModels
                         _inputManager.AddOperator("P");
                         break;
 
+                    case "cmd_div_r":
+                        _inputManager.AddOperator("÷R");
+                        break;
+
+                    case "cmd_pol":
+                        _inputManager.StartFunction("pol");
+                        break;
+
+                    case "cmd_rec":
+                        _inputManager.StartFunction("rec");
+                        break;
+
                     case "cmd_ncr":
                         _inputManager.AddOperator("C");
                         break;
@@ -658,10 +681,18 @@ namespace FluentMath.ViewModels
         // the next calculation continues from exactly what the display is showing, digits or fraction,
         // rather than from an Ans token; watching the number stay put is what makes it read as the same
         // calculation carrying on instead of a new one
+        //
+        // a pair carries on as its first value, the one Ans holds as well
         private void SeedWithShownResult()
         {
-            double value = _evaluator.LastAnswer;
+            double value = _result.Value;
             bool hasFraction = ResultFormatter.TryToFraction(value, out long numerator, out long denominator);
+
+            if (_answerForm == AnswerForm.PrimeFactors && ResultFormatter.TryPrimeFactors(value, out var factors))
+            {
+                _inputManager.SeedWithTokens(ResultFormatter.PrimeFactorTokens(factors));
+                return;
+            }
 
             if (_answerForm == AnswerForm.Mixed && ResultFormatter.HasMixedForm(value))
             {
@@ -676,7 +707,7 @@ namespace FluentMath.ViewModels
                 return;
             }
 
-            _inputManager.SeedWithValue(ResultFormatter.ToPlainString(value));
+            _inputManager.SeedWithValue(ResultFormatter.ToPlainString(value), value);
         }
 
         // the keys that read an operand to their left instead of opening a new one; pressing one of
@@ -703,26 +734,23 @@ namespace FluentMath.ViewModels
         // what every decimal prefix key sends, followed by the name of its prefix
         private const string PrefixCommand = "cmd_prefix_";
 
-        // nPr and nCr stand between two operands the way the arithmetic signs do, so a shown result is
-        // carried on as their n, the way a Casio writes AnsC
+        // nPr, nCr and the division with remainder stand between two operands the way the arithmetic
+        // signs do, so a shown result is carried on as their left one, the way a Casio writes AnsC
         private static bool IsOperator(string sign)
         {
             return sign == "+" || sign == "-" || sign == "*" || sign == "/"
-                || sign == "cmd_npr" || sign == "cmd_ncr";
+                || sign == "cmd_npr" || sign == "cmd_ncr" || sign == "cmd_div_r";
         }
 
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
-        // dms and deg on the function panel; divide with remainder and FACT, which show a result of their
-        // own; Rnd, which rounds to a display format there is no setting for yet; the coordinates panel;
-        // the two header keys, which are waiting on a history list and a variable store rather than on a
-        // token
+        // dms and deg on the function panel; Rnd, which rounds to a display format there is no setting for
+        // yet; the two header keys, which are waiting on a history list and a variable store rather than
+        // on a token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_dms", "cmd_degrees",
-            "cmd_div_r", "cmd_prime",
             "cmd_rnd",
-            "cmd_pol", "cmd_rec",
             "cmd_history", "cmd_memory"
         };
 
@@ -738,7 +766,9 @@ namespace FluentMath.ViewModels
 
         // = deliberately leaves the tree alone; only the display switches over to the result, so a
         // Math ERROR can be corrected instead of retyped from scratch
-        private void CalculateResult()
+        //
+        // says whether there is a result, which a view key pressed during input needs to know
+        private bool CalculateResult()
         {
             // the history line shows the formula the way it was read, with a bracket pair around a product
             // that binds tighter than the division in front of it; the tree itself stays as it was typed
@@ -752,36 +782,74 @@ namespace FluentMath.ViewModels
             CalculationTokens = asRead;
 
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
-            if (result.IsSuccess)
+            if (!result.IsSuccess)
             {
-                _evaluator.LastAnswer = result.Value;
-                _answerForm = AnswerForm.Decimal;
-                PublishResult(result.Value);
-                _isShowingResult = true;
+                ShowError(result.Error);
+                return false;
             }
-            else
-            {
-                InputAndResultText = ResultFormatter.ErrorToLatex(result.Error);
-                PublishInputDisplay(new List<MathToken>(), null, 0, ResultFormatter.ErrorToText(result.Error));
-            }
+
+            _evaluator.LastAnswer = result.Value;
+            _result = result;
+            _answerForm = AnswerForm.Decimal;
+            PublishResult();
+            _isShowingResult = true;
+
+            return true;
         }
 
-        private void PublishResult(double value)
+        private void PublishResult()
         {
-            InputAndResultText = ResultFormatter.ToLatex(value, _answerForm, UseDisplayFractions);
-            PublishInputDisplay(ResultFormatter.ToTokens(value, _answerForm, UseDisplayFractions), null, 0, null);
+            InputAndResultText = ResultFormatter.ToLatex(_result, _answerForm, UseDisplayFractions);
+            PublishInputDisplay(ResultFormatter.ToTokens(_result, _answerForm, UseDisplayFractions), null, 0, null);
+        }
+
+        // the tree stays as it was, so the arrow keys go back into the formula that failed
+        private void ShowError(EvaluationError error)
+        {
+            _isShowingResult = false;
+
+            InputAndResultText = ResultFormatter.ErrorToLatex(error);
+            PublishInputDisplay(new List<MathToken>(), null, 0, ResultFormatter.ErrorToText(error));
+        }
+
+        // FACT, the result as a product of prime powers; pressed again it goes back to the decimal
+        //
+        // pressed during input it evaluates first, which saves the = a Casio needs there; a result with no
+        // prime factors, a fraction, a negative number or 0, is the Math ERROR the Casio manual names
+        // a pair has none either and is factorised by its first value, the one it carries on as
+        private void ShowPrimeFactors()
+        {
+            if (!_isShowingResult && !CalculateResult()) return;
+
+            if (_answerForm == AnswerForm.PrimeFactors)
+            {
+                _answerForm = AnswerForm.Decimal;
+                PublishResult();
+                return;
+            }
+
+            if (!ResultFormatter.TryPrimeFactors(_result.Value, out _))
+            {
+                ShowError(EvaluationError.Domain);
+                return;
+            }
+
+            _result = EvaluationResult.Success(_result.Value);
+            _answerForm = AnswerForm.PrimeFactors;
+            PublishResult();
         }
 
         // cycles the shown result between a decimal, an improper fraction and a mixed number, skipping
-        // whichever of the three this value does not have
+        // whichever of the three this value does not have; a pair switches both values together, and
+        // has a form when either of them does
         //
         // the conversion is numeric, so a result that came out of a root or a pi has no fraction at all
-        // and the key does nothing there, the same as pressing it while a formula is being typed
+        // and the key does nothing there
+        // pressed during input it evaluates first and then switches, which saves the = a Casio needs
         private void ToggleAnswerForm()
         {
-            if (!_isShowingResult) return;
+            if (!_isShowingResult && !CalculateResult()) return;
 
-            double value = _evaluator.LastAnswer;
             AnswerForm next = _answerForm;
 
             for (int step = 0; step < 3; step++)
@@ -789,16 +857,24 @@ namespace FluentMath.ViewModels
                 next = NextAnswerForm(next);
 
                 if (next == AnswerForm.Decimal) break;
-                if (next == AnswerForm.Improper && ResultFormatter.HasFractionForm(value)) break;
-                if (next == AnswerForm.Mixed && ResultFormatter.HasMixedForm(value)) break;
+                if (next == AnswerForm.Improper && HasForm(ResultFormatter.HasFractionForm)) break;
+                if (next == AnswerForm.Mixed && HasForm(ResultFormatter.HasMixedForm)) break;
             }
 
             if (next == _answerForm) return;
 
             _answerForm = next;
-            PublishResult(value);
+            PublishResult();
         }
 
+        private bool HasForm(Func<double, bool> hasForm)
+        {
+            if (hasForm(_result.Value)) return true;
+
+            return _result.Kind != ResultKind.Single && hasForm(_result.Second);
+        }
+
+        // the prime factors are left for the decimal, from where the cycle starts over
         private static AnswerForm NextAnswerForm(AnswerForm form)
         {
             if (form == AnswerForm.Decimal) return AnswerForm.Improper;

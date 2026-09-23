@@ -39,9 +39,12 @@ namespace FluentMath.Models
         // into a fraction; it also keeps the expansion below inside a long
         private const long MaxFractionNumerator = 10000000000;
 
-        // how close the fraction has to sit to count as the same number; the value has already been cut
-        // to twelve significant digits, so anything further out than this is a different number
-        private const double FractionTolerance = 1e-12;
+        // the largest number FACT takes apart: every whole number the display shows without a power of
+        // ten, which trial division up to a million covers completely
+        //
+        // the Casio gives up on a prime factor above 1000 and shows it in brackets; covering the whole
+        // range instead costs nothing noticeable
+        private const long MaxFactorised = 999999999999;
 
 
         // === public formatting ===
@@ -94,6 +97,36 @@ namespace FluentMath.Models
             return rounded.ToString(PlainNumberFormat, CultureInfo.InvariantCulture);
         }
 
+        // a result in the form it is shown in: a single value in the answer form, a pair as both its values
+        // with their names, or the prime factors
+        public static string ToLatex(EvaluationResult result, AnswerForm form, bool displayFractions)
+        {
+            if (form == AnswerForm.PrimeFactors && TryPrimeFactors(result.Value, out List<(long Prime, int Exponent)> factors))
+            {
+                return PrimeFactorLatex(factors);
+            }
+
+            if (result.Kind == ResultKind.Single) return ToLatex(result.Value, form, displayFractions);
+
+            (string first, string second) = PairNames(result.Kind);
+            return $"{first}={ToLatex(result.Value, form, displayFractions)}{PairSeparator}"
+                + $"{second}={ToLatex(result.Second, form, displayFractions)}";
+        }
+
+        private static string PrimeFactorLatex(List<(long Prime, int Exponent)> factors)
+        {
+            if (factors.Count == 0) return "1";
+
+            List<string> parts = new List<string>();
+            foreach ((long prime, int exponent) in factors)
+            {
+                string text = prime.ToString(CultureInfo.InvariantCulture);
+                parts.Add(exponent == 1 ? text : $"{text}^{{{exponent.ToString(CultureInfo.InvariantCulture)}}}");
+            }
+
+            return string.Join(LatexHelper.TaggedOperator("\\times"), parts);
+        }
+
         // the wording is the one a Casio uses, short enough to still fit the display at full size
         public static string ErrorToText(EvaluationError error)
         {
@@ -113,6 +146,27 @@ namespace FluentMath.Models
 
         // what the native display draws, mirroring ToLatex arm for arm rather than parsing what that
         // produces, so the two shapes cannot drift apart; a change to either belongs in both
+        public static List<MathToken> ToTokens(EvaluationResult result, AnswerForm form, bool displayFractions)
+        {
+            if (form == AnswerForm.PrimeFactors && TryPrimeFactors(result.Value, out List<(long Prime, int Exponent)> factors))
+            {
+                return PrimeFactorTokens(factors);
+            }
+
+            if (result.Kind == ResultKind.Single) return ToTokens(result.Value, form, displayFractions);
+
+            // the names are drawn as text beside the digits rather than typed as anything, the same as the
+            // minus of a negative result below
+            (string first, string second) = PairNames(result.Kind);
+
+            List<MathToken> tokens = DigitTokens(first + "=");
+            tokens.AddRange(ToTokens(result.Value, form, displayFractions));
+            tokens.AddRange(DigitTokens(PairSeparator + second + "="));
+            tokens.AddRange(ToTokens(result.Second, form, displayFractions));
+
+            return tokens;
+        }
+
         public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions)
         {
             if (form != AnswerForm.Decimal
@@ -182,6 +236,85 @@ namespace FluentMath.Models
         }
 
 
+        // === pairs ===
+
+        // what a Casio calls the two values; the separator becomes a semicolon once the decimal mark can be
+        // a comma
+        private const string PairSeparator = ", ";
+
+        private static (string First, string Second) PairNames(ResultKind kind)
+        {
+            return kind switch
+            {
+                ResultKind.QuotientRemainder => ("Q", "R"),
+                ResultKind.Polar => ("r", "θ"),
+                _ => ("x", "y")
+            };
+        }
+
+
+        // === prime factors ===
+
+        // the primes of the value with their exponents, smallest first, for a whole number from 1 to
+        // MaxFactorised as the display shows it; 1 has none and comes back as an empty list
+        //
+        // anything else has no prime factors, which the Casio answers with a Math ERROR
+        public static bool TryPrimeFactors(double value, out List<(long Prime, int Exponent)> factors)
+        {
+            factors = new List<(long Prime, int Exponent)>();
+
+            if (double.IsNaN(value) || double.IsInfinity(value)) return false;
+
+            double shown = RoundToSignificantDigits(value, SignificantDigits);
+            if (shown < 1 || shown > MaxFactorised || shown != Math.Floor(shown)) return false;
+
+            long remaining = (long)shown;
+            for (long divisor = 2; divisor * divisor <= remaining; divisor++)
+            {
+                int exponent = 0;
+                while (remaining % divisor == 0)
+                {
+                    remaining /= divisor;
+                    exponent++;
+                }
+
+                if (exponent > 0) factors.Add((divisor, exponent));
+            }
+
+            // what is left after every divisor up to its square root is itself a prime
+            if (remaining > 1) factors.Add((remaining, 1));
+
+            return true;
+        }
+
+        // real powers and real times signs, so the shown factors carry on into the next calculation as
+        // the product they are
+        public static List<MathToken> PrimeFactorTokens(List<(long Prime, int Exponent)> factors)
+        {
+            if (factors.Count == 0) return DigitTokens("1");
+
+            List<MathToken> tokens = new List<MathToken>();
+            foreach ((long prime, int exponent) in factors)
+            {
+                if (tokens.Count > 0) tokens.Add(new MathToken(TokenType.Operator, "*"));
+
+                string text = prime.ToString(CultureInfo.InvariantCulture);
+                if (exponent == 1)
+                {
+                    tokens.AddRange(DigitTokens(text));
+                    continue;
+                }
+
+                PowerToken power = new PowerToken();
+                power.BaseTokens.AddRange(DigitTokens(text));
+                power.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
+                tokens.Add(power);
+            }
+
+            return tokens;
+        }
+
+
         // === fractions ===
 
         // the simplest fraction that still hits the value, found by continued-fraction expansion, which
@@ -234,9 +367,11 @@ namespace FluentMath.Models
 
             if (currentDenominator <= 0) return false;
 
+            // the fraction is the same number when it shows the same twelve digits; a fixed distance of
+            // 1e-12 times the value was tighter than the rounding itself once a whole part took a digit,
+            // and turned 7/3 away because 2.33333333333 is 3.3e-12 short of it
             double candidate = (double)currentNumerator / currentDenominator;
-            double allowed = FractionTolerance * Math.Max(1, Math.Abs(rounded));
-            if (Math.Abs(candidate - Math.Abs(rounded)) > allowed) return false;
+            if (RoundToSignificantDigits(candidate, SignificantDigits) != Math.Abs(rounded)) return false;
 
             numerator = sign * currentNumerator;
             denominator = currentDenominator;

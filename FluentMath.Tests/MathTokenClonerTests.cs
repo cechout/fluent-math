@@ -114,6 +114,16 @@ namespace FluentMath.Tests
             Assert.NotSame(gcd.Arguments[1], copy.Arguments[1]);
         }
 
+        // the seeded value is what makes a result carry on in full, so a copy keeps pointing at it
+        [Fact]
+        public void ADigitKeepsTheValueItWasSeededWith()
+        {
+            SeededValue seed = new SeededValue(1.0 / 3.0, 1);
+            MathToken digit = new MathToken(TokenType.Number, "0") { Seed = seed };
+
+            Assert.Same(seed, MathTokenCloner.Clone(digit).Seed);
+        }
+
         [Fact]
         public void AMixedFractionKeepsItsThreeParts()
         {

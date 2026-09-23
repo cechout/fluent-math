@@ -129,6 +129,12 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void WritesTheDivisionWithRemainderAsADivisionSignAndAnR()
+        {
+            Assert.Contains("\\div\\mathrm{R}", Latex("17", "divr", "5"));
+        }
+
+        [Fact]
         public void ShowsAnEmptySlotAsABox()
         {
             Assert.Contains("\\square", Keys.Press("3", "exp").GetLatexString(withCursor: true));

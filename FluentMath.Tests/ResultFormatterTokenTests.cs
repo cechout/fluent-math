@@ -89,6 +89,28 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void APairIsBothValuesWithTheirNamesAsText()
+        {
+            List<MathToken> tokens = ResultFormatter.ToTokens(
+                EvaluationResult.Pair(ResultKind.QuotientRemainder, 3, 2), AnswerForm.Decimal, false);
+
+            Assert.Equal("Q=3, R=2", string.Concat(tokens.Select(token => token.Value)));
+        }
+
+        // real powers and real times signs, so seeding them carries the product on
+        [Fact]
+        public void ThePrimeFactorsArePowersJoinedByTimes()
+        {
+            List<MathToken> tokens = ResultFormatter.ToTokens(EvaluationResult.Success(1440), AnswerForm.PrimeFactors, false);
+
+            PowerToken two = Assert.IsType<PowerToken>(tokens[0]);
+            Assert.Equal("2", Digits(two.BaseTokens));
+            Assert.Equal("5", Digits(two.ExponentTokens));
+            Assert.Equal("*", tokens[1].Value);
+            Assert.Equal("5", tokens.Last().Value);
+        }
+
+        [Fact]
         public void AValueWithNoFractionFallsBackToTheDecimal()
         {
             // the same fallback ToLatex makes: a value out of a root has no fraction to find
