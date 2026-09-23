@@ -14,7 +14,9 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{1F029C99-A212-4D50-B14C-BA0B0C9965FA}
+; a new id since the rename, so Fluent Math installs next to Simple Calculator instead of taking over its
+; uninstall entry; the old app keeps {1F029C99-A212-4D50-B14C-BA0B0C9965FA} and is uninstalled on its own
+AppId={{086FECEC-9D29-4431-BC15-F487C0FDE333}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -24,8 +26,6 @@ VersionInfoProductName={#MyAppName}
 VersionInfoDescription={#MyAppName} Setup
 VersionInfoVersion={#MyAppVersion}.0
 DefaultDirName={autopf}\{#MyAppName}
-; an update from the Simple Calculator days would otherwise stay in the old folder; [Code] removes that one
-UsePreviousAppDir=no
 UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 ; "ArchitecturesAllowed=x64compatible" specifies that Setup cannot run
@@ -52,11 +52,6 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
-[InstallDelete]
-; the shortcuts the app had while it was named Simple Calculator
-Type: files; Name: "{autoprograms}\Simple Calculator.lnk"
-Type: files; Name: "{autodesktop}\Simple Calculator.lnk"
-
 [Files]
 ; must stay in sync with PublishDir in FluentMath/Properties/PublishProfiles/win-x64.pubxml
 Source: "..\FluentMath\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -69,39 +64,3 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-// up to v2.1.0 the app was named Simple Calculator and installed into a folder of that name; an update now
-// installs into the new folder, and the old one is removed once the new files are in place
-const
-  // the AppId above, as its uninstall entry spells it
-  UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{1F029C99-A212-4D50-B14C-BA0B0C9965FA}_is1';
-  LegacyFolderName = 'Simple Calculator';
-  LegacyExeName = 'Calculator_WinUI.exe';
-
-var
-  LegacyAppDir: String;
-
-function InitializeSetup(): Boolean;
-begin
-  // read before anything is installed; afterwards the entry already points at the new folder
-  if not RegQueryStringValue(HKLM64, UninstallKey, 'Inno Setup: App Path', LegacyAppDir) then
-    LegacyAppDir := '';
-  Result := True;
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if CurStep <> ssPostInstall then Exit;
-  if LegacyAppDir = '' then Exit;
-  if CompareText(RemoveBackslashUnlessRoot(LegacyAppDir), RemoveBackslashUnlessRoot(ExpandConstant('{app}'))) = 0 then Exit;
-
-  // the path came from a directory page back then and could point anywhere, so only a folder that carries
-  // the old name and still holds the old executable is ours to delete
-  if CompareText(ExtractFileName(RemoveBackslashUnlessRoot(LegacyAppDir)), LegacyFolderName) <> 0 then Exit;
-  if not FileExists(AddBackslash(LegacyAppDir) + LegacyExeName) then Exit;
-
-  // a copy of the old app that is still running keeps some files locked; those stay behind, the rest goes
-  DelTree(LegacyAppDir, True, True, True);
-end;
-
