@@ -101,7 +101,7 @@ namespace Calculator_WinUI.Models.Layout
         //
         // MathAxisHeight and OperatorRaise are what line the two up in the first place, each for its
         // own side; this is what moves them once they are lined up
-        public double MathAxisRaise { get; set; } = 0.0;
+        public double MathAxisRaise { get; set; } = 0.1;
 
         public double FractionBarThickness { get; set; } = 0.04;
         public double FractionNumeratorGap { get; set; } = 0.04; // between the bar and the numerator
@@ -129,7 +129,7 @@ namespace Calculator_WinUI.Models.Layout
         // face that happens to set the two at one weight is no reason for us to tie them together.
         // They are drawn as two paths that meet at the top of the hook, and the round joins there are
         // what keeps the step between two weights from showing
-        public double RadicalHookThickness { get; set; } = 0.08;
+        public double RadicalHookThickness { get; set; } = 0.06;
         public double RadicalVerticalGap { get; set; } = -0.18; // em between that bar and the radicand
 
         // air between the sign and the radicand
@@ -166,6 +166,17 @@ namespace Calculator_WinUI.Models.Layout
         public double DelimiterWidth { get; set; } = 0.3;
         public double DelimiterPadding { get; set; } = 0.05;
         public double DelimiterThickness { get; set; } = 0.06; // em of the stroke it is drawn with
+
+        // how much of the reach of what it encloses a delimiter takes
+        //
+        // a single digit hands over the whole line ascent of the face, the room it keeps for accents
+        // and for the tallest letter it sets, and a bracket that takes all of it stands far taller than
+        // the digit inside it. The growing past that was always right; the height it started from was
+        // not, which is what this trims
+        //
+        // a bracket around nothing still stands as tall as one around a digit: the reach is floored at
+        // the strut before it is scaled, or an empty pair would fall in on itself
+        public double DelimiterHeightScale { get; set; } = 0.85;
 
 
         // === the caret ===

@@ -99,6 +99,8 @@ namespace Calculator_WinUI.Tests
         [InlineData("logb", "2", "right", "8")]
         [InlineData("fn:sin", "9")]
         [InlineData("1", "exp", "5")]
+        [InlineData("(", "1", "+", "2", ")")]
+        [InlineData("(", "1", "frac", "2", "down", "3", ")")]
         public void EveryAddressTheLayoutWritesIsOneTheInputManagerAccepts(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);
@@ -323,6 +325,8 @@ namespace Calculator_WinUI.Tests
         [InlineData("fn:sin", "9")]
         [InlineData("1", "exp", "5")]
         [InlineData("frac", "down", "2")]
+        [InlineData("(", "1", "+", "2", ")")]
+        [InlineData("(", "1", "frac", "2", "down", "3", ")")]
         public void AClickOnTheCaretLeavesItExactlyWhereItStands(params string[] keys)
         {
             // every position the cursor reaches walking left out of the formula it just typed
@@ -364,6 +368,8 @@ namespace Calculator_WinUI.Tests
         [InlineData("root", "3", "right", "8")]
         [InlineData("fn:sin", "9")]
         [InlineData("frac", "down", "2")]
+        [InlineData("(", "1", "+", "2", ")")]
+        [InlineData("(", "1", "frac", "2", "down", "3", ")")]
         public void APreviewStandsExactlyWhereAClickPutsTheCaret(params string[] keys)
         {
             RowBox laid = Laid(Keys.Press(keys).RootTokens);

@@ -282,6 +282,17 @@ namespace Calculator_WinUI.Models.Layout
             Ascent = ascent;
             Descent = descent;
         }
+
+        // a typed bracket is built before the row around it is, since only the row knows what stands
+        // between it and its partner; the reach is filled in once that is known
+        //
+        // a delimiter belonging to a function needs none of this, because there the content is built
+        // first and handed over whole
+        internal void Stretch(double ascent, double descent)
+        {
+            Ascent = ascent;
+            Descent = descent;
+        }
     }
 
 

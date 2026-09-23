@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -89,6 +90,8 @@ namespace Calculator_WinUI.Models.Layout
                 }
             }
 
+            StretchTypedBrackets(children, fontSize);
+
             RowBox row;
             if (children.Count == 0)
             {
@@ -132,6 +135,11 @@ namespace Calculator_WinUI.Models.Layout
             }
 
             if (token.Type == TokenType.Operator) return BuildOperator(token, fontSize);
+
+            if (token.Type == TokenType.BracketOpen || token.Type == TokenType.BracketClose)
+            {
+                return BuildTypedBracket(token, fontSize);
+            }
 
             return BuildAtom(token, fontSize);
         }
@@ -395,16 +403,111 @@ namespace Calculator_WinUI.Models.Layout
         private void AddDelimited(List<MathBox> parts, MathBox content,
             DelimiterKind open, DelimiterKind close, double fontSize)
         {
-            double padding = fontSize * _style.DelimiterPadding;
             double width = fontSize * _style.DelimiterWidth;
-            double ascent = content.Ascent + padding;
-            double descent = content.Descent + padding;
-
             double thickness = fontSize * _style.DelimiterThickness;
+
+            (double ascent, double descent) = DelimiterReach(content.Ascent, content.Descent, fontSize);
 
             parts.Add(new DelimiterBox(open, width, ascent, descent, thickness));
             parts.Add(content);
             parts.Add(new DelimiterBox(close, width, ascent, descent, thickness));
+        }
+
+        // how far a delimiter reaches around a content of this size, for a function and for a typed
+        // bracket alike, so the two can never end up shaped differently
+        //
+        // the floor is the strut rather than a number of its own: a bracket around nothing stands as
+        // tall as one around a digit, which is the only sensible thing an empty pair can do
+        private (double Ascent, double Descent) DelimiterReach(double ascent, double descent, double fontSize)
+        {
+            TextMetrics strut = _measurer.Measure(StrutText, fontSize);
+            double padding = fontSize * _style.DelimiterPadding;
+
+            return (Math.Max(ascent, strut.Ascent) * _style.DelimiterHeightScale + padding,
+                Math.Max(descent, strut.Descent) * _style.DelimiterHeightScale + padding);
+        }
+
+        // a typed bracket is a delimiter and not a glyph, so it can grow with what it encloses the way
+        // the bracket of a function does; it is built at the floor and stretched once the row is known
+        private DelimiterBox BuildTypedBracket(MathToken token, double fontSize)
+        {
+            DelimiterKind kind = token.Type == TokenType.BracketOpen
+                ? DelimiterKind.ParenthesisOpen
+                : DelimiterKind.ParenthesisClose;
+
+            (double ascent, double descent) = DelimiterReach(0, 0, fontSize);
+
+            return new DelimiterBox(kind, fontSize * _style.DelimiterWidth, ascent, descent,
+                fontSize * _style.DelimiterThickness);
+        }
+
+        // every typed bracket takes its height from what stands between it and its partner
+        //
+        // it runs over the boxes of the row and not over its tokens, because only a box knows how far it
+        // reaches, and it runs before the RowBox is built, because a row works its own reach out of the
+        // children it is handed
+        //
+        // the row stays flat and nothing is wrapped. The tokens between two typed brackets live in the
+        // same list the brackets do, unlike the parameter of a function which is a list of its own; a
+        // group around them would take every cursor position inside it out of the line a click is
+        // resolved against
+        //
+        // a bracket with nothing to pair it off reaches to the end of the row, or back to the start for
+        // a lone closing one. That is what keeps it growing while a formula is still being typed rather
+        // than snapping to height the moment it is closed
+        private void StretchTypedBrackets(List<MathBox> children, double fontSize)
+        {
+            List<int> open = new List<int>();
+
+            for (int index = 0; index < children.Count; index++)
+            {
+                if (children[index] is not DelimiterBox delimiter) continue;
+
+                if (delimiter.Kind == DelimiterKind.ParenthesisOpen)
+                {
+                    open.Add(index);
+                    continue;
+                }
+
+                if (delimiter.Kind != DelimiterKind.ParenthesisClose) continue;
+
+                if (open.Count == 0)
+                {
+                    StretchPair(children, -1, index, fontSize);
+                    continue;
+                }
+
+                int start = open[open.Count - 1];
+                open.RemoveAt(open.Count - 1);
+
+                StretchPair(children, start, index, fontSize);
+            }
+
+            // innermost first, so an outer bracket is measured against an inner one that already grew
+            for (int index = open.Count - 1; index >= 0; index--)
+            {
+                StretchPair(children, open[index], children.Count, fontSize);
+            }
+        }
+
+        private void StretchPair(List<MathBox> children, int openIndex, int closeIndex, double fontSize)
+        {
+            double ascent = 0;
+            double descent = 0;
+
+            for (int index = openIndex + 1; index < closeIndex; index++)
+            {
+                MathBox child = children[index];
+
+                // the reach a row works out of its children, raise and all
+                ascent = Math.Max(ascent, child.Ascent + child.Raise);
+                descent = Math.Max(descent, child.Descent - child.Raise);
+            }
+
+            (double reachUp, double reachDown) = DelimiterReach(ascent, descent, fontSize);
+
+            if (openIndex >= 0) ((DelimiterBox)children[openIndex]).Stretch(reachUp, reachDown);
+            if (closeIndex < children.Count) ((DelimiterBox)children[closeIndex]).Stretch(reachUp, reachDown);
         }
 
         private TextRunBox TextRun(string text, double fontSize, MathToken token)

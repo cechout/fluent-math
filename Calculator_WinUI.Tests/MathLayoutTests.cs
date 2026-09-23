@@ -187,7 +187,8 @@ namespace Calculator_WinUI.Tests
             {
                 FontSizePx = FontSize,
                 OperatorScale = 0.5,
-                OperatorRaise = 0.25
+                OperatorRaise = 0.25,
+                MathAxisRaise = 0
             };
 
             RowBox row = Engine(style).BuildRow(new List<MathToken> { Operator("+") });
@@ -204,7 +205,8 @@ namespace Calculator_WinUI.Tests
                 FontSizePx = FontSize,
                 OperatorScale = 1.0,  // same size as the text, so only the raise moves it
                 OperatorGap = 0,
-                OperatorRaise = 0.25
+                OperatorRaise = 0.25,
+                MathAxisRaise = 0
             };
 
             RowBox row = Engine(style).BuildRow(new List<MathToken> { Operator("+") });
@@ -293,7 +295,8 @@ namespace Calculator_WinUI.Tests
                 FontSizePx = FontSize,
                 OperatorScale = 1.0,
                 OperatorGap = 0,
-                OperatorRaise = 0.25
+                OperatorRaise = 0.25,
+                MathAxisRaise = 0
             };
 
             RowBox row = Engine(style).BuildRow(new List<MathToken> { Operator("+") });
