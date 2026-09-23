@@ -32,7 +32,7 @@ namespace FluentMath.Views
 
         public StandardPage()
         {
-            ViewModel = new StandardViewModel();
+            ViewModel = new StandardViewModel(App.Settings);
             this.InitializeComponent();
 
             RebuildStyles();
@@ -354,6 +354,14 @@ namespace FluentMath.Views
         {
             _historyStyle = MathLayoutStyle.ForHistoryLine();
             _inputStyle = MathLayoutStyle.ForInputLine();
+
+            // the page is built anew on every navigation, so a change on the settings page is in force
+            // by the time these are read
+            foreach (MathLayoutStyle style in new[] { _historyStyle, _inputStyle })
+            {
+                style.DecimalMark = App.Settings.DecimalMarkText;
+                style.GroupDigits = App.Settings.GroupDigits;
+            }
 
             // the panels take the knobs as numbers and redraw with them; their colors come from the
             // ThemeResources in the markup, which re-resolve themselves on a theme change

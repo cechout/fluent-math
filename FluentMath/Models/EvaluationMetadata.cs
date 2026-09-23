@@ -28,13 +28,15 @@ namespace FluentMath.Models
 
     // which shape a finished result is shown in; the S to D key cycles through the first three
     // a value only has the fractions when a fraction was found for it at all, and the prime factors only
-    // when it is a whole number above zero, which the FACT key asks for
+    // when it is a whole number above zero, which the FACT key asks for; the ENG keys ask for the
+    // engineering form, a mantissa over a power of ten that is a multiple of three
     public enum AnswerForm
     {
         Decimal,
         Improper,
         Mixed,
-        PrimeFactors
+        PrimeFactors,
+        Engineering
     }
 
 

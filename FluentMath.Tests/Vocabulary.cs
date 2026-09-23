@@ -28,7 +28,7 @@ namespace FluentMath.Tests
             "cmd_pow_e", "cmd_exp", "cmd_frac_mixed",
             "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
             "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
-            "cmd_pol", "cmd_rec", "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
+            "cmd_pol", "cmd_rec", "cmd_eng", "cmd_eng_back", "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
             "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa",
             "cmd_history", "cmd_memory",
             "cmd_angle_cycle", "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
@@ -37,8 +37,8 @@ namespace FluentMath.Tests
         // handled by the ViewModel but with no button anywhere
         //
         // the selector in the caret bar sends cmd_angle_cycle, because a button that shows
-        // the current unit can only offer the next one; these three set a unit outright and are waiting
-        // on a settings page that lists all three
+        // the current unit can only offer the next one; these three set a unit outright, and the settings
+        // page writes the unit into the settings itself rather than sending them
         public static readonly string[] Parked =
         {
             "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
@@ -52,7 +52,6 @@ namespace FluentMath.Tests
         public static readonly string[] NotImplemented =
         {
             "cmd_dms", "cmd_degrees",
-            "cmd_rnd",
             "cmd_history", "cmd_memory"
         };
 
@@ -76,7 +75,7 @@ namespace FluentMath.Tests
         // input they evaluate first
         public static readonly string[] ViewKeys =
         {
-            "cmd_prime"
+            "cmd_prime", "cmd_eng", "cmd_eng_back"
         };
 
         // the keys that change a mode instead of the formula, and must leave both the input and a shown

@@ -1132,13 +1132,19 @@
                                     </Style>
                                 </Flyout.FlyoutPresenterStyle>
 
-                                <!--  the eleven decimal prefixes, split the way they read: the fractions of a unit on top and the multiples of one below  -->
+                                <!--
+                                    the eleven decimal prefixes, split the way they read: the fractions of a
+                                    unit on top and the multiples of one below; in front of them ENG, which
+                                    steps a result towards the fractions, over its shift, which steps it
+                                    towards the multiples
+                                -->
                                 <Grid ColumnSpacing="{StaticResource KeySpacing}" RowSpacing="{StaticResource KeySpacing}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
                                         <RowDefinition Height="Auto" />
                                     </Grid.RowDefinitions>
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
                                         <ColumnDefinition Width="Auto" />
@@ -1154,6 +1160,30 @@
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
+                                        CommandParameter="cmd_eng"
+                                        Style="{StaticResource NumberPadButtonStyle}">
+                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ENG" />
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
+                                        Grid.Column="0"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
+                                        Click="FlyoutKey_Click"
+                                        Command="{x:Bind ViewModel.InputCommand}"
+                                        CommandParameter="cmd_eng_back"
+                                        Style="{StaticResource NumberPadButtonStyle}">
+                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="←ENG" />
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="0"
+                                        Grid.Column="1"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
+                                        Click="FlyoutKey_Click"
+                                        Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_prefix_milli"
                                         Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="m" />
@@ -1161,7 +1191,7 @@
 
                                     <Button
                                         Grid.Row="0"
-                                        Grid.Column="1"
+                                        Grid.Column="2"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1173,7 +1203,7 @@
 
                                     <Button
                                         Grid.Row="0"
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1185,7 +1215,7 @@
 
                                     <Button
                                         Grid.Row="0"
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1197,7 +1227,7 @@
 
                                     <Button
                                         Grid.Row="0"
-                                        Grid.Column="4"
+                                        Grid.Column="5"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1209,7 +1239,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="0"
+                                        Grid.Column="1"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1221,7 +1251,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="1"
+                                        Grid.Column="2"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1233,7 +1263,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="2"
+                                        Grid.Column="3"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1245,7 +1275,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="3"
+                                        Grid.Column="4"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1257,7 +1287,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="4"
+                                        Grid.Column="5"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1269,7 +1299,7 @@
 
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="5"
+                                        Grid.Column="6"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -1886,7 +1916,8 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="."
                 Style="{StaticResource NumberPadButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="." />
+                <!--  the key always types a dot; the label follows the decimal mark the display draws it as  -->
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="{x:Bind ViewModel.DecimalMarkLabel}" />
             </Button>
             <Button
                 Grid.Row="5"

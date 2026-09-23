@@ -11,7 +11,8 @@ namespace FluentMath.Models
     // twelve significant digits is roughly what the Casio the app is modelled on shows
     //
     // everything here formats with InvariantCulture on purpose, a German system would otherwise put a
-    // comma into a number that then no longer parses back
+    // comma into a number that then no longer parses back; a decimal comma is only ever drawn, the layout
+    // swaps it in
     public static class ResultFormatter
     {
         // === constants ===
@@ -19,8 +20,10 @@ namespace FluentMath.Models
         private const int SignificantDigits = 12;
 
         // outside this window a plain decimal is a wall of zeros, so the output switches to a power of ten
+        // the lower bound is the one of Norm 2, which is what the display did before it had a setting
         private const double ScientificUpperBound = 1e12;
         private const double ScientificLowerBound = 1e-9;
+        private const double Norm1LowerBound = 1e-2;
 
         // enough placeholders to spell out the smallest number that still avoids scientific notation
         private const string PlainNumberFormat = "0.####################";
@@ -51,22 +54,36 @@ namespace FluentMath.Models
 
         public static string ToLatex(double value)
         {
-            double absolute = Math.Abs(value);
-            if (value != 0 && (absolute >= ScientificUpperBound || absolute < ScientificLowerBound))
-            {
-                return ToScientificLatex(value);
-            }
+            return ToLatex(value, NumberFormat.Default);
+        }
 
-            return ToPlainString(value);
+        public static string ToLatex(double value, NumberFormat format)
+        {
+            return ToLatex(Write(value, format));
+        }
+
+        public static string ToLatex(WrittenDecimal written)
+        {
+            if (written.Prefix != null) return written.Digits + new PostfixToken(written.Prefix).ToLatex(null!);
+            if (written.Exponent is not int exponent) return written.Digits;
+
+            // the times sign goes through the same helper the input line uses, so a result is not spaced
+            // differently from the formula that produced it
+            return $"{written.Digits}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
+        }
+
+        public static string ToLatex(double value, AnswerForm form, bool displayFractions)
+        {
+            return ToLatex(value, form, displayFractions, NumberFormat.Default);
         }
 
         // the same value in the shape the S to D key currently has selected; a form this value does not
         // have falls back to the decimal rather than to nothing
-        public static string ToLatex(double value, AnswerForm form, bool displayFractions)
+        public static string ToLatex(double value, AnswerForm form, bool displayFractions, NumberFormat format)
         {
-            if (form == AnswerForm.Decimal) return ToLatex(value);
-            if (!TryToFraction(value, out long numerator, out long denominator)) return ToLatex(value);
-            if (denominator <= 1) return ToLatex(value);
+            if (form == AnswerForm.Decimal) return ToLatex(value, format);
+            if (!TryToFraction(value, out long numerator, out long denominator)) return ToLatex(value, format);
+            if (denominator <= 1) return ToLatex(value, format);
 
             string command = displayFractions ? "dfrac" : "frac";
             if (form == AnswerForm.Improper) return FractionLatex(command, numerator, denominator);
@@ -97,20 +114,25 @@ namespace FluentMath.Models
             return rounded.ToString(PlainNumberFormat, CultureInfo.InvariantCulture);
         }
 
+        public static string ToLatex(EvaluationResult result, AnswerForm form, bool displayFractions)
+        {
+            return ToLatex(result, form, displayFractions, NumberFormat.Default);
+        }
+
         // a result in the form it is shown in: a single value in the answer form, a pair as both its values
         // with their names, or the prime factors
-        public static string ToLatex(EvaluationResult result, AnswerForm form, bool displayFractions)
+        public static string ToLatex(EvaluationResult result, AnswerForm form, bool displayFractions, NumberFormat format)
         {
             if (form == AnswerForm.PrimeFactors && TryPrimeFactors(result.Value, out List<(long Prime, int Exponent)> factors))
             {
                 return PrimeFactorLatex(factors);
             }
 
-            if (result.Kind == ResultKind.Single) return ToLatex(result.Value, form, displayFractions);
+            if (result.Kind == ResultKind.Single) return ToLatex(result.Value, form, displayFractions, format);
 
             (string first, string second) = PairNames(result.Kind);
-            return $"{first}={ToLatex(result.Value, form, displayFractions)}{PairSeparator}"
-                + $"{second}={ToLatex(result.Second, form, displayFractions)}";
+            return $"{first}={ToLatex(result.Value, form, displayFractions, format)}{PairSeparator}"
+                + $"{second}={ToLatex(result.Second, form, displayFractions, format)}";
         }
 
         private static string PrimeFactorLatex(List<(long Prime, int Exponent)> factors)
@@ -144,30 +166,40 @@ namespace FluentMath.Models
 
         // === the same values as tokens ===
 
+        public static List<MathToken> ToTokens(EvaluationResult result, AnswerForm form, bool displayFractions)
+        {
+            return ToTokens(result, form, displayFractions, NumberFormat.Default);
+        }
+
         // what the native display draws, mirroring ToLatex arm for arm rather than parsing what that
         // produces, so the two shapes cannot drift apart; a change to either belongs in both
-        public static List<MathToken> ToTokens(EvaluationResult result, AnswerForm form, bool displayFractions)
+        public static List<MathToken> ToTokens(EvaluationResult result, AnswerForm form, bool displayFractions, NumberFormat format)
         {
             if (form == AnswerForm.PrimeFactors && TryPrimeFactors(result.Value, out List<(long Prime, int Exponent)> factors))
             {
                 return PrimeFactorTokens(factors);
             }
 
-            if (result.Kind == ResultKind.Single) return ToTokens(result.Value, form, displayFractions);
+            if (result.Kind == ResultKind.Single) return ToTokens(result.Value, form, displayFractions, format);
 
             // the names are drawn as text beside the digits rather than typed as anything, the same as the
             // minus of a negative result below
             (string first, string second) = PairNames(result.Kind);
 
             List<MathToken> tokens = DigitTokens(first + "=");
-            tokens.AddRange(ToTokens(result.Value, form, displayFractions));
+            tokens.AddRange(ToTokens(result.Value, form, displayFractions, format));
             tokens.AddRange(DigitTokens(PairSeparator + second + "="));
-            tokens.AddRange(ToTokens(result.Second, form, displayFractions));
+            tokens.AddRange(ToTokens(result.Second, form, displayFractions, format));
 
             return tokens;
         }
 
         public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions)
+        {
+            return ToTokens(value, form, displayFractions, NumberFormat.Default);
+        }
+
+        public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions, NumberFormat format)
         {
             if (form != AnswerForm.Decimal
                 && TryToFraction(value, out long numerator, out long denominator)
@@ -186,30 +218,41 @@ namespace FluentMath.Models
                 return new List<MathToken> { mixed };
             }
 
-            return ToTokens(value);
+            return ToTokens(value, format);
         }
 
         public static List<MathToken> ToTokens(double value)
         {
-            double absolute = Math.Abs(value);
-            if (value != 0 && (absolute >= ScientificUpperBound || absolute < ScientificLowerBound))
+            return ToTokens(value, NumberFormat.Default);
+        }
+
+        public static List<MathToken> ToTokens(double value, NumberFormat format)
+        {
+            return ToTokens(Write(value, format));
+        }
+
+        public static List<MathToken> ToTokens(WrittenDecimal written)
+        {
+            List<MathToken> tokens = DigitTokens(written.Digits);
+
+            if (written.Prefix != null)
             {
-                (string mantissa, int exponent) = SplitScientific(value);
-
-                // spelled out the same way the EXP key spells it, so a result and a typed formula are
-                // the same shape rather than two that happen to look alike
-                List<MathToken> tokens = DigitTokens(mantissa);
-                tokens.Add(new MathToken(TokenType.Operator, "*"));
-
-                PowerToken power = new PowerToken();
-                power.BaseTokens.AddRange(DigitTokens("10"));
-                power.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
-                tokens.Add(power);
-
+                tokens.Add(new PostfixToken(written.Prefix));
                 return tokens;
             }
 
-            return DigitTokens(ToPlainString(value));
+            if (written.Exponent is not int exponent) return tokens;
+
+            // spelled out the same way the EXP key spells it, so a result and a typed formula are
+            // the same shape rather than two that happen to look alike
+            tokens.Add(new MathToken(TokenType.Operator, "*"));
+
+            PowerToken power = new PowerToken();
+            power.BaseTokens.AddRange(DigitTokens("10"));
+            power.ExponentTokens.AddRange(DigitTokens(exponent.ToString(CultureInfo.InvariantCulture)));
+            tokens.Add(power);
+
+            return tokens;
         }
 
         private static FractionToken FractionTokens(long numerator, long denominator)
@@ -238,8 +281,8 @@ namespace FluentMath.Models
 
         // === pairs ===
 
-        // what a Casio calls the two values; the separator becomes a semicolon once the decimal mark can be
-        // a comma
+        // what a Casio calls the two values; with a decimal comma the layout draws the separator as a
+        // semicolon, the way it draws the one between two arguments
         private const string PairSeparator = ", ";
 
         private static (string First, string Second) PairNames(ResultKind kind)
@@ -250,6 +293,183 @@ namespace FluentMath.Models
                 ResultKind.Polar => ("r", "θ"),
                 _ => ("x", "y")
             };
+        }
+
+
+        // === number formats ===
+
+        // the value as the number format writes it
+        public static WrittenDecimal Write(double value, NumberFormat format)
+        {
+            if (!double.IsFinite(value)) return new WrittenDecimal(ToPlainString(value));
+
+            return format.Notation switch
+            {
+                NumberNotation.Fix => WriteFixed(value, format.Digits),
+                NumberNotation.Sci => WriteScientific(value, SciDigits(format)),
+                NumberNotation.Norm1 => WriteNormal(value, Norm1LowerBound),
+                _ => WriteNormal(value, ScientificLowerBound)
+            };
+        }
+
+        // the value rounded the way the number format writes it, which is what Rnd hands back
+        public static double RoundToFormat(double value, NumberFormat format)
+        {
+            if (!double.IsFinite(value)) return value;
+
+            return Write(value, format).Value;
+        }
+
+        // every significant digit up to twelve, and a power of ten outside the window
+        //
+        // the window is judged on the rounded value, so a number that rounds up to 1e12 is not written as
+        // thirteen digits
+        private static WrittenDecimal WriteNormal(double value, double lowerBound)
+        {
+            double rounded = RoundToSignificantDigits(value, SignificantDigits);
+            double absolute = Math.Abs(rounded);
+
+            if (rounded != 0 && (absolute >= ScientificUpperBound || absolute < lowerBound))
+            {
+                (string mantissa, int exponent) = SplitScientific(value);
+                return new WrittenDecimal(mantissa, exponent);
+            }
+
+            return new WrittenDecimal(ToPlainString(value));
+        }
+
+        // exactly this many decimals; a number too large for the display is written with a power of ten
+        // whose mantissa keeps them
+        //
+        // a negative number that rounds to nothing keeps its minus, since the digits carry the value on
+        // into the next calculation and the sign would otherwise be lost there
+        private static WrittenDecimal WriteFixed(double value, int decimals)
+        {
+            (decimal mantissa, int exponent) = Decompose(value);
+            if (exponent >= 12) return WriteScientific(value, decimals + 1);
+
+            // below half the last decimal the value rounds to zero, and scaling it would leave the range
+            // a decimal holds
+            decimal plain = exponent < -decimals - 1 ? 0m : Scale(mantissa, exponent);
+            decimal rounded = Math.Round(plain, decimals, MidpointRounding.AwayFromZero);
+
+            if (Math.Abs(rounded) >= 1e12m) return WriteScientific(value, decimals + 1);
+
+            return new WrittenDecimal(Signed(Math.Abs(rounded).ToString("F" + decimals, CultureInfo.InvariantCulture), value));
+        }
+
+        // exactly this many significant digits, always with a power of ten
+        private static WrittenDecimal WriteScientific(double value, int significant)
+        {
+            (decimal mantissa, int exponent) = Decompose(value);
+
+            decimal rounded = Math.Round(mantissa, significant - 1, MidpointRounding.AwayFromZero);
+            if (Math.Abs(rounded) >= 10)
+            {
+                rounded /= 10;
+                exponent++;
+            }
+
+            string digits = Math.Abs(rounded).ToString("F" + (significant - 1), CultureInfo.InvariantCulture);
+            return new WrittenDecimal(Signed(digits, value), exponent);
+        }
+
+        private static int SciDigits(NumberFormat format)
+        {
+            return format.Digits == 0 ? SignificantDigits : format.Digits;
+        }
+
+        private static string Signed(string digits, double value)
+        {
+            return value < 0 ? "-" + digits : digits;
+        }
+
+        // the value as a mantissa from 1 to below 10 and its power of ten, read off the fifteen digits a
+        // Casio holds, so it rounds the way it reads: 2.675 goes to 2.68 where the double just below it
+        // would round down
+        private static (decimal Mantissa, int Exponent) Decompose(double value)
+        {
+            string text = value.ToString("E14", CultureInfo.InvariantCulture);
+            int split = text.IndexOf('E');
+
+            decimal mantissa = decimal.Parse(text.Substring(0, split), NumberStyles.Float, CultureInfo.InvariantCulture);
+            int exponent = int.Parse(text.Substring(split + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+
+            return (mantissa, exponent);
+        }
+
+        private static decimal Scale(decimal value, int exponent)
+        {
+            for (int step = 0; step < exponent; step++) value *= 10;
+            for (int step = 0; step > exponent; step--) value /= 10;
+
+            return value;
+        }
+
+
+        // === engineering ===
+
+        // the power of ten a first press of ENG writes: the largest multiple of three that leaves at least
+        // one digit in front of the point
+        public static int EngineeringExponent(double value)
+        {
+            double rounded = RoundToSignificantDigits(value, SignificantDigits);
+            if (rounded == 0 || !double.IsFinite(rounded)) return 0;
+
+            int magnitude = Decompose(rounded).Exponent;
+            return (int)Math.Floor(magnitude / 3.0) * 3;
+        }
+
+        // whether the ENG view can write the value over this power of ten: the mantissa has to stay a
+        // number the display writes without a power of its own, from 1e-9 up to below 1e12, which is
+        // where ENG and its shift stop stepping
+        public static bool CanWriteEngineering(double value, int exponent)
+        {
+            double rounded = RoundToSignificantDigits(value, SignificantDigits);
+            if (rounded == 0 || !double.IsFinite(rounded)) return false;
+
+            int magnitude = Decompose(rounded).Exponent - exponent;
+            return magnitude >= -9 && magnitude < 12;
+        }
+
+        // the value over that power of ten, the mantissa written the way the number format writes
+        // digits: up to twelve significant ones in Norm, n decimals in Fix and n significant digits in Sci
+        //
+        // with the prefixes on, a power that has one is written as it, 1.234k, and the power 0 as nothing
+        // at all; without them the power is always written, 1234×10⁰, as on a Casio
+        public static WrittenDecimal Engineering(double value, int exponent, NumberFormat format, bool usePrefixes)
+        {
+            (decimal mantissa, int magnitude) = Decompose(value);
+            int shift = magnitude - exponent;
+
+            int decimals = format.Notation switch
+            {
+                NumberNotation.Fix => format.Digits,
+                NumberNotation.Sci => SciDigits(format) - 1 - shift,
+                _ => SignificantDigits - 1 - shift
+            };
+
+            decimal rounded = Math.Abs(RoundDecimal(Scale(mantissa, shift), decimals));
+            string digits = format.Notation == NumberNotation.Norm1 || format.Notation == NumberNotation.Norm2
+                ? rounded.ToString(PlainNumberFormat, CultureInfo.InvariantCulture)
+                : rounded.ToString("F" + Math.Max(0, decimals), CultureInfo.InvariantCulture);
+
+            digits = Signed(digits, value);
+
+            if (!usePrefixes) return new WrittenDecimal(digits, exponent);
+            if (exponent == 0) return new WrittenDecimal(digits);
+
+            string? prefix = PostfixToken.PrefixFor(exponent);
+            return prefix == null ? new WrittenDecimal(digits, exponent) : new WrittenDecimal(digits, exponent, prefix);
+        }
+
+        // a negative number of decimals rounds in front of the point, the way Sci 3 writes 1234 as 1230
+        private static decimal RoundDecimal(decimal value, int decimals)
+        {
+            if (decimals >= 0) return Math.Round(value, Math.Min(decimals, 28), MidpointRounding.AwayFromZero);
+
+            decimal unit = Scale(1m, -decimals);
+            return Math.Round(value / unit, 0, MidpointRounding.AwayFromZero) * unit;
         }
 
 
@@ -397,15 +617,6 @@ namespace FluentMath.Models
 
         // === helpers ===
 
-        private static string ToScientificLatex(double value)
-        {
-            (string mantissaText, int exponent) = SplitScientific(value);
-
-            // the times sign goes through the same helper the input line uses, so a result is not spaced
-            // differently from the formula that produced it
-            return $"{mantissaText}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
-        }
-
         // shared by both output shapes, so a rounding carry is handled in one place rather than two
         private static (string Mantissa, int Exponent) SplitScientific(double value)
         {
@@ -444,6 +655,42 @@ namespace FluentMath.Models
             // scaled back; capping the decimals instead cost 1.2345678901234e-8 four of its twelve digits
             double unit = Math.Pow(10, magnitude);
             return Math.Round(value / unit, digits - 1, MidpointRounding.AwayFromZero) * unit;
+        }
+    }
+
+
+    // a decimal the way the display writes it: the digits, and behind them a power of ten, a decimal
+    // prefix or nothing
+    //
+    // the one shape both outputs and the seed of the next calculation are built from, so what is drawn,
+    // what is carried on and what Rnd returns are the same number
+    public readonly struct WrittenDecimal
+    {
+        public string Digits { get; } // a negative number starts with a plain minus
+
+        // the power of ten the digits are scaled by, null when they stand alone
+        public int? Exponent { get; }
+
+        // the prefix written for that power instead of the power itself, by its postfix name
+        public string? Prefix { get; }
+
+        public WrittenDecimal(string digits, int? exponent = null, string? prefix = null)
+        {
+            Digits = digits;
+            Exponent = exponent;
+            Prefix = prefix;
+        }
+
+        public double Value
+        {
+            get
+            {
+                string text = Exponent is int exponent
+                    ? Digits + "E" + exponent.ToString(CultureInfo.InvariantCulture)
+                    : Digits;
+
+                return double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+            }
         }
     }
 }

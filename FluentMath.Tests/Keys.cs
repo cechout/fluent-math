@@ -28,7 +28,7 @@ namespace FluentMath.Tests
             "fn:sec", "fn:csc", "fn:cot", "fn:arcsec", "fn:arccsc", "fn:arccot",
             "fn:sech", "fn:csch", "fn:coth", "fn:arsech", "fn:arcsch", "fn:arcoth",
             "fn:floor", "fn:ceil", "fn:int", "fn:intg",
-            "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix",
+            "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix", "fn:rnd",
             "npr", "ncr", "rand", "pre:kilo", "pre:micro",
             "mixed", "divr", "fn:pol", "fn:rec"
         };

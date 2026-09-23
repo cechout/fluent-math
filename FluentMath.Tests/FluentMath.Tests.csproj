@@ -20,6 +20,7 @@
     <Compile Include="..\FluentMath\Models\NavigationMetadata.cs" />
     <Compile Include="..\FluentMath\Models\EvaluationMetadata.cs" />
     <Compile Include="..\FluentMath\Models\ResultFormatter.cs" />
+    <Compile Include="..\FluentMath\Models\CalculatorSettings.cs" />
     <Compile Include="..\FluentMath\ViewModels\StandardViewModel.cs" />
     <Compile Include="..\FluentMath\ViewModels\RelayCommand.cs" />
   </ItemGroup>

@@ -911,6 +911,44 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 
+        // and as a number with a power of ten behind it, typed the way the EXP key types one; the digits
+        // carry the full mantissa, the power is exact as it stands
+        public void SeedWithScientific(string mantissaText, double fullMantissa, int exponent)
+        {
+            SeedWithValue(mantissaText, fullMantissa);
+
+            var power = new PowerToken();
+            FillWithDigits(power.BaseTokens, "10");
+            FillWithDigits(power.ExponentTokens, exponent.ToString(CultureInfo.InvariantCulture));
+
+            _rootTokens.Add(new MathToken(TokenType.Operator, "*"));
+            _rootTokens.Add(power);
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // and as a number with a decimal prefix behind it, the way the ENG view writes one
+        public void SeedWithPrefix(string mantissaText, double fullMantissa, string prefix)
+        {
+            SeedWithValue(mantissaText, fullMantissa);
+
+            _rootTokens.Add(new PostfixToken(prefix));
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // puts a seeded result in brackets when it is more than the one operand a key to its right would
+        // take: a negative number, a power of ten, the prime factors
+        //
+        // squaring −5 is then 25, the way a Casio squares Ans, rather than the −25 that −5² typed by hand
+        // is; a single operand, a number, a fraction or a number with a prefix, is left bare
+        public void EncloseIfCompound()
+        {
+            if (FindOperandStart(_rootTokens, _rootTokens.Count) == 0) return;
+
+            _rootTokens.Insert(0, new MathToken(TokenType.BracketOpen, "("));
+            _rootTokens.Add(new MathToken(TokenType.BracketClose, ")"));
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
         // one token per character, exactly what typing the same number by hand would leave behind; a
         // leading minus is a sign rather than a digit, so it goes in as the operator the evaluator
         // already reads that way

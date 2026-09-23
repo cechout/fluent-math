@@ -51,6 +51,13 @@ namespace FluentMath.Tests
             }
         }
 
+        // every result opens as its decimal, the way the display worked before exact came first; the
+        // tests about the S to D cycle and about decimal digits start from there
+        private static StandardViewModel DecimalFirst()
+        {
+            return new StandardViewModel(new CalculatorSettings { ExactFirst = false });
+        }
+
         private static StandardViewModel AfterOnePlusOne()
         {
             var viewModel = new StandardViewModel();
@@ -262,7 +269,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AppliesTheAngleUnitToTheNextEvaluation()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
 
             Press(viewModel, "cmd_sin", "3", "0", "=");
             Assert.Equal("0.5", viewModel.InputAndResultText);
@@ -321,7 +328,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ReadsTheExponentKeyAsAnOrdinaryMultiplication()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "1", "/", "3", "cmd_exp", "5", "=");
 
             Assert.Equal("33333.3333333", viewModel.InputAndResultText);
@@ -421,7 +428,7 @@ namespace FluentMath.Tests
         [Fact]
         public void EvaluatesFirstWhenPressedWhileAFormulaIsBeingTyped()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "7", "/", "3", "sd");
 
             Assert.Contains("frac{7}{3}", viewModel.InputAndResultText);
@@ -430,7 +437,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SwitchesBothValuesOfAPairTogether()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "cmd_rec", "1", "cmd_nav_right", "60", "=");
             Assert.StartsWith("x=0.5, y=0.866025403784", viewModel.InputAndResultText);
 
@@ -453,7 +460,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CyclesStraightBackWhenThereIsNoMixedForm()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "1", "/", "3", "=");
 
             string asDecimal = viewModel.InputAndResultText;
@@ -468,7 +475,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CyclesThroughAllThreeFormsWhenTheyExist()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=");
             Assert.Equal("1.25", viewModel.InputAndResultText);
 
@@ -486,7 +493,7 @@ namespace FluentMath.Tests
         [Fact]
         public void StartsEveryResultBackAtTheDecimalForm()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=", "sd");
             Assert.Contains("frac", viewModel.InputAndResultText);
 
@@ -497,7 +504,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesTheShownFractionIntoTheNextCalculation()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=", "sd");
 
             Press(viewModel, "+");
@@ -512,7 +519,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ContinuesAMixedFractionFromTheResult()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "=", "cmd_frac_mixed", "1", "cmd_nav_right", "2", "=");
 
             Assert.Equal("5.5", viewModel.InputAndResultText);
@@ -523,7 +530,7 @@ namespace FluentMath.Tests
         [Fact]
         public void OpensAnEmptyMixedFractionOnAnEmptyDisplay()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "cmd_frac_mixed", "1", "cmd_nav_right", "1", "cmd_nav_right", "2", "=");
 
             Assert.Equal("1.5", viewModel.InputAndResultText);
@@ -532,7 +539,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesAShownMixedNumberOnAsAMixedFraction()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=", "sd", "sd", "+");
 
             Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
@@ -541,7 +548,7 @@ namespace FluentMath.Tests
             Assert.Equal("2.25", viewModel.InputAndResultText);
 
             // the sign is part of the whole number, so squaring a negative one comes out positive
-            var negative = new StandardViewModel();
+            var negative = DecimalFirst();
             Press(negative, "-", "5", "/", "4", "=", "sd", "sd", "cmd_pow_2", "=");
             Assert.Equal("1.5625", negative.InputAndResultText);
         }
@@ -550,7 +557,7 @@ namespace FluentMath.Tests
         [Fact]
         public void PlacesAClickInsideAShownMixedNumber()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=", "sd", "sd");
 
             viewModel.PlaceCursor("0.0@1");
@@ -563,16 +570,16 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesTheFullValueBehindTheShownDigits()
         {
-            var seeded = new StandardViewModel();
+            var seeded = DecimalFirst();
             Press(seeded, "1", "/", "3", "=", "*", "3", "=");
             Assert.Equal("1", seeded.InputAndResultText);
 
             // until a digit is edited: the last 3 taken off and typed again is a number typed by hand
-            var edited = new StandardViewModel();
+            var edited = DecimalFirst();
             Press(edited, "1", "/", "3", "=", "+", "back", "back", "3", "*", "3", "=");
             Assert.Equal("0.999999999999", edited.InputAndResultText);
 
-            var carried = new StandardViewModel();
+            var carried = DecimalFirst();
             Press(carried, "1", "/", "3", "=", "AC", "cmd_ans", "*", "3", "=");
             Assert.Equal("1", carried.InputAndResultText);
         }
@@ -716,6 +723,183 @@ namespace FluentMath.Tests
             Press(viewModel, "3", "=");
 
             Assert.Equal("23", viewModel.InputAndResultText);
+        }
+
+
+        // === the calculator setup ===
+
+        // measured on the Casio: a result opens as its fraction, and S to D shows the decimal
+        [Fact]
+        public void OpensAResultAsItsFractionWhenExactComesFirst()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "/", "4", "=");
+            Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Equal("0.25", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
+
+            // a root has no fraction and opens as the decimal
+            Press(viewModel, "AC", "cmd_sqrt", "2", "=");
+            Assert.StartsWith("1.41421356237", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void OpensTheMixedFormFirstWhenTheSettingsSaySo()
+        {
+            var viewModel = new StandardViewModel(new CalculatorSettings { MixedFirst = true });
+            Press(viewModel, "5", "/", "4", "=");
+            Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
+
+            Press(viewModel, "sd");
+            Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
+
+            // a proper fraction has no mixed form and opens as the improper one
+            Press(viewModel, "AC", "1", "/", "4", "=");
+            Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
+        }
+
+        [Fact]
+        public void WritesTheDecimalInTheNumberFormatAndCarriesTheFullValueOn()
+        {
+            var settings = new CalculatorSettings { ExactFirst = false, NumberFormat = new NumberFormat(NumberNotation.Fix, 2) };
+            var viewModel = new StandardViewModel(settings);
+
+            Press(viewModel, "1", "/", "3", "=");
+            Assert.Equal("0.33", viewModel.InputAndResultText);
+
+            Press(viewModel, "*", "3", "=");
+            Assert.Equal("1.00", viewModel.InputAndResultText);
+
+            // a power of ten is carried on as it is written, with the full mantissa behind its digits
+            settings.NumberFormat = new NumberFormat(NumberNotation.Sci, 3);
+            Press(viewModel, "AC", "1", "/", "3", "=");
+            Assert.StartsWith("3.33", viewModel.InputAndResultText);
+
+            Press(viewModel, "*", "3", "=");
+            Assert.StartsWith("1.00", viewModel.InputAndResultText);
+        }
+
+        // measured on the Casio: in Fix 2, Rnd(1÷3) is 33/100 and three of it 99/100
+        [Fact]
+        public void RoundsToTheNumberFormatWithRnd()
+        {
+            var viewModel = new StandardViewModel(new CalculatorSettings { NumberFormat = new NumberFormat(NumberNotation.Fix, 2) });
+
+            Press(viewModel, "cmd_rnd", "1", "/", "3", "=");
+            Assert.Contains("frac{33}{100}", viewModel.InputAndResultText);
+
+            Press(viewModel, "*", "3", "=");
+            Assert.Contains("frac{99}{100}", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void KeepsTheAngleUnitForTheNextViewModel()
+        {
+            var settings = new CalculatorSettings();
+            Press(new StandardViewModel(settings), "cmd_angle_cycle");
+
+            Assert.Equal("RAD", new StandardViewModel(settings).AngleModeLabel);
+        }
+
+        [Fact]
+        public void LabelsTheDecimalKeyWithTheMarkTheDisplayDraws()
+        {
+            Assert.Equal(",", new StandardViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Comma }).DecimalMarkLabel);
+            Assert.Equal(".", new StandardViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Dot }).DecimalMarkLabel);
+        }
+
+
+        // === ENG ===
+
+        // measured on the Casio: 1234, then ENG, ENG and the shift of ENG
+        [Fact]
+        public void StepsThroughTheEngineeringForms()
+        {
+            var viewModel = new StandardViewModel();
+
+            Press(viewModel, "1234", "=", "cmd_eng");
+            Assert.StartsWith("1.234", viewModel.InputAndResultText);
+            Assert.EndsWith("10^{3}", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_eng");
+            Assert.StartsWith("1234", viewModel.InputAndResultText);
+            Assert.EndsWith("10^{0}", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_eng_back");
+            Assert.StartsWith("1.234", viewModel.InputAndResultText);
+
+            // the shift pressed first goes one power above, 0.123×10³ for 123
+            Press(viewModel, "AC", "123", "=", "cmd_eng_back");
+            Assert.StartsWith("0.123", viewModel.InputAndResultText);
+            Assert.EndsWith("10^{3}", viewModel.InputAndResultText);
+
+            Press(viewModel, "sd");
+            Assert.Equal("123", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void WritesTheEngineeringFormWithAPrefixAndCarriesItOn()
+        {
+            var viewModel = new StandardViewModel(new CalculatorSettings { UsePrefixes = true });
+
+            Press(viewModel, "1234", "=", "cmd_eng");
+            Assert.Equal("1.234\\mathrm{k}", viewModel.InputAndResultText);
+
+            Press(viewModel, "+");
+            Assert.IsType<PostfixToken>(viewModel.InputTokens[5]);
+
+            Press(viewModel, "1", "=");
+            Assert.Equal("1235", viewModel.InputAndResultText);
+        }
+
+
+        // === a result taken as the operand of the next key ===
+
+        // a Casio squares Ans, so a negative result squares to a positive number; −5² typed by hand is
+        // still −25
+        [Fact]
+        public void SquaresANegativeResultAsAWhole()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "-", "5", "=", "cmd_pow_2", "=");
+
+            Assert.Equal("25", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void SquaresThePrimeFactorsAsAWhole()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1440", "=", "cmd_prime", "cmd_pow_2", "=");
+
+            Assert.Equal("2073600", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void SquaresAPowerOfTenAsAWhole()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "3", "cmd_exp", "20", "=", "cmd_pow_2", "=");
+
+            Assert.StartsWith("9", viewModel.InputAndResultText);
+            Assert.EndsWith("10^{40}", viewModel.InputAndResultText);
+        }
+
+        // a single operand needs no brackets, and an operator key needs none either
+        [Fact]
+        public void LeavesTheBracketsOutWhereTheyChangeNothing()
+        {
+            var positive = new StandardViewModel();
+            Press(positive, "5", "=", "cmd_pow_2");
+            Assert.IsType<PowerToken>(Assert.Single(positive.InputTokens));
+
+            var negative = new StandardViewModel();
+            Press(negative, "-", "5", "=", "+");
+            Assert.Equal(TokenType.Operator, negative.InputTokens[0].Type);
         }
     }
 }

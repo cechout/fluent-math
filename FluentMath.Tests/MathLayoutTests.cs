@@ -317,5 +317,62 @@ namespace FluentMath.Tests
             Assert.Equal(60 - FontSize * 0.75, run.Top);
             Assert.Equal(60 + FontSize * 0.25, run.Bottom);
         }
+
+
+        // === numbers ===
+
+        [Fact]
+        public void DrawsTheDecimalPointAsTheMarkTheStyleAsksFor()
+        {
+            MathLayoutStyle style = new MathLayoutStyle { FontSizePx = FontSize, DecimalMark = "," };
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Digit("1"), Digit("."), Digit("5") });
+
+            TextRunBox run = Assert.IsType<TextRunBox>(Assert.Single(row.Children));
+            Assert.Equal("1,5", run.Text);
+            Assert.Equal(3, run.Tokens.Count);
+        }
+
+        // a comma between two values would read as a decimal comma, so it turns into a semicolon
+        [Fact]
+        public void SeparatesTwoArgumentsWithASemicolonBesideADecimalComma()
+        {
+            MathLayoutStyle style = new MathLayoutStyle { FontSizePx = FontSize, DecimalMark = "," };
+            FunctionToken gcd = new FunctionToken("gcd");
+            gcd.Arguments[0].Add(Digit("4"));
+            gcd.Arguments[1].Add(Digit("6"));
+
+            RowBox function = (RowBox)Engine(style).BuildRow(new List<MathToken> { gcd }).Children.Single();
+            RowBox arguments = (RowBox)function.Children[2];
+
+            Assert.Equal(";", ((TextRunBox)arguments.Children[1]).Text);
+        }
+
+        [Fact]
+        public void GroupsTheWholePartInThreesAndLeavesTheDecimalsAlone()
+        {
+            MathLayoutStyle style = new MathLayoutStyle { FontSizePx = FontSize, GroupDigits = true };
+            List<MathToken> tokens = "1234567.8912".Select(character => Digit(character.ToString())).ToList();
+
+            RowBox row = Engine(style).BuildRow(tokens);
+
+            Assert.Equal(new[] { "1", "234", "567.8912" }, row.Children.Cast<TextRunBox>().Select(run => run.Text));
+            Assert.Equal(FontSize * 0.2 * 2 + 12 * FontSize, row.Width, 9);
+        }
+
+        // the place between two groups is the middle of the gap, where the caret stands and a click lands
+        [Fact]
+        public void PutsThePlaceBetweenTwoGroupsInTheMiddleOfTheGap()
+        {
+            MathLayoutStyle style = new MathLayoutStyle { FontSizePx = FontSize, GroupDigits = true };
+            List<MathToken> tokens = "1234".Select(character => Digit(character.ToString())).ToList();
+
+            MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(), style, new CaretTarget(tokens, 1));
+            RowBox row = engine.BuildRow(tokens);
+            row.Place(0, row.Ascent);
+
+            double middle = FontSize + FontSize * 0.1;
+            Assert.Equal(middle, engine.Caret.Value.Box.X + engine.Caret.Value.Offset, 9);
+            Assert.Equal("@1", MathHitTest.NearestAddress(row, middle + 1, row.Baseline));
+        }
     }
 }

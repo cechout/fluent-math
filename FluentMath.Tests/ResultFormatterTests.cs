@@ -196,5 +196,126 @@ namespace FluentMath.Tests
             Assert.Equal(ResultFormatter.ToLatex(value), ResultFormatter.ToLatex(value, AnswerForm.Improper, false));
             Assert.Equal(ResultFormatter.ToLatex(4), ResultFormatter.ToLatex(4, AnswerForm.Mixed, false));
         }
+
+
+        // === number formats ===
+
+        private static (string Digits, int? Exponent) Written(double value, NumberFormat format)
+        {
+            WrittenDecimal written = ResultFormatter.Write(value, format);
+            return (written.Digits, written.Exponent);
+        }
+
+        // measured on the Casio: 1÷200 is 5×10⁻³ in Norm 1, the setting it ships with
+        [Fact]
+        public void WritesNorm1WithAPowerOfTenBelowAHundredth()
+        {
+            NumberFormat norm1 = new NumberFormat(NumberNotation.Norm1);
+
+            Assert.Equal(("5", (int?)-3), Written(0.005, norm1));
+            Assert.Equal(("0.01", (int?)null), Written(0.01, norm1));
+            Assert.Equal(("0.005", (int?)null), Written(0.005, NumberFormat.Default));
+        }
+
+        [Fact]
+        public void WritesAFixedNumberOfDecimals()
+        {
+            NumberFormat fix2 = new NumberFormat(NumberNotation.Fix, 2);
+
+            Assert.Equal(("0.33", (int?)null), Written(1.0 / 3, fix2));
+            Assert.Equal(("5.00", (int?)null), Written(5, fix2));
+            Assert.Equal(("2.68", (int?)null), Written(2.675, fix2));
+            Assert.Equal(("0", (int?)null), Written(0.4, new NumberFormat(NumberNotation.Fix, 0)));
+
+            // too large for the display, and the mantissa keeps the decimals
+            Assert.Equal(("1.23", (int?)15), Written(1.234e15, fix2));
+        }
+
+        // the digits carry the value on into the next calculation, so they cannot drop its sign
+        [Fact]
+        public void KeepsTheMinusOfANegativeNumberThatFixRoundsToNothing()
+        {
+            Assert.Equal(("-0.00", (int?)null), Written(-0.001, new NumberFormat(NumberNotation.Fix, 2)));
+        }
+
+        [Fact]
+        public void WritesAFixedNumberOfSignificantDigits()
+        {
+            NumberFormat sci3 = new NumberFormat(NumberNotation.Sci, 3);
+
+            Assert.Equal(("1.23", (int?)3), Written(1234, sci3));
+            Assert.Equal(("1.00", (int?)0), Written(1, sci3));
+            Assert.Equal(("1.00", (int?)1), Written(9.996, sci3));
+            Assert.Equal(("-2.5", (int?)-4), Written(-0.00025, new NumberFormat(NumberNotation.Sci, 2)));
+
+            // Sci 0 is every digit the display has
+            Assert.Equal(("3.33333333333", (int?)-1), Written(1.0 / 3, new NumberFormat(NumberNotation.Sci, 0)));
+        }
+
+        [Fact]
+        public void HandsBackTheNumberItWrote()
+        {
+            Assert.Equal(1230, ResultFormatter.RoundToFormat(1234, new NumberFormat(NumberNotation.Sci, 3)));
+            Assert.Equal(1.23e15, ResultFormatter.RoundToFormat(1.234e15, new NumberFormat(NumberNotation.Fix, 2)));
+        }
+
+
+        // === engineering ===
+
+        private static (string Digits, int? Exponent) Engineering(double value, int exponent, NumberFormat format)
+        {
+            WrittenDecimal written = ResultFormatter.Engineering(value, exponent, format, usePrefixes: false);
+            return (written.Digits, written.Exponent);
+        }
+
+        // measured on the Casio: 1234 with ENG is 1.234×10³, ENG again 1234×10⁰; 123 with the shift of
+        // ENG is 0.123×10³
+        [Fact]
+        public void WritesTheValueOverAPowerOfThree()
+        {
+            Assert.Equal(3, ResultFormatter.EngineeringExponent(1234));
+            Assert.Equal(0, ResultFormatter.EngineeringExponent(123));
+            Assert.Equal(-6, ResultFormatter.EngineeringExponent(0.0000456));
+
+            Assert.Equal(("1.234", (int?)3), Engineering(1234, 3, NumberFormat.Default));
+            Assert.Equal(("1234", (int?)0), Engineering(1234, 0, NumberFormat.Default));
+            Assert.Equal(("0.123", (int?)3), Engineering(123, 3, NumberFormat.Default));
+            Assert.Equal(("-45.6", (int?)-6), Engineering(-0.0000456, -6, NumberFormat.Default));
+        }
+
+        [Fact]
+        public void WritesTheEngineeringMantissaInTheNumberFormat()
+        {
+            Assert.Equal(("1.23", (int?)3), Engineering(1234, 3, new NumberFormat(NumberNotation.Fix, 2)));
+            Assert.Equal(("1230", (int?)0), Engineering(1234, 0, new NumberFormat(NumberNotation.Sci, 3)));
+        }
+
+        [Fact]
+        public void StopsSteppingWhereTheMantissaWouldNeedAPowerOfItsOwn()
+        {
+            Assert.True(ResultFormatter.CanWriteEngineering(1234, -6));
+            Assert.False(ResultFormatter.CanWriteEngineering(1234, -9));
+            Assert.True(ResultFormatter.CanWriteEngineering(1234, 12));
+            Assert.False(ResultFormatter.CanWriteEngineering(1234, 15));
+            Assert.False(ResultFormatter.CanWriteEngineering(0, 0));
+        }
+
+        [Fact]
+        public void WritesThePrefixInsteadOfThePowerWhenAskedTo()
+        {
+            WrittenDecimal kilo = ResultFormatter.Engineering(1234, 3, NumberFormat.Default, usePrefixes: true);
+            Assert.Equal("1.234", kilo.Digits);
+            Assert.Equal("kilo", kilo.Prefix);
+
+            // the power 0 has no prefix and needs none
+            WrittenDecimal plain = ResultFormatter.Engineering(1234, 0, NumberFormat.Default, usePrefixes: true);
+            Assert.Equal("1234", plain.Digits);
+            Assert.Null(plain.Exponent);
+
+            // past exa there is none, and the power stays
+            WrittenDecimal beyond = ResultFormatter.Engineering(1e21, 21, NumberFormat.Default, usePrefixes: true);
+            Assert.Null(beyond.Prefix);
+            Assert.Equal(21, beyond.Exponent);
+        }
     }
 }
