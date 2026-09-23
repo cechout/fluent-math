@@ -336,6 +336,13 @@ namespace FluentMath.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
+                case OverlineBox overline:
+                    Add(new Rectangle { Fill = Ink },
+                        new Rect(overline.X, overline.BarTop, overline.Width, overline.BarThickness));
+
+                    Realize(overline.Content);
+                    break;
+
                 case PlaceholderBox placeholder:
                     // the box is as tall as the text that would fill the slot, the square is not, so it
                     // sits in the middle of it

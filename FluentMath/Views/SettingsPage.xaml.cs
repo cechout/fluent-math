@@ -68,6 +68,7 @@ namespace FluentMath.Views
             AngleUnitComboBox.SelectedIndex = (int)settings.AngleMode;
             ResultFormComboBox.SelectedIndex = settings.ExactFirst ? 0 : 1;
             FractionFormComboBox.SelectedIndex = settings.MixedFirst ? 1 : 0;
+            RecurringToggle.IsOn = settings.RecurringDecimals;
             NotationComboBox.SelectedIndex = (int)settings.NumberFormat.Notation;
             DigitsComboBox.SelectedIndex = settings.NumberFormat.Digits;
             PrefixesToggle.IsOn = settings.UsePrefixes;
@@ -98,6 +99,7 @@ namespace FluentMath.Views
             settings.AngleMode = (AngleMode)AngleUnitComboBox.SelectedIndex;
             settings.ExactFirst = ResultFormComboBox.SelectedIndex == 0;
             settings.MixedFirst = FractionFormComboBox.SelectedIndex == 1;
+            settings.RecurringDecimals = RecurringToggle.IsOn;
             settings.NumberFormat = new NumberFormat((NumberNotation)NotationComboBox.SelectedIndex, DigitsComboBox.SelectedIndex);
             settings.UsePrefixes = PrefixesToggle.IsOn;
             settings.DecimalMark = (DecimalMark)DecimalMarkComboBox.SelectedIndex;

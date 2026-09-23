@@ -142,6 +142,7 @@ namespace FluentMath.Models.Layout
                 case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel, path, tokenIndex);
                 case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel, path, tokenIndex);
                 case PostfixToken postfix: return BuildPostfix(postfix, fontSize, scriptLevel);
+                case RecurringToken recurring: return BuildRecurring(recurring, fontSize);
             }
 
             if (token.Type == TokenType.Operator && token.Value == "÷R") return BuildRemainderDivision(token, fontSize);
@@ -351,6 +352,14 @@ namespace FluentMath.Models.Layout
         private TextRunBox BuildAtom(MathToken token, double fontSize)
         {
             return TextRun(AtomText(token), fontSize, token);
+        }
+
+        // the period of a recurring decimal, its digits under a bar that spans exactly them; the digits in
+        // front of it are an ordinary run, so the two measure and draw like one number
+        private OverlineBox BuildRecurring(RecurringToken token, double fontSize)
+        {
+            return new OverlineBox(TextRun(token.Value, fontSize, token),
+                fontSize * _style.RecurringBarThickness, fontSize * _style.RecurringBarGap);
         }
 
 

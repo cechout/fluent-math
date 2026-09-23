@@ -188,6 +188,110 @@ namespace FluentMath.Tests
             Assert.Contains("dfrac", ResultFormatter.ToLatex(1.25, AnswerForm.Improper, true));
         }
 
+        // === exact forms ===
+
+        private static MathValue Exact(ExactValue value) => new MathValue(0, value);
+
+        private static ExactValue Root(long radicand) => ExactValue.SquareRoot(ExactValue.FromInteger(radicand))!;
+
+        private static ExactValue Fraction(long numerator, long denominator)
+        {
+            return ExactValue.FromRational(new Rational(numerator, denominator));
+        }
+
+        // twelve characters written as a mixed number, sign and separators included
+        [Fact]
+        public void ShowsAFractionOnlyWithinTheBudget()
+        {
+            Assert.True(ResultFormatter.TryFraction(Exact(Fraction(1, 12345)), out long numerator, out long denominator));
+            Assert.Equal(1, numerator);
+            Assert.Equal(12345, denominator);
+
+            Assert.True(ResultFormatter.HasFractionForm(Exact(Fraction(-1, 123456789))));
+            Assert.True(ResultFormatter.HasFractionForm(Exact(Fraction(12345678, 89))));
+
+            Assert.False(ResultFormatter.HasFractionForm(Exact(Fraction(-1, 1234567890))));
+            Assert.False(ResultFormatter.HasFractionForm(Exact(Fraction(123456789, 89))));
+        }
+
+        // an exact value knows it is irrational, and a value without one is still searched numerically
+        [Fact]
+        public void TakesTheFractionFromTheExactValueWhereThereIsOne()
+        {
+            Assert.False(ResultFormatter.HasFractionForm(Exact(Root(2))));
+            Assert.True(ResultFormatter.HasExactForm(Exact(Root(2))));
+
+            Assert.True(ResultFormatter.TryFraction(0.75, out long numerator, out long denominator));
+            Assert.Equal(3, numerator);
+            Assert.Equal(4, denominator);
+        }
+
+        [Fact]
+        public void WritesARootFormOverOneDenominator()
+        {
+            ExactValue sine15 = ExactValue.Multiply(ExactValue.Subtract(Root(6), Root(2)), Fraction(1, 4))!;
+            Assert.Equal("\\frac{\\sqrt{6}-\\sqrt{2}}{4}", ResultFormatter.ToLatex(Exact(sine15), AnswerForm.Improper, false));
+
+            ExactValue half = ExactValue.Add(Fraction(1, 2), Root(3))!;
+            Assert.Equal("\\dfrac{1+2\\sqrt{3}}{2}", ResultFormatter.ToLatex(Exact(half), AnswerForm.Mixed, true));
+
+            // a single term keeps its sign in front of the bar
+            ExactValue negative = ExactValue.Multiply(Root(2), Fraction(-1, 2))!;
+            Assert.Equal("-\\frac{\\sqrt{2}}{2}", ResultFormatter.ToLatex(Exact(negative), AnswerForm.Improper, false));
+        }
+
+        // the ranges of the Casio manual: coefficients and denominator below 100, radicands below 1000
+        [Fact]
+        public void ShowsNoRootFormOutsideTheRanges()
+        {
+            Assert.False(ResultFormatter.HasExactForm(Exact(ExactValue.Multiply(Root(2), ExactValue.FromInteger(100))!)));
+            Assert.False(ResultFormatter.HasExactForm(Exact(Root(1003))));
+            Assert.False(ResultFormatter.HasExactForm(Exact(ExactValue.Multiply(Root(2), Fraction(1, 100))!)));
+
+            Assert.True(ResultFormatter.HasExactForm(Exact(ExactValue.Multiply(Root(2), Fraction(1, 99))!)));
+        }
+
+        [Fact]
+        public void WritesTheDecimalOfAFormThatIsAskedFor()
+        {
+            Assert.StartsWith("1.41421356237", ResultFormatter.ToLatex(new MathValue(0, Root(2)), AnswerForm.Decimal, false));
+        }
+
+
+        // === recurring decimals ===
+
+        [Theory]
+        [InlineData(7, 3, "2.", "3")]
+        [InlineData(-7, 3, "-2.", "3")]
+        [InlineData(5, 12, "0.41", "6")]
+        [InlineData(1, 6, "0.1", "6")]
+        [InlineData(1, 7, "0.", "142857")]
+        [InlineData(1, 17, "0.", "0588235294117647")]
+        public void FindsThePeriodOfAFraction(long numerator, long denominator, string expectedLeading, string expectedPeriod)
+        {
+            Assert.True(ResultFormatter.TryRecurring(Exact(Fraction(numerator, denominator)), out string leading, out string period));
+            Assert.Equal(expectedLeading, leading);
+            Assert.Equal(expectedPeriod, period);
+        }
+
+        // a decimal that ends has no period, and one that takes more than sixteen digits to repeat has
+        // none shown; a whole part counts towards them
+        [Fact]
+        public void FindsNoPeriodWhereThereIsNoneToShow()
+        {
+            Assert.False(ResultFormatter.HasRecurringForm(Exact(Fraction(1, 4))));
+            Assert.False(ResultFormatter.HasRecurringForm(Exact(Fraction(1, 97))));
+            Assert.False(ResultFormatter.HasRecurringForm(Exact(Fraction(100, 17))));
+            Assert.False(ResultFormatter.HasRecurringForm(Exact(ExactValue.FromInteger(5))));
+            Assert.False(ResultFormatter.HasRecurringForm(Exact(Root(2))));
+        }
+
+        [Fact]
+        public void WritesThePeriodUnderABar()
+        {
+            Assert.Equal("0.41\\overline{6}", ResultFormatter.ToLatex(Exact(Fraction(5, 12)), AnswerForm.Recurring, false));
+        }
+
         [Fact]
         public void FallsBackToTheDecimalWhereThereIsNoFraction()
         {

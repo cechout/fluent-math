@@ -57,6 +57,10 @@ namespace FluentMath.Models
         // which of the two fraction forms comes first
         public bool MixedFirst { get; set; }
 
+        // whether S to D shows a fraction as a recurring decimal on its way to the decimal, 2.3 with a bar
+        // for 7/3, when the period fits
+        public bool RecurringDecimals { get; set; } = true;
+
         public NumberFormat NumberFormat { get; set; } = NumberFormat.Default;
 
         // a result in the ENG view is written with its decimal prefix, 1.234k rather than 1.234×10³

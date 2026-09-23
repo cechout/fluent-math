@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Numerics;
+using System.Text;
 
 namespace FluentMath.Models
 {
@@ -49,6 +51,21 @@ namespace FluentMath.Models
         // range instead costs nothing noticeable
         private const long MaxFactorised = 999999999999;
 
+        // --- exact forms ---
+        // a fraction, and the coefficient of π, is shown when it fits this many characters written as a
+        // mixed number, sign and separators included, 13871 48/89 being eleven; the Casio takes ten, here
+        // it follows the twelve digits
+        private const int FractionBudget = 12;
+
+        // a form with roots is shown with every coefficient and its denominator below this, the ranges the
+        // Casio manual gives; √997 is exact on the Casio and √1003 a decimal, 99√2 exact and 100√2 not
+        private const long MaxFormCoefficient = 100;
+        private const long MaxFormRadicand = 1000;
+
+        // a recurring decimal is shown when its digits up to the end of the first period are no more than
+        // this, a leading 0 not counted: 1÷17 has all sixteen under its bar, 1÷97 has no bar at all
+        private const int MaxRecurringDigits = 16;
+
 
         // === public formatting ===
 
@@ -72,20 +89,33 @@ namespace FluentMath.Models
             return $"{written.Digits}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
         }
 
-        public static string ToLatex(double value, AnswerForm form, bool displayFractions)
+        public static string ToLatex(MathValue value, AnswerForm form, bool displayFractions)
         {
             return ToLatex(value, form, displayFractions, NumberFormat.Default);
         }
 
         // the same value in the shape the S to D key currently has selected; a form this value does not
         // have falls back to the decimal rather than to nothing
-        public static string ToLatex(double value, AnswerForm form, bool displayFractions, NumberFormat format)
+        //
+        // the improper and the mixed form are the exact form: a fraction for a rational, and for anything
+        // else the form with roots or π, which has no whole part to split off and is the same under both
+        public static string ToLatex(MathValue value, AnswerForm form, bool displayFractions, NumberFormat format)
         {
-            if (form == AnswerForm.Decimal) return ToLatex(value, format);
-            if (!TryToFraction(value, out long numerator, out long denominator)) return ToLatex(value, format);
-            if (denominator <= 1) return ToLatex(value, format);
+            if (form == AnswerForm.Decimal) return ToLatex(value.Value, format);
 
             string command = displayFractions ? "dfrac" : "frac";
+
+            if (form == AnswerForm.Recurring)
+            {
+                if (!TryRecurring(value, out string leading, out string period)) return ToLatex(value.Value, format);
+                return $"{leading}\\overline{{{period}}}";
+            }
+
+            if (!TryFraction(value, out long numerator, out long denominator))
+            {
+                return ExactFormLatex(value.Exact, command) ?? ToLatex(value.Value, format);
+            }
+
             if (form == AnswerForm.Improper) return FractionLatex(command, numerator, denominator);
 
             long whole = numerator / denominator;
@@ -128,11 +158,11 @@ namespace FluentMath.Models
                 return PrimeFactorLatex(factors);
             }
 
-            if (result.Kind == ResultKind.Single) return ToLatex(result.Value, form, displayFractions, format);
+            if (result.Kind == ResultKind.Single) return ToLatex(result.FirstValue, form, displayFractions, format);
 
             (string first, string second) = PairNames(result.Kind);
-            return $"{first}={ToLatex(result.Value, form, displayFractions, format)}{PairSeparator}"
-                + $"{second}={ToLatex(result.Second, form, displayFractions, format)}";
+            return $"{first}={ToLatex(result.FirstValue, form, displayFractions, format)}{PairSeparator}"
+                + $"{second}={ToLatex(result.SecondValue, form, displayFractions, format)}";
         }
 
         private static string PrimeFactorLatex(List<(long Prime, int Exponent)> factors)
@@ -180,30 +210,41 @@ namespace FluentMath.Models
                 return PrimeFactorTokens(factors);
             }
 
-            if (result.Kind == ResultKind.Single) return ToTokens(result.Value, form, displayFractions, format);
+            if (result.Kind == ResultKind.Single) return ToTokens(result.FirstValue, form, displayFractions, format);
 
             // the names are drawn as text beside the digits rather than typed as anything, the same as the
             // minus of a negative result below
             (string first, string second) = PairNames(result.Kind);
 
             List<MathToken> tokens = DigitTokens(first + "=");
-            tokens.AddRange(ToTokens(result.Value, form, displayFractions, format));
+            tokens.AddRange(ToTokens(result.FirstValue, form, displayFractions, format));
             tokens.AddRange(DigitTokens(PairSeparator + second + "="));
-            tokens.AddRange(ToTokens(result.Second, form, displayFractions, format));
+            tokens.AddRange(ToTokens(result.SecondValue, form, displayFractions, format));
 
             return tokens;
         }
 
-        public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions)
+        public static List<MathToken> ToTokens(MathValue value, AnswerForm form, bool displayFractions)
         {
             return ToTokens(value, form, displayFractions, NumberFormat.Default);
         }
 
-        public static List<MathToken> ToTokens(double value, AnswerForm form, bool displayFractions, NumberFormat format)
+        public static List<MathToken> ToTokens(MathValue value, AnswerForm form, bool displayFractions, NumberFormat format)
         {
-            if (form != AnswerForm.Decimal
-                && TryToFraction(value, out long numerator, out long denominator)
-                && denominator > 1)
+            if (form == AnswerForm.Decimal) return ToTokens(value.Value, format);
+
+            // the digits in front of the period as they are, and the period as the token the bar is drawn over
+            if (form == AnswerForm.Recurring)
+            {
+                if (!TryRecurring(value, out string leading, out string period)) return ToTokens(value.Value, format);
+
+                List<MathToken> recurring = DigitTokens(leading);
+                recurring.Add(new RecurringToken(period));
+
+                return recurring;
+            }
+
+            if (TryFraction(value, out long numerator, out long denominator))
             {
                 long whole = form == AnswerForm.Mixed ? numerator / denominator : 0;
                 if (whole == 0) return new List<MathToken> { FractionTokens(numerator, denominator) };
@@ -218,7 +259,7 @@ namespace FluentMath.Models
                 return new List<MathToken> { mixed };
             }
 
-            return ToTokens(value, format);
+            return ExactFormTokens(value, asInput: false) ?? ToTokens(value.Value, format);
         }
 
         public static List<MathToken> ToTokens(double value)
@@ -535,6 +576,294 @@ namespace FluentMath.Models
         }
 
 
+        // === exact forms ===
+
+        // the fraction a value is shown as: its exact value when that is a rational, the numeric search
+        // below when it has none, and nothing at all for a value known to be irrational; a whole number is
+        // its own simplest form and has none either
+        //
+        // only a fraction that fits the budget counts, so 1÷12345 is 1/12345 and a longer one a decimal
+        public static bool TryFraction(MathValue value, out long numerator, out long denominator)
+        {
+            numerator = 0;
+            denominator = 1;
+
+            if (value.Exact != null)
+            {
+                if (!value.Exact.TryGetRational(out Rational rational) || rational.IsInteger) return false;
+                if (MixedLength(rational.Numerator, rational.Denominator) > FractionBudget) return false;
+
+                numerator = (long)rational.Numerator;
+                denominator = (long)rational.Denominator;
+                return true;
+            }
+
+            if (!TryToFraction(value.Value, out numerator, out denominator) || denominator <= 1) return false;
+
+            return MixedLength(numerator, denominator) <= FractionBudget;
+        }
+
+        // a fraction, or a form with roots or π, which is what exact first opens a result in
+        public static bool HasExactForm(MathValue value)
+        {
+            return HasFractionForm(value) || TryPiForm(value.Exact, out _, out _) || TryRootForm(value.Exact, out _, out _);
+        }
+
+        // a whole number is already its own simplest form, so it counts as having no fraction to show
+        public static bool HasFractionForm(MathValue value)
+        {
+            return TryFraction(value, out _, out _);
+        }
+
+        // a mixed number needs a whole part to split off, so it only exists above one
+        public static bool HasMixedForm(MathValue value)
+        {
+            if (!TryFraction(value, out long numerator, out long denominator)) return false;
+
+            return Math.Abs(numerator) > denominator;
+        }
+
+        public static bool HasRecurringForm(MathValue value)
+        {
+            return TryRecurring(value, out _, out _);
+        }
+
+        // how many characters the value takes written as a mixed number, sign and separators included
+        private static int MixedLength(BigInteger numerator, BigInteger denominator)
+        {
+            BigInteger magnitude = BigInteger.Abs(numerator);
+            BigInteger whole = magnitude / denominator;
+            BigInteger rest = magnitude % denominator;
+
+            int length = numerator.Sign < 0 ? 1 : 0;
+            if (rest.IsZero) return length + DigitCount(whole);
+
+            length += DigitCount(rest) + 1 + DigitCount(denominator);
+            if (!whole.IsZero) length += DigitCount(whole) + 1;
+
+            return length;
+        }
+
+        private static int DigitCount(BigInteger value)
+        {
+            return BigInteger.Abs(value).ToString(CultureInfo.InvariantCulture).Length;
+        }
+
+
+        // === recurring decimals ===
+
+        // the fraction written out by long division, split into the digits in front of the period and the
+        // period itself: 7/3 is 2. and 3, 5/12 is 0.41 and 6
+        //
+        // a fraction that ends has no period, and one whose period ends too late has none shown
+        public static bool TryRecurring(MathValue value, out string leading, out string period)
+        {
+            leading = "";
+            period = "";
+
+            if (!TryFraction(value, out long numerator, out long denominator)) return false;
+
+            long magnitude = Math.Abs(numerator);
+            long whole = magnitude / denominator;
+            long remainder = magnitude % denominator;
+            int wholeDigits = whole == 0 ? 0 : whole.ToString(CultureInfo.InvariantCulture).Length;
+
+            StringBuilder digits = new StringBuilder();
+            Dictionary<long, int> seen = new Dictionary<long, int>();
+
+            // a remainder that comes round again starts the same digits again, and the period is what
+            // lies between its two appearances
+            while (remainder != 0)
+            {
+                if (seen.TryGetValue(remainder, out int start))
+                {
+                    string sign = numerator < 0 ? "-" : "";
+                    leading = sign + whole.ToString(CultureInfo.InvariantCulture) + "." + digits.ToString(0, start);
+                    period = digits.ToString(start, digits.Length - start);
+                    return true;
+                }
+
+                if (wholeDigits + digits.Length >= MaxRecurringDigits) return false;
+
+                seen[remainder] = digits.Length;
+                remainder *= 10;
+                digits.Append((char)('0' + remainder / denominator));
+                remainder %= denominator;
+            }
+
+            return false;
+        }
+
+
+        // === roots and π ===
+
+        // an irrational exact value the way a Casio writes it: up to two terms with roots over one
+        // denominator, the rational term first, (√6−√2)/4 or 5+2√6; or a rational times π, with the
+        // coefficient as a fraction in front, 1/6π
+        //
+        // null when there is no such value, or when it does not fit the ranges a Casio shows it in; the
+        // caller writes the decimal then
+        private static string? ExactFormLatex(ExactValue? exact, string command)
+        {
+            if (TryPiForm(exact, out long piNumerator, out long piDenominator))
+            {
+                string sign = piNumerator < 0 ? "-" : "";
+                long magnitude = Math.Abs(piNumerator);
+
+                if (piDenominator > 1) return $"{sign}{FractionLatex(command, magnitude, piDenominator)}\\pi";
+                return magnitude == 1 ? $"{sign}\\pi" : $"{sign}{magnitude.ToString(CultureInfo.InvariantCulture)}\\pi";
+            }
+
+            if (!TryRootForm(exact, out List<(long Coefficient, long Radicand)> terms, out long denominator)) return null;
+
+            if (denominator == 1) return TermsLatex(terms);
+
+            string bottom = denominator.ToString(CultureInfo.InvariantCulture);
+
+            // a single term keeps its sign in front of the bar, two keep theirs inside it
+            if (terms.Count == 1 && terms[0].Coefficient < 0)
+            {
+                return $"-\\{command}{{{TermsLatex(new List<(long, long)> { (-terms[0].Coefficient, terms[0].Radicand) })}}}{{{bottom}}}";
+            }
+
+            return $"\\{command}{{{TermsLatex(terms)}}}{{{bottom}}}";
+        }
+
+        private static string TermsLatex(List<(long Coefficient, long Radicand)> terms)
+        {
+            StringBuilder latex = new StringBuilder();
+
+            foreach ((long coefficient, long radicand) in terms)
+            {
+                if (coefficient < 0) latex.Append('-');
+                else if (latex.Length > 0) latex.Append('+');
+
+                long magnitude = Math.Abs(coefficient);
+                if (magnitude != 1 || radicand == 1) latex.Append(magnitude.ToString(CultureInfo.InvariantCulture));
+                if (radicand != 1) latex.Append($"\\sqrt{{{radicand.ToString(CultureInfo.InvariantCulture)}}}");
+            }
+
+            return latex.ToString();
+        }
+
+        // the same form as tokens, mirroring ExactFormLatex; asInput writes a leading minus as the sign the
+        // evaluator reads rather than as part of a number, which is the one difference between what is
+        // drawn and what a continuing calculation is seeded with
+        //
+        // the roots are real roots and π is the real constant, so the seed evaluates back to the exact value
+        public static List<MathToken>? ExactFormTokens(MathValue value, bool asInput)
+        {
+            if (TryPiForm(value.Exact, out long piNumerator, out long piDenominator))
+            {
+                List<MathToken> pi = LeadingSign(piNumerator < 0, asInput);
+                long magnitude = Math.Abs(piNumerator);
+
+                if (piDenominator > 1) pi.Add(FractionTokens(magnitude, piDenominator));
+                else if (magnitude != 1) pi.AddRange(DigitTokens(magnitude.ToString(CultureInfo.InvariantCulture)));
+
+                pi.Add(new ConstantToken("pi"));
+                return pi;
+            }
+
+            if (!TryRootForm(value.Exact, out List<(long Coefficient, long Radicand)> terms, out long denominator)) return null;
+
+            if (denominator == 1) return TermTokens(terms, asInput);
+
+            FractionToken fraction = new FractionToken();
+            fraction.DenominatorTokens.AddRange(DigitTokens(denominator.ToString(CultureInfo.InvariantCulture)));
+
+            // a single term keeps its sign in front of the bar, two keep theirs inside it
+            if (terms.Count == 1 && terms[0].Coefficient < 0)
+            {
+                fraction.NumeratorTokens.AddRange(TermTokens(new List<(long, long)> { (-terms[0].Coefficient, terms[0].Radicand) }, asInput));
+
+                List<MathToken> negative = LeadingSign(true, asInput);
+                negative.Add(fraction);
+                return negative;
+            }
+
+            fraction.NumeratorTokens.AddRange(TermTokens(terms, asInput));
+            return new List<MathToken> { fraction };
+        }
+
+        private static List<MathToken> TermTokens(List<(long Coefficient, long Radicand)> terms, bool asInput)
+        {
+            List<MathToken> tokens = new List<MathToken>();
+
+            foreach ((long coefficient, long radicand) in terms)
+            {
+                if (tokens.Count == 0) tokens.AddRange(LeadingSign(coefficient < 0, asInput));
+                else tokens.Add(new MathToken(TokenType.Operator, coefficient < 0 ? "-" : "+"));
+
+                long magnitude = Math.Abs(coefficient);
+                if (magnitude != 1 || radicand == 1) tokens.AddRange(DigitTokens(magnitude.ToString(CultureInfo.InvariantCulture)));
+
+                if (radicand == 1) continue;
+
+                RootToken root = new RootToken();
+                root.RadicandTokens.AddRange(DigitTokens(radicand.ToString(CultureInfo.InvariantCulture)));
+                tokens.Add(root);
+            }
+
+            return tokens;
+        }
+
+        // a minus that stands for the whole value: drawn as part of the number the way a negative decimal
+        // is, and typed as the sign the evaluator reads in front of its operand
+        private static List<MathToken> LeadingSign(bool negative, bool asInput)
+        {
+            if (!negative) return new List<MathToken>();
+            if (asInput) return new List<MathToken> { new MathToken(TokenType.Operator, "-") };
+
+            return DigitTokens("-");
+        }
+
+        private static bool TryPiForm(ExactValue? exact, out long numerator, out long denominator)
+        {
+            numerator = 0;
+            denominator = 1;
+
+            if (exact == null || !exact.TimesPi) return false;
+
+            Rational coefficient = exact.Terms[0].Coefficient;
+            if (MixedLength(coefficient.Numerator, coefficient.Denominator) > FractionBudget) return false;
+
+            numerator = (long)coefficient.Numerator;
+            denominator = (long)coefficient.Denominator;
+            return true;
+        }
+
+        // the terms over their common denominator, each coefficient a whole number
+        private static bool TryRootForm(ExactValue? exact, out List<(long Coefficient, long Radicand)> terms,
+            out long denominator)
+        {
+            terms = new List<(long Coefficient, long Radicand)>();
+            denominator = 1;
+
+            if (exact == null || exact.TimesPi || exact.IsRational) return false;
+
+            BigInteger common = BigInteger.One;
+            foreach (SurdTerm term in exact.Terms)
+            {
+                BigInteger termDenominator = term.Coefficient.Denominator;
+                common = common * termDenominator / BigInteger.GreatestCommonDivisor(common, termDenominator);
+            }
+
+            if (common >= MaxFormCoefficient) return false;
+
+            foreach (SurdTerm term in exact.Terms)
+            {
+                BigInteger coefficient = term.Coefficient.Numerator * (common / term.Coefficient.Denominator);
+                if (BigInteger.Abs(coefficient) >= MaxFormCoefficient || term.Radicand >= MaxFormRadicand) return false;
+
+                terms.Add(((long)coefficient, term.Radicand));
+            }
+
+            denominator = (long)common;
+            return true;
+        }
+
+
         // === fractions ===
 
         // the simplest fraction that still hits the value, found by continued-fraction expansion, which
@@ -542,6 +871,8 @@ namespace FluentMath.Models
         //
         // this is numeric and nothing else: a result that came out of a root or a pi has no fraction to
         // find here, and the caller leaves it as a decimal
+        // it only runs for a value that has no exact one, a logarithm or e say, since an exact value
+        // knows its fraction; its caps are what keep an irrational out there
         public static bool TryToFraction(double value, out long numerator, out long denominator)
         {
             numerator = 0;
@@ -596,22 +927,6 @@ namespace FluentMath.Models
             numerator = sign * currentNumerator;
             denominator = currentDenominator;
             return true;
-        }
-
-        // a whole number is already its own simplest form, so it counts as having no fraction to show
-        public static bool HasFractionForm(double value)
-        {
-            if (!TryToFraction(value, out _, out long denominator)) return false;
-
-            return denominator > 1;
-        }
-
-        // a mixed number needs a whole part to split off, so it only exists above one
-        public static bool HasMixedForm(double value)
-        {
-            if (!TryToFraction(value, out long numerator, out long denominator)) return false;
-
-            return denominator > 1 && Math.Abs(numerator) > denominator;
         }
 
 
