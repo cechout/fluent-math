@@ -95,6 +95,9 @@ namespace FluentMath.Models
         public TokenType Type { get; set; }
         public string Value { get; set; }
 
+        // set on the digits a result was seeded as, see SeededValue
+        public SeededValue? Seed { get; set; }
+
         public MathToken(TokenType type, string value = "")
         {
             Type = type;
@@ -102,6 +105,26 @@ namespace FluentMath.Models
         }
 
         public virtual string ToLatex(LatexRenderContext context) { return Value; }
+    }
+
+    // the full value behind the digits a shown result is carried on as
+    //
+    // the display shows twelve significant digits and the next calculation starts from those digits, so
+    // without this 1÷3 followed by ×3 comes out as 0.999999999999; every digit of the run shares one of
+    // these, and the evaluator reads the full value for as long as the run is exactly those digits
+    // an edit inside the run adds a digit without one or takes one away, and the run reads as typed
+    //
+    // the magnitude only, since a minus in front is a sign token of its own
+    public sealed class SeededValue
+    {
+        public double Magnitude { get; }
+        public int DigitCount { get; }
+
+        public SeededValue(double magnitude, int digitCount)
+        {
+            Magnitude = magnitude;
+            DigitCount = digitCount;
+        }
     }
 
 
@@ -303,6 +326,8 @@ namespace FluentMath.Models
                 "lcm" => ("LCM", false),
                 "ranint" => ("RanInt#", false),
                 "rndfix" => ("RndFix", false),
+                "pol" => ("Pol", false),
+                "rec" => ("Rec", false),
                 _ => (functionName, false)
             };
         }
@@ -325,7 +350,7 @@ namespace FluentMath.Models
         {
             return functionName switch
             {
-                "gcd" or "lcm" or "ranint" or "rndfix" => 2,
+                "gcd" or "lcm" or "ranint" or "rndfix" or "pol" or "rec" => 2,
                 _ => 1
             };
         }
@@ -554,6 +579,7 @@ namespace FluentMath.Models
                     {
                         "*" => "\\cdot",
                         "/" => "\\div",
+                        "÷R" => "\\div\\mathrm{R}",
                         _ => currentToken.Value
                     };
 
@@ -678,7 +704,7 @@ namespace FluentMath.Models
                 throw new NotSupportedException($"no clone for {token.GetType().Name}");
             }
 
-            return new MathToken(token.Type, token.Value);
+            return new MathToken(token.Type, token.Value) { Seed = token.Seed };
         }
     }
 }

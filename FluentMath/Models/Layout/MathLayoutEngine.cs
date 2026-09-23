@@ -136,6 +136,7 @@ namespace FluentMath.Models.Layout
                 case PostfixToken postfix: return BuildPostfix(postfix, fontSize, scriptLevel);
             }
 
+            if (token.Type == TokenType.Operator && token.Value == "÷R") return BuildRemainderDivision(token, fontSize);
             if (token.Type == TokenType.Operator) return BuildOperator(token, fontSize);
 
             if (token.Type == TokenType.BracketOpen || token.Type == TokenType.BracketClose)
@@ -250,6 +251,22 @@ namespace FluentMath.Models.Layout
             box.TrailingGap = box.LeadingGap;
 
             return box;
+        }
+
+        // the divided by sign with an R behind it, the way the Casio key prints it: the sign rides on the
+        // axis like any other operator, the R stands on the baseline like the letter of nPr, and the
+        // operator gaps go around the pair rather than between its two halves
+        private RowBox BuildRemainderDivision(MathToken token, double fontSize)
+        {
+            TextRunBox sign = BuildOperator(token, fontSize);
+            double leading = sign.LeadingGap;
+            double trailing = sign.TrailingGap;
+            sign.LeadingGap = 0;
+            sign.TrailingGap = 0;
+
+            TextRunBox letter = TextRun("R", fontSize, token);
+
+            return new RowBox(new List<MathBox> { sign, letter }) { LeadingGap = leading, TrailingGap = trailing };
         }
 
         private TextRunBox BuildAtom(MathToken token, double fontSize)
@@ -669,6 +686,7 @@ namespace FluentMath.Models.Layout
             {
                 "*" => "×", // multiplication sign, the one a pocket calculator prints
                 "/" => "÷", // division sign
+                "÷R" => "÷", // the R is drawn beside it, see BuildRemainderDivision
                 "-" => "−", // real minus, which is wider and sits higher than a hyphen
                 _ => value
             };

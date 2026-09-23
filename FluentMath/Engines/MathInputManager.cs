@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using FluentMath.Models;
@@ -852,14 +853,20 @@ namespace FluentMath.Engines
         // the digits rather than an Ans token: the display is still showing that number, and swapping it
         // for a word reads as the formula having been thrown away; it also keeps the result editable
         // digit by digit
-        // the cost is that only the twelve significant digits on screen survive into the next step,
-        // which is what the Ans key in the flyout is there for
-        public void SeedWithValue(string numberText)
+        // fullValue is the value behind the twelve digits on screen; the digits carry it with them, so
+        // 1÷3 followed by ×3 is 1 again, until one of them is edited, see SeededValue
+        public void SeedWithValue(string numberText, double? fullValue = null)
         {
             Clear();
 
             FillWithDigits(_rootTokens, numberText);
             _rootContext.CursorIndex = _rootTokens.Count;
+
+            if (fullValue is not double value) return;
+
+            List<MathToken> digits = _rootTokens.FindAll(token => token.Type == TokenType.Number);
+            SeededValue seed = new SeededValue(Math.Abs(value), digits.Count);
+            foreach (MathToken digit in digits) digit.Seed = seed;
         }
 
         // the same for a result the S to D key is showing as a fraction, so the display keeps the shape
@@ -891,6 +898,16 @@ namespace FluentMath.Engines
             FillWithDigits(mixed.DenominatorTokens, denominator.ToString(CultureInfo.InvariantCulture));
 
             _rootTokens.Add(mixed);
+            _rootContext.CursorIndex = _rootTokens.Count;
+        }
+
+        // and as the tokens a result is drawn as, when those are real tokens already: the prime factors,
+        // whose powers and times signs carry on as the product they are
+        public void SeedWithTokens(IEnumerable<MathToken> tokens)
+        {
+            Clear();
+
+            _rootTokens.AddRange(tokens);
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 

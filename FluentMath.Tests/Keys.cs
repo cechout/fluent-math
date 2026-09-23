@@ -20,7 +20,7 @@ namespace FluentMath.Tests
             "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",
             "+", "-", "*", "/", "(", ")",
             "!", "inv", "%", "pi", "e", "ans",
-            "frac", "mixed", "pow", "powe", "sqrt", "root", "log", "logb", "exp",
+            "frac", "pow", "powe", "sqrt", "root", "log", "logb", "exp",
             "left", "right", "up", "down", "back",
             "fn:sin", "fn:cos", "fn:tan", "fn:arcsin", "fn:arccos", "fn:arctan",
             "fn:sinh", "fn:cosh", "fn:tanh", "fn:arsinh", "fn:arcosh", "fn:artanh",
@@ -29,7 +29,8 @@ namespace FluentMath.Tests
             "fn:sech", "fn:csch", "fn:coth", "fn:arsech", "fn:arcsch", "fn:arcoth",
             "fn:floor", "fn:ceil", "fn:int", "fn:intg",
             "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix",
-            "npr", "ncr", "rand", "pre:kilo", "pre:micro"
+            "npr", "ncr", "rand", "pre:kilo", "pre:micro",
+            "mixed", "divr", "fn:pol", "fn:rec"
         };
 
         public static MathInputManager Press(params string[] keys)
@@ -87,6 +88,10 @@ namespace FluentMath.Tests
 
                 case "ncr":
                     manager.AddOperator("C");
+                    return;
+
+                case "divr":
+                    manager.AddOperator("÷R");
                     return;
 
                 case "frac":

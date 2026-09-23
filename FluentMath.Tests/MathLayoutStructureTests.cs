@@ -576,6 +576,34 @@ namespace FluentMath.Tests
             Assert.True(row.Children[3].Raise > 0);
         }
 
+        // the sign on the axis like a divided by, the R on the baseline like the letter of nCr, and the
+        // operator gaps around the two of them
+        [Fact]
+        public void TheDivisionWithRemainderIsADivisionSignWithAnROnTheBaseline()
+        {
+            MathLayoutStyle style = Style();
+            style.MathAxisRaise = 0.3;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken>
+            {
+                Digit("7"), new MathToken(TokenType.Operator, "÷R"), Digit("2")
+            });
+
+            RowBox pair = Assert.IsType<RowBox>(row.Children[1]);
+            TextRunBox sign = (TextRunBox)pair.Children[0];
+            TextRunBox letter = (TextRunBox)pair.Children[1];
+
+            Assert.Equal("÷", sign.Text);
+            Assert.True(sign.Raise > 0);
+            Assert.Equal("R", letter.Text);
+            Assert.Equal(0, letter.Raise);
+
+            Assert.True(pair.LeadingGap > 0);
+            Assert.Equal(pair.LeadingGap, pair.TrailingGap);
+            Assert.Equal(0, sign.LeadingGap);
+            Assert.Equal(0, sign.TrailingGap);
+        }
+
         [Fact]
         public void APrefixIsWrittenAsItsSymbolAndRanAsItsName()
         {

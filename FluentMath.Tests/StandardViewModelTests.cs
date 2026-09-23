@@ -416,16 +416,26 @@ namespace FluentMath.Tests
 
         // === S to D ===
 
+        // a deliberate difference to the Casio, where S to D instead of = does nothing: it evaluates and
+        // then switches, which saves the =
         [Fact]
-        public void DoesNothingWhileAFormulaIsBeingTyped()
+        public void EvaluatesFirstWhenPressedWhileAFormulaIsBeingTyped()
         {
             var viewModel = new StandardViewModel();
-            Press(viewModel, "1", "+", "1");
+            Press(viewModel, "7", "/", "3", "sd");
 
-            string before = viewModel.InputAndResultText;
+            Assert.Contains("frac{7}{3}", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void SwitchesBothValuesOfAPairTogether()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_rec", "1", "cmd_nav_right", "60", "=");
+            Assert.StartsWith("x=0.5, y=0.866025403784", viewModel.InputAndResultText);
+
             Press(viewModel, "sd");
-
-            Assert.Equal(before, viewModel.InputAndResultText);
+            Assert.StartsWith("x=\\frac{1}{2}, y=0.866025403784", viewModel.InputAndResultText);
         }
 
         [Fact]
@@ -549,19 +559,113 @@ namespace FluentMath.Tests
             Assert.Equal("10.25", viewModel.InputAndResultText);
         }
 
+        // measured on the Casio: 1÷3, then ×3 is 1; the seeded digits carry the value behind them
         [Fact]
-        public void LosesThePrecisionASeededResultCannotHoldButAnsCan()
+        public void CarriesTheFullValueBehindTheShownDigits()
         {
-            // the seeded digits are what the display showed, so a third of a whole comes back short
             var seeded = new StandardViewModel();
             Press(seeded, "1", "/", "3", "=", "*", "3", "=");
-            Assert.Equal("0.999999999999", seeded.InputAndResultText);
+            Assert.Equal("1", seeded.InputAndResultText);
 
-            // Ans resolves against the untouched double instead; a fresh calculator, since the run
-            // above has already moved the last answer on
+            // until a digit is edited: the last 3 taken off and typed again is a number typed by hand
+            var edited = new StandardViewModel();
+            Press(edited, "1", "/", "3", "=", "+", "back", "back", "3", "*", "3", "=");
+            Assert.Equal("0.999999999999", edited.InputAndResultText);
+
             var carried = new StandardViewModel();
             Press(carried, "1", "/", "3", "=", "AC", "cmd_ans", "*", "3", "=");
             Assert.Equal("1", carried.InputAndResultText);
+        }
+
+
+        // === division with remainder, Pol and Rec ===
+
+        // measured on the Casio: 17÷R5 shows the pair, and +1 carries on from the quotient to 4
+        [Fact]
+        public void ShowsTheRemainderAndCarriesOnFromTheQuotient()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "17", "cmd_div_r", "5", "=");
+            Assert.Equal("Q=3, R=2", viewModel.InputAndResultText);
+
+            Press(viewModel, "+", "1", "=");
+            Assert.Equal("4", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void ContinuesADivisionWithRemainderFromAResult()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "17", "=", "cmd_div_r", "5", "=");
+
+            Assert.Equal("Q=3, R=2", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void ShowsPolarCoordinatesAndCarriesOnFromR()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_pol", "3", "cmd_nav_right", "4", "=");
+            Assert.Equal("r=5, θ=53.1301023542", viewModel.InputAndResultText);
+
+            Press(viewModel, "+", "1", "=");
+            Assert.Equal("6", viewModel.InputAndResultText);
+        }
+
+
+        // === FACT ===
+
+        [Fact]
+        public void ShowsThePrimeFactorsAndGoesBackOnASecondPress()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1440", "=", "cmd_prime");
+            Assert.StartsWith("2^{5}", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_prime");
+            Assert.Equal("1440", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void CarriesThePrimeFactorsOnAsTheProductTheyAre()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1440", "=", "cmd_prime", "+");
+            Assert.IsType<PowerToken>(viewModel.InputTokens[0]);
+
+            Press(viewModel, "1", "=");
+            Assert.Equal("1441", viewModel.InputAndResultText);
+        }
+
+        // a deliberate difference to the Casio, where FACT during input does nothing
+        [Fact]
+        public void EvaluatesFirstWhenFactIsPressedDuringInput()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1440", "cmd_prime");
+
+            Assert.StartsWith("2^{5}", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void AnswersAResultWithoutPrimeFactorsWithAMathError()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "3", "/", "2", "=", "cmd_prime");
+            Assert.Equal("Math ERROR", viewModel.InputErrorText);
+
+            // the formula is still there to be corrected
+            Press(viewModel, "cmd_nav_left");
+            Assert.Equal(3, viewModel.InputTokens.Count);
+        }
+
+        [Fact]
+        public void LeavesTheFactorsForTheDecimalOnSToD()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1440", "=", "cmd_prime", "sd");
+
+            Assert.Equal("1440", viewModel.InputAndResultText);
         }
 
 

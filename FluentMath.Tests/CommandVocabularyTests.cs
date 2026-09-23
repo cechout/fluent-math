@@ -113,6 +113,30 @@ namespace FluentMath.Tests
             Assert.Equal("2", onAResult.InputAndResultText);
         }
 
+        // a view key only changes the display, so Left afterwards walks back into the formula the result
+        // came from, whether the key was pressed on the result or instead of the =
+        [Theory]
+        [MemberData(nameof(ViewKey))]
+        public void AViewKeyLeavesTheFormulaBehindTheResultAlone(string key)
+        {
+            StandardViewModel onAResult = WithAShownResult();
+            StandardViewModelTests.Press(onAResult, key, "cmd_nav_left");
+
+            Assert.Equal(3, onAResult.InputTokens.Count);
+
+            var duringInput = new StandardViewModel();
+            StandardViewModelTests.Press(duringInput, "1", "+", "1", key);
+            Assert.Null(duringInput.CaretTokens);
+
+            StandardViewModelTests.Press(duringInput, "cmd_nav_left");
+            Assert.Equal(3, duringInput.InputTokens.Count);
+        }
+
+        public static IEnumerable<object[]> ViewKey()
+        {
+            foreach (string key in Vocabulary.ViewKeys) yield return new object[] { key };
+        }
+
         public static IEnumerable<object[]> NotImplementedKey()
         {
             foreach (string key in Vocabulary.NotImplemented) yield return new object[] { key };

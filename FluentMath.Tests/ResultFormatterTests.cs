@@ -57,6 +57,74 @@ namespace FluentMath.Tests
         }
 
 
+        // === prime factors ===
+
+        // measured on the Casio: 1440 is 2^5×3^2×5
+        [Fact]
+        public void TakesAWholeNumberApartIntoPrimePowers()
+        {
+            Assert.True(ResultFormatter.TryPrimeFactors(1440, out var factors));
+            Assert.Equal(new (long, int)[] { (2, 5), (3, 2), (5, 1) }, factors);
+        }
+
+        // the Casio gives up on 2027×2029 and shows (4112783); here every twelve digit number comes apart
+        [Fact]
+        public void FindsLargePrimeFactorsAsWell()
+        {
+            Assert.True(ResultFormatter.TryPrimeFactors(4112783, out var pair));
+            Assert.Equal(new (long, int)[] { (2027, 1), (2029, 1) }, pair);
+
+            Assert.True(ResultFormatter.TryPrimeFactors(999999999989, out var prime));
+            Assert.Equal(new (long, int)[] { (999999999989, 1) }, prime);
+        }
+
+        [Fact]
+        public void FindsNoPrimeFactorsWhereThereAreNone()
+        {
+            Assert.True(ResultFormatter.TryPrimeFactors(1, out var none));
+            Assert.Empty(none);
+
+            Assert.False(ResultFormatter.TryPrimeFactors(0, out _));
+            Assert.False(ResultFormatter.TryPrimeFactors(-6, out _));
+            Assert.False(ResultFormatter.TryPrimeFactors(1.5, out _));
+            Assert.False(ResultFormatter.TryPrimeFactors(1e12, out _));
+        }
+
+        // judged on the twelve digits the display shows, so a result with noise behind them still counts
+        [Fact]
+        public void JudgesTheNumberTheDisplayShows()
+        {
+            Assert.True(ResultFormatter.TryPrimeFactors(0.1 * 30, out var factors));
+            Assert.Equal(new (long, int)[] { (3, 1) }, factors);
+        }
+
+        [Fact]
+        public void WritesThePrimeFactorsAsPowersJoinedByTimes()
+        {
+            string latex = ResultFormatter.ToLatex(EvaluationResult.Success(1440), AnswerForm.PrimeFactors, false);
+
+            Assert.StartsWith("2^{5}", latex);
+            Assert.Contains("3^{2}", latex);
+            Assert.EndsWith("5", latex);
+        }
+
+
+        // === pairs ===
+
+        [Fact]
+        public void WritesAPairWithTheNamesOfItsValues()
+        {
+            EvaluationResult division = EvaluationResult.Pair(ResultKind.QuotientRemainder, 3, 2);
+            Assert.Equal("Q=3, R=2", ResultFormatter.ToLatex(division, AnswerForm.Decimal, false));
+
+            EvaluationResult polar = EvaluationResult.Pair(ResultKind.Polar, 5, 0.5);
+            Assert.Equal("r=5, θ=\\frac{1}{2}", ResultFormatter.ToLatex(polar, AnswerForm.Improper, false));
+
+            EvaluationResult rectangular = EvaluationResult.Pair(ResultKind.Rectangular, -1, 2);
+            Assert.Equal("x=-1, y=2", ResultFormatter.ToLatex(rectangular, AnswerForm.Decimal, false));
+        }
+
+
         // === fractions ===
 
         [Theory]
@@ -66,6 +134,9 @@ namespace FluentMath.Tests
         [InlineData(-1.25, -5, 4)]
         [InlineData(0.1 + 0.2, 3, 10)]
         [InlineData(0.0, 0, 1)]
+        [InlineData(7.0 / 3.0, 7, 3)]          // a whole part takes one of the twelve digits
+        [InlineData(-22.0 / 7.0, -22, 7)]
+        [InlineData(12346.0 / 9999.0, 12346, 9999)]
         public void FindsTheFractionBehindADecimal(double value, long expectedNumerator, long expectedDenominator)
         {
             Assert.True(ResultFormatter.TryToFraction(value, out long numerator, out long denominator));

@@ -89,6 +89,8 @@ namespace FluentMath.Tests
         [InlineData("5", "pre:kilo", "rand")]
         [InlineData("2", "mixed", "1", "right", "3")]  // a mixed fraction, whose whole part begins where the token does
         [InlineData("5", "+", "mixed")]                // the empty template behind an operator
+        [InlineData("17", "divr", "5")]
+        [InlineData("fn:pol", "3", "right", "4")]
         public void EveryPressOfAnArrowKeyMovesTheCaretSomewhereTheEyeCanFollow(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);

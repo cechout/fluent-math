@@ -14,13 +14,13 @@ namespace FluentMath.Engines
     //
     // the grammar is the usual precedence ladder:
     //   expression  := term (plus or minus, term)*
-    //   term        := combination (times or divided by, combination)*
+    //   term        := combination (times or divided by or divided with remainder, combination)*
     //   combination := product (nPr or nCr, product)*
     //   product     := unary (implicit, postfix)*
     //   unary       := sign* postfix
     //   postfix     := atom (factorial or reciprocal or percent or prefix)*
-    //   atom        := number | constant | Ans | Ran# | bracketed expression | fraction | power | root
-    //                   | function | logarithm
+    //   atom        := number | constant | Ans | Ran# | bracketed expression | fraction | mixed fraction
+    //                   | power | root | function | logarithm
     //
     // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
     // half-typed formula is the normal state of the input rather than an exceptional one
@@ -42,6 +42,13 @@ namespace FluentMath.Engines
 
         // what Ran# and RanInt# draw from; settable so a test can hand in a seeded one
         public Random RandomSource { get; set; } = new Random();
+
+        // --- the second value of a pair ---
+        // the remainder of a division with remainder that was the last operation at the top level, and
+        // the angle or y of the last Pol or Rec; Evaluate makes a pair of them only when that operation is
+        // the whole calculation
+        private double? _topLevelRemainder;
+        private double _coordinateSecond;
 
         // --- trigonometric results ---
         private const double TrigNoisePerRadian = 1e-14; // the most a zero of sin or cos comes out as, per radian of angle
@@ -65,11 +72,12 @@ namespace FluentMath.Engines
         public EvaluationResult Evaluate(IReadOnlyList<MathToken> tokens)
         {
             _error = EvaluationError.None;
+            _topLevelRemainder = null;
 
             if (tokens.Count == 0) return EvaluationResult.Success(0); // empty input reads as 0, same as the display
 
             int position = 0;
-            double value = ParseExpression(tokens, ref position);
+            double value = ParseExpression(tokens, ref position, topLevel: true);
 
             if (_error != EvaluationError.None) return EvaluationResult.Failure(_error);
 
@@ -79,21 +87,38 @@ namespace FluentMath.Engines
             if (double.IsNaN(value)) return EvaluationResult.Failure(EvaluationError.Domain);
             if (double.IsInfinity(value)) return EvaluationResult.Failure(EvaluationError.Overflow);
 
+            // Pol and Rec show both values only as the whole formula; 1+Pol(3,4) is 6 on the Casio
+            if (tokens.Count == 1 && tokens[0] is FunctionToken { Value: "pol" or "rec" } coordinates)
+            {
+                ResultKind kind = coordinates.Value == "pol" ? ResultKind.Polar : ResultKind.Rectangular;
+                return EvaluationResult.Pair(kind, value, _coordinateSecond);
+            }
+
+            if (_topLevelRemainder is double remainder)
+            {
+                return EvaluationResult.Pair(ResultKind.QuotientRemainder, value, remainder);
+            }
+
             return EvaluationResult.Success(value);
         }
 
 
         // === grammar ===
 
-        private double ParseExpression(IReadOnlyList<MathToken> tokens, ref int position)
+        // topLevel is set for the formula itself and for nothing nested in it, a bracket or a slot, which is
+        // the only level a division with remainder shows its remainder from
+        private double ParseExpression(IReadOnlyList<MathToken> tokens, ref int position, bool topLevel = false)
         {
-            double value = ParseTerm(tokens, ref position);
+            double value = ParseTerm(tokens, ref position, topLevel);
 
             while (_error == EvaluationError.None && position < tokens.Count)
             {
                 MathToken token = tokens[position];
                 if (token.Type != TokenType.Operator) break;
                 if (token.Value != "+" && token.Value != "-") break;
+
+                // a sum is not a division with remainder, whichever side of it the division stands on
+                if (topLevel) _topLevelRemainder = null;
 
                 position++;
                 double right = ParseTerm(tokens, ref position);
@@ -105,7 +130,7 @@ namespace FluentMath.Engines
             return value;
         }
 
-        private double ParseTerm(IReadOnlyList<MathToken> tokens, ref int position)
+        private double ParseTerm(IReadOnlyList<MathToken> tokens, ref int position, bool topLevel = false)
         {
             double value = ParseCombination(tokens, ref position);
 
@@ -113,24 +138,52 @@ namespace FluentMath.Engines
             {
                 MathToken token = tokens[position];
                 if (token.Type != TokenType.Operator) break;
-                if (token.Value != "*" && token.Value != "/") break;
+                if (token.Value != "*" && token.Value != "/" && token.Value != "÷R") break;
 
                 position++;
                 double right = ParseCombination(tokens, ref position);
                 if (_error != EvaluationError.None) return 0;
 
+                // only the last operation of the formula keeps its remainder
+                if (topLevel) _topLevelRemainder = null;
+
                 if (token.Value == "*")
                 {
                     value *= right;
                 }
-                else
+                else if (token.Value == "/")
                 {
                     if (right == 0) return Fail(EvaluationError.DivideByZero);
                     value /= right;
                 }
+                else
+                {
+                    value = DivideWithRemainder(value, right, topLevel);
+                }
             }
 
             return value;
+        }
+
+        // the quotient of a whole dividend of zero or more by a whole divisor above zero; inside a
+        // calculation that is all it hands on, so 10+17÷R6 is 12 as on the Casio
+        //
+        // any other pair of operands makes it a plain division, the way −17÷R5 is −17/5 on the Casio
+        private double DivideWithRemainder(double dividend, double divisor, bool topLevel)
+        {
+            if (divisor == 0) return Fail(EvaluationError.DivideByZero);
+
+            if (!TryWholeNumber(dividend, out double wholeDividend) || !TryWholeNumber(divisor, out double wholeDivisor)
+                || wholeDividend < 0 || wholeDivisor <= 0)
+            {
+                return dividend / divisor;
+            }
+
+            long a = (long)wholeDividend;
+            long b = (long)wholeDivisor;
+
+            if (topLevel) _topLevelRemainder = a % b;
+            return a / b;
         }
 
         // nPr and nCr bind tighter than times and divided by and looser than a product written without a
@@ -274,12 +327,17 @@ namespace FluentMath.Engines
                 // the input keeps one token per character, so the whole run is what makes up one value
                 // reading it greedily is also what stops the implicit multiplication above from turning
                 // 45 into 4 times 5
+                int start = position;
                 var literal = new StringBuilder();
                 while (position < tokens.Count && tokens[position].Type == TokenType.Number)
                 {
                     literal.Append(tokens[position].Value);
                     position++;
                 }
+
+                // a result carried on as digits is its full value rather than the twelve digits shown, for
+                // as long as the run is exactly the digits it was seeded as
+                if (IsSeededRun(tokens, start, position)) return tokens[start].Seed!.Magnitude;
 
                 if (!double.TryParse(literal.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double number))
                 {
@@ -305,6 +363,19 @@ namespace FluentMath.Engines
             }
 
             return Fail(EvaluationError.Syntax);
+        }
+
+        private static bool IsSeededRun(IReadOnlyList<MathToken> tokens, int start, int end)
+        {
+            SeededValue? seed = tokens[start].Seed;
+            if (seed == null || end - start != seed.DigitCount) return false;
+
+            for (int index = start; index < end; index++)
+            {
+                if (!ReferenceEquals(tokens[index].Seed, seed)) return false;
+            }
+
+            return true;
         }
 
         private static bool StartsAtom(MathToken token)
@@ -349,7 +420,8 @@ namespace FluentMath.Engines
 
             for (int index = 0; index < tokens.Count; index++)
             {
-                if (tokens[index].Type != TokenType.Operator || tokens[index].Value != "/") continue;
+                if (tokens[index].Type != TokenType.Operator) continue;
+                if (tokens[index].Value != "/" && tokens[index].Value != "÷R") continue;
 
                 int start = index + 1;
                 int end = OperandEnd(tokens, start, out int factors, out int unclosed);
@@ -704,9 +776,42 @@ namespace FluentMath.Engines
 
                 case "rndfix":
                     return RoundToDecimals(arguments[0], arguments[1]);
+
+                case "pol":
+                    return Polar(arguments[0], arguments[1]);
+
+                case "rec":
+                    return Rectangular(arguments[0], arguments[1]);
             }
 
             return Fail(EvaluationError.Syntax);
+        }
+
+
+        // === coordinates ===
+
+        // r of the point (x, y), with θ left in _coordinateSecond for the pair; θ is in the angle unit
+        // selected and runs up to and including a half turn, so Pol(−1, 0) is π as on the Casio
+        //
+        // the origin has no angle, which the Casio answers with a Math ERROR
+        private double Polar(double x, double y)
+        {
+            if (x == 0 && y == 0) return Fail(EvaluationError.Domain);
+
+            // a negative zero would put a point on the negative axis at minus a half turn
+            _coordinateSecond = FromRadians(Math.Atan2(y == 0 ? 0 : y, x));
+
+            return double.Hypot(x, y);
+        }
+
+        // x of the point at distance r and angle θ, with y left in _coordinateSecond; through the same
+        // cleaned sine and cosine as sin and cos, so Rec(1, 90) is exactly (0, 1)
+        private double Rectangular(double r, double angle)
+        {
+            double x = r * Trigonometric("cos", angle);
+            _coordinateSecond = r * Trigonometric("sin", angle);
+
+            return x;
         }
 
 

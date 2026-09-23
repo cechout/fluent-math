@@ -52,9 +52,7 @@ namespace FluentMath.Tests
         public static readonly string[] NotImplemented =
         {
             "cmd_dms", "cmd_degrees",
-            "cmd_div_r", "cmd_prime",
             "cmd_rnd",
-            "cmd_pol", "cmd_rec",
             "cmd_history", "cmd_memory"
         };
 
@@ -71,7 +69,14 @@ namespace FluentMath.Tests
         // result on as their left one; mirrors the commands in StandardViewModel.IsOperator
         public static readonly string[] OperatorCommands =
         {
-            "cmd_npr", "cmd_ncr"
+            "cmd_npr", "cmd_ncr", "cmd_div_r"
+        };
+
+        // the keys that change how a result is shown and leave the formula behind it alone; pressed during
+        // input they evaluate first
+        public static readonly string[] ViewKeys =
+        {
+            "cmd_prime"
         };
 
         // the keys that change a mode instead of the formula, and must leave both the input and a shown
