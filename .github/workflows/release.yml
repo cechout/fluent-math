@@ -27,25 +27,25 @@ jobs:
         id: version
         shell: pwsh
         run: |
-          $xml = [xml](Get-Content Calculator_WinUI/Calculator_WinUI.csproj)
+          $xml = [xml](Get-Content FluentMath/FluentMath.csproj)
           $version = $xml.Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
           "version=$version" >> $env:GITHUB_OUTPUT
 
-      # always the project, never Calculator.slnx; the solution also contains the frozen
+      # always the project, never FluentMath.slnx; the solution also contains the frozen
       # WPF v1 (net472, packages.config) which does not build on a dotnet-only runner
       - name: restore
-        run: dotnet restore Calculator_WinUI/Calculator_WinUI.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
+        run: dotnet restore FluentMath/FluentMath.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
       # WinUI3 x:Bind on types defined in this project needs a full Build pass first, so
       # MarkupCompilePass2 gets the LocalAssembly it resolves them against, otherwise the XAML
       # compiler fails on a from-scratch checkout with no prior obj state (WMC1509/WMC9999)
       - name: build win-x64
-        run: dotnet build Calculator_WinUI/Calculator_WinUI.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
+        run: dotnet build FluentMath/FluentMath.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
       # uses the real win-x64.pubxml (Properties/PublishProfiles) so CI applies the exact same
       # settings as a local Visual Studio publish, PublishTrimmed=false included
       - name: publish win-x64
-        run: dotnet publish Calculator_WinUI/Calculator_WinUI.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
+        run: dotnet publish FluentMath/FluentMath.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 
       - name: install inno setup
         run: choco install innosetup -y --no-progress
@@ -55,13 +55,13 @@ jobs:
         run: >
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
           /DMyAppVersion=${{ steps.version.outputs.version }}
-          Setup\CalculatorWinUI_Setup.iss
+          Setup\FluentMath_Setup.iss
 
       - name: upload installer artifact
         uses: actions/upload-artifact@v7
         with:
-          name: SimpleCalculator_Installer
-          path: Setup/Output/SimpleCalculator_Installer.exe
+          name: FluentMath_Installer
+          path: Setup/Output/FluentMath_Installer.exe
 
       # create draft only
       - name: create draft release
@@ -69,5 +69,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >
           gh release create ${{ github.ref_name }}
-          Setup/Output/SimpleCalculator_Installer.exe
-          --draft --generate-notes --title "Simple Calculator ${{ github.ref_name }}"
+          Setup/Output/FluentMath_Installer.exe
+          --draft --generate-notes --title "Fluent Math ${{ github.ref_name }}"

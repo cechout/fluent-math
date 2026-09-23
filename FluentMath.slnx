@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="Calculator/Calculator.csproj" Id="77b23386-f64c-48c7-8de3-0d13acdd99d9" />
+  <Project Path="FluentMath.Tests/FluentMath.Tests.csproj" />
+  <Project Path="FluentMath/FluentMath.csproj">
+    <Platform Project="x64" />
+    <Deploy Solution="*|Any CPU" />
+    <Deploy Solution="Release|x64" />
+  </Project>
+</Solution>

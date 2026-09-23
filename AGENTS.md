@@ -1,4 +1,4 @@
-# Simple Calculator Development Guidelines
+# Fluent Math Development Guidelines
 
 This project is a C#/.NET 8 WinUI 3 desktop app: a calculator for Windows that works the way a physical
 pocket calculator does. The whole equation is typed first and evaluated on `=`, which is what guarantees
@@ -14,7 +14,7 @@ rates. It ships unpackaged and self-contained and needs no elevation.
 - Everything is English: code, comments, commit messages, UI strings and release notes.
 - Always follow `.editorconfig`. Text files are LF; `.gitattributes` pins the checkout, and the CI
   `format` job fails on CRLF.
-- Build and publish `Calculator_WinUI/Calculator_WinUI.csproj`, never `Calculator.slnx`. The solution
+- Build and publish `FluentMath/FluentMath.csproj`, never `FluentMath.slnx`. The solution
   also contains the frozen WPF version 1, which targets `net472` with a `packages.config` and does not
   build on a dotnet-only runner.
 - `Calculator/` is that WPF version 1 and is kept for history only. It is not developed further and
@@ -62,7 +62,7 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ## Project Structure
 
 ```text
-Calculator_WinUI/
+FluentMath/
 ├── Assets/       the app icon and the package logos
 ├── Controls/     the formula display: MathPanel, XamlTextMeasurer
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
@@ -75,7 +75,7 @@ Calculator_WinUI/
 ├── ViewModels/   StandardViewModel, CurrencyViewModel, RelayCommand
 └── Views/        StandardPage, CurrencyPage, SettingsPage
 
-Calculator_WinUI.Tests/   the engine tests, plain net8.0, no reference to the app
+FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
@@ -91,8 +91,8 @@ needs and none of the workflows carry an MSBuild setup step.
 WinUI 3 has no `Any CPU` configuration, so always pass `-p:Platform=x64`.
 
 ```powershell
-dotnet restore Calculator_WinUI/Calculator_WinUI.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
-dotnet build Calculator_WinUI/Calculator_WinUI.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
+dotnet restore FluentMath/FluentMath.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
+dotnet build FluentMath/FluentMath.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
 ```
 
 Publish only through a publish profile, and only after a full build pass. The XAML compiler resolves
@@ -100,7 +100,7 @@ Publish only through a publish profile, and only after a full build pass. The XA
 build produces; publishing a fresh checkout without one fails with `WMC1509` or `WMC9999`.
 
 ```powershell
-dotnet publish Calculator_WinUI/Calculator_WinUI.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
+dotnet publish FluentMath/FluentMath.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 ```
 
 The `format` check runs `dotnet format whitespace --verify-no-changes` against the `.editorconfig`. It
@@ -112,13 +112,13 @@ silently never run.
 
 ## Test
 
-`Calculator_WinUI.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
+`FluentMath.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
 routing in `StandardViewModel`. It targets plain `net8.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 
 ```powershell
-dotnet test Calculator_WinUI.Tests/Calculator_WinUI.Tests.csproj
+dotnet test FluentMath.Tests/FluentMath.Tests.csproj
 ```
 
 The formula layout is covered too, under `Models/Layout/`: it is arithmetic over boxes and its text
@@ -187,19 +187,19 @@ repository setting, not in the build.
 - **`PublishTrimmed=False` stays.** Trimming strips the WinRT and COM interop types the Windows App SDK
   resolves at runtime, and the app crashes on start. The `.csproj` defaults it to `False` as well, so a
   publish that bypasses a profile cannot hit the trap either.
-- **Publish only through a profile in `Calculator_WinUI/Properties/PublishProfiles/`.** That is what
+- **Publish only through a profile in `FluentMath/Properties/PublishProfiles/`.** That is what
   makes a publish in CI apply the exact same settings as a local one, `PublishTrimmed` included.
 - **Never bump `<Version>` in a feature branch.** The bump is a release activity and belongs on the same
   commit that carries the tag. The `.csproj` is the only place it is written: MSBuild derives
   `AssemblyVersion` and `FileVersion` from it, and the release workflow reads it out and hands it to Inno
   Setup, so the installer can never drift out of sync.
-- **The release asset name is a contract.** `SimpleCalculator_Installer.exe` is what the release workflow
+- **The release asset name is a contract.** `FluentMath_Installer.exe` is what the release workflow
   uploads, what the Inno Setup script produces, and what the release notes tell people to download.
   Renaming one of the three breaks the other two quietly.
 - **The release workflow creates a draft, and a human publishes it.** Publishing straight from CI would
   put every tag in front of users the moment the build finishes.
 - **Two `.gitignore` negations stay.** The stock template silently excludes files the build needs: the
-  macOS `Icon` rule swallowed `Calculator_WinUI/Assets/Icon/`, so a fresh checkout failed with `CS7064`
+  macOS `Icon` rule swallowed `FluentMath/Assets/Icon/`, so a fresh checkout failed with `CS7064`
   and the error named the icon rather than anything about git, and `*.pubxml` swallowed all three publish
   profiles.
 - **The CodeQL default setup stays switched off in the repository settings.** It collides with the
