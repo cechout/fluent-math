@@ -43,6 +43,9 @@ namespace FluentMath.Engines
         // what Ran# and RanInt# draw from; settable so a test can hand in a seeded one
         public Random RandomSource { get; set; } = new Random();
 
+        // the number format of the display, which Rnd rounds to
+        public NumberFormat NumberFormat { get; set; } = NumberFormat.Default;
+
         // --- the second value of a pair ---
         // the remainder of a division with remainder that was the last operation at the top level, and
         // the angle or y of the last Pol or Rec; Evaluate makes a pair of them only when that operation is
@@ -776,6 +779,10 @@ namespace FluentMath.Engines
 
                 case "rndfix":
                     return RoundToDecimals(arguments[0], arguments[1]);
+
+                // the value the display would write, so Rnd(1÷3) in Fix 2 is 0.33 and three of it 0.99
+                case "rnd":
+                    return ResultFormatter.RoundToFormat(parameter, NumberFormat);
 
                 case "pol":
                     return Polar(arguments[0], arguments[1]);

@@ -30,7 +30,6 @@ namespace FluentMath.Models.Layout
 
         // signs the display draws that no token carries as its value
         private const string MinusOne = "−1"; // the reciprocal and the inverse hyperbolics
-        private const string ArgumentSeparator = ","; // between the two arguments of GCD, RanInt# and the like
 
 
         // === construction ===
@@ -65,30 +64,39 @@ namespace FluentMath.Models.Layout
             double caretOffset = 0;
             int index = 0;
 
-            while (index < tokens.Count)
+            // the caret hangs off the box it stands in front of, or inside the run it stands in
+            void Add(MathBox box, int start, int end)
             {
-                int start = index;
-                MathBox box;
-
-                if (tokens[index].Type == TokenType.Number)
-                {
-                    box = BuildNumberRun(tokens, ref index, fontSize, path);
-                }
-                else
-                {
-                    box = BuildToken(tokens[index], fontSize, scriptLevel, path, index);
-                    box.CursorAddress = Address(path, index);
-                    index++;
-                }
-
                 children.Add(box);
 
-                // the caret hangs off the box it stands in front of, or inside the run it stands in
-                if (carriesCaret && _caret.Index >= start && _caret.Index < index)
+                if (carriesCaret && _caret.Index >= start && _caret.Index < end)
                 {
                     caretBox = box;
                     caretOffset = box is TextRunBox run ? OffsetInRun(run, _caret.Index - start) : 0;
                 }
+            }
+
+            while (index < tokens.Count)
+            {
+                if (tokens[index].Type == TokenType.Number)
+                {
+                    int runEnd = index;
+                    while (runEnd < tokens.Count && tokens[runEnd].Type == TokenType.Number) runEnd++;
+
+                    List<TextRunBox> groups = BuildNumberRun(tokens, index, runEnd, fontSize, path);
+                    foreach (TextRunBox group in groups)
+                    {
+                        Add(group, index, index + group.Tokens.Count);
+                        index += group.Tokens.Count;
+                    }
+
+                    continue;
+                }
+
+                MathBox box = BuildToken(tokens[index], fontSize, scriptLevel, path, index);
+                box.CursorAddress = Address(path, index);
+                Add(box, index, index + 1);
+                index++;
             }
 
             StretchTypedBrackets(children, fontSize);
@@ -152,24 +160,92 @@ namespace FluentMath.Models.Layout
 
         // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
         // own, because a bracket has to scale with what it encloses as soon as it can
-        private TextRunBox BuildNumberRun(IReadOnlyList<MathToken> tokens, ref int index, double fontSize,
-            string path)
+        //
+        // with digit grouping on, the run is cut where a group of three begins and the gap goes between
+        // the pieces; the cuts depend on the digits alone and never on the caret, so no digit moves as the
+        // caret passes it
+        private List<TextRunBox> BuildNumberRun(IReadOnlyList<MathToken> tokens, int start, int end,
+            double fontSize, string path)
         {
-            int start = index;
-            StringBuilder text = new StringBuilder();
-            List<MathToken> covered = new List<MathToken>();
+            List<TextRunBox> groups = new List<TextRunBox>();
+            List<int> cuts = _style.GroupDigits ? GroupCuts(tokens, start, end) : new List<int>();
+            cuts.Add(end);
 
-            while (index < tokens.Count && tokens[index].Type == TokenType.Number)
+            double gap = fontSize * _style.DigitGroupGap;
+            int from = start;
+
+            foreach (int cut in cuts)
             {
-                text.Append(tokens[index].Value);
-                covered.Add(tokens[index]);
-                index++;
+                StringBuilder text = new StringBuilder();
+                List<MathToken> covered = new List<MathToken>();
+
+                for (int index = from; index < cut; index++)
+                {
+                    text.Append(Drawn(tokens[index]));
+                    covered.Add(tokens[index]);
+                }
+
+                // the place in front of a group is the middle of the gap before it, so the caret stands
+                // between the two groups rather than against either of them
+                bool afterGap = groups.Count > 0;
+                string run = text.ToString();
+                TextRunBox group = Addressed(new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered),
+                    path, from, fontSize, afterGap ? -gap / 2 : 0);
+
+                if (afterGap) group.LeadingGap = gap;
+
+                groups.Add(group);
+                from = cut;
             }
 
-            string run = text.ToString();
+            return groups;
+        }
 
-            return Addressed(new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered),
-                path, start, fontSize);
+        // where a group of three begins inside each whole part of the run, counted from its last digit;
+        // digits behind a decimal point are left alone
+        //
+        // a run is not always one number: a pair writes both values and their names into one, so every
+        // unbroken stretch of digits is grouped on its own
+        private static List<int> GroupCuts(IReadOnlyList<MathToken> tokens, int start, int end)
+        {
+            List<int> cuts = new List<int>();
+            int index = start;
+
+            while (index < end)
+            {
+                if (!IsDigit(tokens[index]))
+                {
+                    index++;
+                    continue;
+                }
+
+                int first = index;
+                while (index < end && IsDigit(tokens[index])) index++;
+
+                if (first > start && tokens[first - 1].Value == ".") continue;
+
+                // the first group takes what is left over, one to three digits, and every cut after it
+                // is three further on
+                int length = index - first;
+                for (int cut = first + (length - 1) % 3 + 1; cut < index; cut += 3) cuts.Add(cut);
+            }
+
+            return cuts;
+        }
+
+        private static bool IsDigit(MathToken token)
+        {
+            return token.Value.Length == 1 && char.IsAsciiDigit(token.Value[0]);
+        }
+
+        // what a character of a number run is drawn as: the decimal point as the mark the settings ask
+        // for, and the comma between the two values of a pair as the separator that goes with it
+        private string Drawn(MathToken token)
+        {
+            if (token.Value == ".") return _style.DecimalMark;
+            if (token.Value == ",") return _style.ListSeparator;
+
+            return token.Value;
         }
 
         // how far into a run the caret stands, when it stands between two digits of the same number
@@ -179,7 +255,7 @@ namespace FluentMath.Models.Layout
         // first glyph, and the digits either side of the caret would shift as it passed between them
         private static double OffsetInRun(TextRunBox run, int tokenOffset)
         {
-            if (tokenOffset <= 0) return 0;
+            if (tokenOffset <= 0) return run.TokenOffsets is { Count: > 0 } offsets ? offsets[0] : 0;
             if (run.TokenOffsets == null || tokenOffset >= run.TokenOffsets.Count) return run.Width;
 
             return run.TokenOffsets[tokenOffset];
@@ -193,7 +269,10 @@ namespace FluentMath.Models.Layout
         //
         // the prefixes cost nothing after the first keystroke, since the measurer keeps every answer and a
         // formula asks for the same handful of runs again on every rebuild
-        private TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex, double fontSize)
+        //
+        // the first place is at the left edge, or reaches back into the gap in front of a digit group
+        private TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex, double fontSize,
+            double firstOffset = 0)
         {
             string[] addresses = new string[run.Tokens.Count];
             double[] offsets = new double[run.Tokens.Count];
@@ -202,9 +281,9 @@ namespace FluentMath.Models.Layout
             for (int offset = 0; offset < addresses.Length; offset++)
             {
                 addresses[offset] = Address(path, firstTokenIndex + offset);
-                offsets[offset] = offset == 0 ? 0 : _measurer.Measure(prefix.ToString(), fontSize).Width;
+                offsets[offset] = offset == 0 ? firstOffset : _measurer.Measure(prefix.ToString(), fontSize).Width;
 
-                prefix.Append(run.Tokens[offset].Value);
+                prefix.Append(Drawn(run.Tokens[offset]));
             }
 
             run.CursorAddress = addresses.Length > 0 ? addresses[0] : null;
@@ -440,7 +519,7 @@ namespace FluentMath.Models.Layout
             {
                 if (index > 0)
                 {
-                    TextRunBox separator = TextRun(ArgumentSeparator, size, token);
+                    TextRunBox separator = TextRun(_style.ListSeparator, size, token);
                     separator.TrailingGap = size * _style.ArgumentSeparatorGap;
                     arguments.Add(separator);
                 }

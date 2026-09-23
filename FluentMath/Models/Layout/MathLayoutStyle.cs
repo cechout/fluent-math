@@ -42,6 +42,22 @@ namespace FluentMath.Models.Layout
         public double MinFitScale { get; set; } = 0.45;
 
 
+        // === numbers ===
+
+        // the mark drawn between the whole part and the decimals; the tokens always hold a dot and only
+        // the drawing swaps it, so a formula means the same whichever mark it is shown with
+        public string DecimalMark { get; set; } = ".";
+
+        // with a decimal comma a comma can no longer separate two arguments or the two values of a pair,
+        // so the separator becomes a semicolon, the way a Casio with a decimal comma writes it
+        public string ListSeparator => DecimalMark == "," ? ";" : ",";
+
+        // a gap every three digits of a whole part, 1 234 567; it is air between two runs rather than a
+        // character, so no token stands for it and the caret still steps from digit to digit
+        public bool GroupDigits { get; set; } = false;
+        public double DigitGroupGap { get; set; } = 0.2; // em, with the place between the groups in its middle
+
+
         // === script levels ===
 
         // a numerator, a denominator and an exponent are set at script size, and one step further in at

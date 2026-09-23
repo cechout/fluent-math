@@ -249,6 +249,17 @@ namespace FluentMath.Models
             return Prefixes.TryGetValue(kind, out (int Exponent, string Symbol) prefix) ? prefix.Exponent : null;
         }
 
+        // the other way round, the prefix that stands for a power of ten, or null where there is none
+        public static string? PrefixFor(int exponent)
+        {
+            foreach (KeyValuePair<string, (int Exponent, string Symbol)> prefix in Prefixes)
+            {
+                if (prefix.Value.Exponent == exponent) return prefix.Key;
+            }
+
+            return null;
+        }
+
         public override string ToLatex(LatexRenderContext context) { return _latex; }
     }
 
@@ -326,6 +337,7 @@ namespace FluentMath.Models
                 "lcm" => ("LCM", false),
                 "ranint" => ("RanInt#", false),
                 "rndfix" => ("RndFix", false),
+                "rnd" => ("Rnd", false),
                 "pol" => ("Pol", false),
                 "rec" => ("Rec", false),
                 _ => (functionName, false)

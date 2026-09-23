@@ -20,15 +20,23 @@ namespace FluentMath.ViewModels
         private readonly MathInputManager _inputManager = new MathInputManager();
         private readonly MathEvaluator _evaluator = new MathEvaluator();
 
+        // the calculator setup; shared with the settings page, which is why it is handed in rather than
+        // owned, and read at the moment it matters rather than copied
+        private readonly CalculatorSettings _settings;
+
         // true while the display shows a result instead of the formula being typed; the next keypress
         // decides whether that result is dropped or carried into the next calculation
         private bool _isShowingResult;
 
-        // which shape the shown result is in; the S to D key cycles it, every = starts over at decimal
+        // which shape the shown result is in; the S to D key cycles it, every = starts over at the form the
+        // settings open a result in
         private AnswerForm _answerForm;
 
         // the result on screen, a pair included; LastAnswer on the evaluator only keeps its first value
         private EvaluationResult _result;
+
+        // the power of ten the ENG view writes the result over
+        private int _engineeringExponent;
 
 
         // === display properties ===
@@ -109,16 +117,16 @@ namespace FluentMath.ViewModels
 
         // === angle mode ===
 
-        // the evaluator owns the mode; this pair exists so the keypad can set it and the indicator above
-        // the display can follow it
+        // the settings own the mode, so it survives a trip to another page; this pair exists so the keypad
+        // can set it and the indicator above the display can follow it
         public AngleMode CurrentAngleMode
         {
-            get => _evaluator.AngleMode;
+            get => _settings.AngleMode;
             set
             {
-                if (_evaluator.AngleMode == value) return;
+                if (_settings.AngleMode == value) return;
 
-                _evaluator.AngleMode = value;
+                _settings.AngleMode = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(AngleModeLabel));
             }
@@ -138,8 +146,8 @@ namespace FluentMath.ViewModels
         }
 
         // cycle is what the single selector button sends, since a button that shows the current unit can
-        // only offer the next one; the three direct keys stay handled for a settings page that lists all
-        // three at once, and for the tests that press them
+        // only offer the next one; the three direct keys stay handled for the tests that press them, the
+        // settings page writes the unit into the settings itself
         private void SetAngleMode(string sign)
         {
             if (sign == "cmd_angle_cycle") { CurrentAngleMode = NextAngleMode(CurrentAngleMode); }
@@ -246,8 +254,13 @@ namespace FluentMath.ViewModels
 
         // === constructor ===
 
-        public StandardViewModel()
+        // a setup of its own with every setting at its default, for a caller that has no shared one
+        public StandardViewModel() : this(new CalculatorSettings()) { }
+
+        public StandardViewModel(CalculatorSettings settings)
         {
+            _settings = settings;
+
             InputCommand = new RelayCommand<string>(AddToTextBox);
             CalculateCommand = new RelayCommand<object>(_ => CalculateResult());
             ClearCommand = new RelayCommand<object>(_ => ClearAll());
@@ -306,6 +319,12 @@ namespace FluentMath.ViewModels
             if (sign == "cmd_prime")
             {
                 ShowPrimeFactors();
+                return;
+            }
+
+            if (sign == "cmd_eng" || sign == "cmd_eng_back")
+            {
+                ShowEngineering(towardsSmallerPowers: sign == "cmd_eng");
                 return;
             }
 
@@ -513,6 +532,10 @@ namespace FluentMath.ViewModels
                         _inputManager.StartFunction("rndfix");
                         break;
 
+                    case "cmd_rnd":
+                        _inputManager.StartFunction("rnd");
+                        break;
+
                     case "cmd_rand":
                         _inputManager.AddRandom();
                         break;
@@ -606,6 +629,10 @@ namespace FluentMath.ViewModels
         // set from the page out of MathDisplayStyle, since the engine has no idea a display exists
         public bool UseDisplayFractions { get; set; }
 
+        // what the decimal point key is labelled with; the key always types a dot, which the display draws
+        // as the mark the settings ask for
+        public string DecimalMarkLabel => _settings.DecimalMarkText;
+
         // the input line is the only one that can be clicked, so it is the only one that asks for the
         // addresses that make a click resolvable back into a cursor position
         private void PublishInput()
@@ -672,17 +699,26 @@ namespace FluentMath.ViewModels
             if (IsOperator(sign) || ContinuesFromResult(sign))
             {
                 SeedWithShownResult();
+                if (TakesTheOperandBefore(sign)) _inputManager.EncloseIfCompound();
                 return;
             }
 
             _inputManager.Clear();
         }
 
+        // the keys that take the operand on their left as a whole, where a result written as more than one
+        // operand has to go in brackets to stay one; EXP is a times sign and does not
+        private static bool TakesTheOperandBefore(string sign)
+        {
+            return (ContinuesFromResult(sign) && sign != "cmd_exp") || sign == "cmd_npr" || sign == "cmd_ncr";
+        }
+
         // the next calculation continues from exactly what the display is showing, digits or fraction,
         // rather than from an Ans token; watching the number stay put is what makes it read as the same
         // calculation carrying on instead of a new one
         //
-        // a pair carries on as its first value, the one Ans holds as well
+        // a pair carries on as its first value, the one Ans holds as well; a decimal carries on as the
+        // digits the number format wrote, with the full value behind them
         private void SeedWithShownResult()
         {
             double value = _result.Value;
@@ -701,13 +737,27 @@ namespace FluentMath.ViewModels
                 return;
             }
 
-            if (_answerForm != AnswerForm.Decimal && hasFraction && denominator > 1)
+            if ((_answerForm == AnswerForm.Improper || _answerForm == AnswerForm.Mixed) && hasFraction && denominator > 1)
             {
                 _inputManager.SeedWithFraction(numerator, denominator);
                 return;
             }
 
-            _inputManager.SeedWithValue(ResultFormatter.ToPlainString(value), value);
+            WrittenDecimal written = _answerForm == AnswerForm.Engineering
+                ? ResultFormatter.Engineering(value, _engineeringExponent, _settings.NumberFormat, _settings.UsePrefixes)
+                : ResultFormatter.Write(value, _settings.NumberFormat);
+
+            if (written.Exponent is not int exponent)
+            {
+                _inputManager.SeedWithValue(written.Digits, value);
+                return;
+            }
+
+            // the digits stand for the value over the power, so that is what they carry
+            double mantissa = value / Math.Pow(10, exponent);
+
+            if (written.Prefix != null) _inputManager.SeedWithPrefix(written.Digits, mantissa, written.Prefix);
+            else _inputManager.SeedWithScientific(written.Digits, mantissa, exponent);
         }
 
         // the keys that read an operand to their left instead of opening a new one; pressing one of
@@ -744,13 +794,11 @@ namespace FluentMath.ViewModels
 
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
-        // dms and deg on the function panel; Rnd, which rounds to a display format there is no setting for
-        // yet; the two header keys, which are waiting on a history list and a variable store rather than
-        // on a token
+        // dms and deg on the function panel; the two header keys, which are waiting on a history list and
+        // a variable store rather than on a token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_dms", "cmd_degrees",
-            "cmd_rnd",
             "cmd_history", "cmd_memory"
         };
 
@@ -781,6 +829,9 @@ namespace FluentMath.ViewModels
             CalculationText = readLatex + "=";
             CalculationTokens = asRead;
 
+            _evaluator.AngleMode = _settings.AngleMode;
+            _evaluator.NumberFormat = _settings.NumberFormat;
+
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (!result.IsSuccess)
             {
@@ -790,7 +841,7 @@ namespace FluentMath.ViewModels
 
             _evaluator.LastAnswer = result.Value;
             _result = result;
-            _answerForm = AnswerForm.Decimal;
+            _answerForm = FirstAnswerForm();
             PublishResult();
             _isShowingResult = true;
 
@@ -799,8 +850,24 @@ namespace FluentMath.ViewModels
 
         private void PublishResult()
         {
-            InputAndResultText = ResultFormatter.ToLatex(_result, _answerForm, UseDisplayFractions);
-            PublishInputDisplay(ResultFormatter.ToTokens(_result, _answerForm, UseDisplayFractions), null, 0, null);
+            NumberFormat format = _settings.NumberFormat;
+            List<MathToken> tokens;
+
+            if (_answerForm == AnswerForm.Engineering)
+            {
+                WrittenDecimal written = ResultFormatter.Engineering(_result.Value, _engineeringExponent,
+                    format, _settings.UsePrefixes);
+
+                InputAndResultText = ResultFormatter.ToLatex(written);
+                tokens = ResultFormatter.ToTokens(written);
+            }
+            else
+            {
+                InputAndResultText = ResultFormatter.ToLatex(_result, _answerForm, UseDisplayFractions, format);
+                tokens = ResultFormatter.ToTokens(_result, _answerForm, UseDisplayFractions, format);
+            }
+
+            PublishInputDisplay(tokens, null, 0, null);
         }
 
         // the tree stays as it was, so the arrow keys go back into the formula that failed
@@ -839,9 +906,40 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // cycles the shown result between a decimal, an improper fraction and a mixed number, skipping
-        // whichever of the three this value does not have; a pair switches both values together, and
-        // has a form when either of them does
+        // ENG and its shift, the result over a power of ten that is a multiple of three
+        //
+        // the first press of ENG writes the power that leaves one to three digits in front of the point,
+        // the first press of the shift one power further up, 0.123×10³ for 123; every press after that
+        // steps three powers down or up, until the mantissa would need a power of its own
+        // pressed during input it evaluates first; a pair turns into its first value, as it does for FACT
+        private void ShowEngineering(bool towardsSmallerPowers)
+        {
+            if (!_isShowingResult && !CalculateResult()) return;
+
+            double value = _result.Value;
+
+            if (_answerForm != AnswerForm.Engineering)
+            {
+                int standard = ResultFormatter.EngineeringExponent(value);
+                int first = towardsSmallerPowers ? standard : standard + 3;
+
+                _engineeringExponent = ResultFormatter.CanWriteEngineering(value, first) ? first : standard;
+                _result = EvaluationResult.Success(value);
+                _answerForm = AnswerForm.Engineering;
+                PublishResult();
+                return;
+            }
+
+            int next = _engineeringExponent + (towardsSmallerPowers ? -3 : 3);
+            if (!ResultFormatter.CanWriteEngineering(value, next)) return;
+
+            _engineeringExponent = next;
+            PublishResult();
+        }
+
+        // cycles the shown result between a decimal and its two fractions, in the order the settings put
+        // the fractions in, skipping whichever this value does not have; a pair switches both values
+        // together, and has a form when either of them does
         //
         // the conversion is numeric, so a result that came out of a root or a pi has no fraction at all
         // and the key does nothing there
@@ -850,21 +948,56 @@ namespace FluentMath.ViewModels
         {
             if (!_isShowingResult && !CalculateResult()) return;
 
-            AnswerForm next = _answerForm;
+            AnswerForm[] cycle = AnswerFormCycle();
+            int at = Array.IndexOf(cycle, _answerForm);
 
-            for (int step = 0; step < 3; step++)
+            // the prime factors and the ENG view are left for the decimal, from where the cycle starts over
+            if (at < 0)
             {
-                next = NextAnswerForm(next);
-
-                if (next == AnswerForm.Decimal) break;
-                if (next == AnswerForm.Improper && HasForm(ResultFormatter.HasFractionForm)) break;
-                if (next == AnswerForm.Mixed && HasForm(ResultFormatter.HasMixedForm)) break;
+                _answerForm = AnswerForm.Decimal;
+                PublishResult();
+                return;
             }
 
-            if (next == _answerForm) return;
+            for (int step = 1; step < cycle.Length; step++)
+            {
+                AnswerForm next = cycle[(at + step) % cycle.Length];
+                if (!HasForm(next)) continue;
 
-            _answerForm = next;
-            PublishResult();
+                _answerForm = next;
+                PublishResult();
+                return;
+            }
+        }
+
+        // the decimal, then the fraction the settings put first, then the other one
+        private AnswerForm[] AnswerFormCycle()
+        {
+            return _settings.MixedFirst
+                ? new[] { AnswerForm.Decimal, AnswerForm.Mixed, AnswerForm.Improper }
+                : new[] { AnswerForm.Decimal, AnswerForm.Improper, AnswerForm.Mixed };
+        }
+
+        // the form a new result opens in: with exact first, the first fraction of the cycle this value
+        // has, and the decimal when it has neither
+        private AnswerForm FirstAnswerForm()
+        {
+            if (!_settings.ExactFirst) return AnswerForm.Decimal;
+
+            foreach (AnswerForm form in AnswerFormCycle())
+            {
+                if (form != AnswerForm.Decimal && HasForm(form)) return form;
+            }
+
+            return AnswerForm.Decimal;
+        }
+
+        private bool HasForm(AnswerForm form)
+        {
+            if (form == AnswerForm.Improper) return HasForm(ResultFormatter.HasFractionForm);
+            if (form == AnswerForm.Mixed) return HasForm(ResultFormatter.HasMixedForm);
+
+            return form == AnswerForm.Decimal;
         }
 
         private bool HasForm(Func<double, bool> hasForm)
@@ -872,15 +1005,6 @@ namespace FluentMath.ViewModels
             if (hasForm(_result.Value)) return true;
 
             return _result.Kind != ResultKind.Single && hasForm(_result.Second);
-        }
-
-        // the prime factors are left for the decimal, from where the cycle starts over
-        private static AnswerForm NextAnswerForm(AnswerForm form)
-        {
-            if (form == AnswerForm.Decimal) return AnswerForm.Improper;
-            if (form == AnswerForm.Improper) return AnswerForm.Mixed;
-
-            return AnswerForm.Decimal;
         }
 
         private void ClearAll()

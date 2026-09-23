@@ -818,6 +818,28 @@ namespace FluentMath.Tests
             Assert.Equal(EvaluationError.Argument, Error("fn:rndfix", "1", "right", "-", "1"));
         }
 
+        private static double Rounded(NumberFormat format, params string[] keys)
+        {
+            EvaluationResult result = new MathEvaluator { NumberFormat = format }.Evaluate(Keys.Press(keys).RootTokens);
+
+            Assert.True(result.IsSuccess);
+            return result.Value;
+        }
+
+        // measured on the Casio: in Fix 2, Rnd(1÷3) is 0.33 and three of it 0.99
+        [Fact]
+        public void RoundsToWhatTheNumberFormatWrites()
+        {
+            NumberFormat fix2 = new NumberFormat(NumberNotation.Fix, 2);
+
+            Assert.Equal(0.33, Rounded(fix2, "fn:rnd", "1", "/", "3"));
+            Assert.Equal(0.99, Rounded(fix2, "fn:rnd", "1", "/", "3", "right", "*", "3"), 15);
+            Assert.Equal(2.68, Rounded(fix2, "fn:rnd", "2.675"));
+
+            Assert.Equal(1230, Rounded(new NumberFormat(NumberNotation.Sci, 3), "fn:rnd", "1234"));
+            Assert.Equal(0.333333333333, Rounded(NumberFormat.Default, "fn:rnd", "1", "/", "3"));
+        }
+
 
         // === decimal prefixes ===
 
