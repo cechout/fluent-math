@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using FluentMath.Engines;
 using FluentMath.Models;
 using Xunit;
@@ -71,6 +73,77 @@ namespace FluentMath.Tests
             Assert.Equal(24, Value("2", "(", "3", ")", "(", "4", ")"));
             Assert.Equal(15, ValueWithAnswer(5, "3", "ans"));
             Assert.Equal(2 * Math.PI, Value("2", "pi"), 12);
+        }
+
+        // what a Casio answers: a product written without a sign is divided by as a whole
+        [Fact]
+        public void BindsAnImplicitProductTighterThanADivision()
+        {
+            Assert.Equal(1, Value("6", "/", "2", "(", "1", "+", "2", ")"));
+            Assert.Equal(1 / (2 * Math.PI), Value("1", "/", "2", "pi"), 15);
+            Assert.Equal(-1, Value("6", "/", "-", "2", "(", "3", ")"));
+            Assert.Equal(1, Value("8", "/", "2", "(", "2", ")", "/", "2"));
+        }
+
+        [Fact]
+        public void LeavesAWrittenTimesSignToTheLeftToRightOrder()
+        {
+            Assert.Equal(9, Value("6", "/", "2", "*", "(", "1", "+", "2", ")"));
+            Assert.Equal(12, Value("2", "(", "3", ")", "!"));
+        }
+
+
+        // === reading ===
+
+        private static string Read(params string[] keys)
+        {
+            return string.Concat(MathEvaluator.CloneWithImpliedBrackets(Keys.Press(keys).RootTokens)
+                .Select(token => token.Value));
+        }
+
+        [Fact]
+        public void BracketsAProductThatADivisionTakesWhole()
+        {
+            Assert.Equal("6/(2(1+2))", Read("6", "/", "2", "(", "1", "+", "2", ")"));
+            Assert.Equal("1/(2pi)", Read("1", "/", "2", "pi"));
+            Assert.Equal("6/(-2(3))", Read("6", "/", "-", "2", "(", "3", ")"));
+            Assert.Equal("6/(2(8/(2(2))))", Read("6", "/", "2", "(", "8", "/", "2", "(", "2", ")", ")"));
+        }
+
+        [Fact]
+        public void LeavesAFormulaThatReadsLeftToRightAlone()
+        {
+            Assert.Equal("6/2*3", Read("6", "/", "2", "*", "3"));
+            Assert.Equal("6*2(3)", Read("6", "*", "2", "(", "3", ")"));
+            Assert.Equal("2(3)/4", Read("2", "(", "3", ")", "/", "4"));
+            Assert.Equal("6/-2", Read("6", "/", "-", "2"));
+        }
+
+        // the closing bracket the user never typed goes in first, so the new one pairs off with the new
+        // opening one
+        [Fact]
+        public void ClosesABracketLeftOpenInsideTheProduct()
+        {
+            Assert.Equal("6/(2(1+2))", Read("6", "/", "2", "(", "1", "+", "2"));
+        }
+
+        [Fact]
+        public void BracketsAProductInsideASlotAsWell()
+        {
+            List<MathToken> read = MathEvaluator.CloneWithImpliedBrackets(
+                Keys.Press("frac", "6", "/", "2", "pi").RootTokens);
+
+            FractionToken fraction = Assert.IsType<FractionToken>(Assert.Single(read));
+            Assert.Equal("6/(2pi)", string.Concat(fraction.NumeratorTokens.Select(token => token.Value)));
+        }
+
+        [Fact]
+        public void LeavesTheTreeItReadsAsItWasTyped()
+        {
+            MathInputManager manager = Keys.Press("6", "/", "2", "(", "1", "+", "2", ")");
+            MathEvaluator.CloneWithImpliedBrackets(manager.RootTokens);
+
+            Assert.Equal(8, manager.RootTokens.Count);
         }
 
 

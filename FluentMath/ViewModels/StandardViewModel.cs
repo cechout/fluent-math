@@ -620,10 +620,16 @@ namespace FluentMath.ViewModels
         // Math ERROR can be corrected instead of retyped from scratch
         private void CalculateResult()
         {
-            CalculationText = _inputManager.GetLatexString(withCursor: false,
-                displayFractions: UseDisplayFractions) + "=";
+            // the history line shows the formula the way it was read, with a bracket pair around a product
+            // that binds tighter than the division in front of it; the tree itself stays as it was typed
+            List<MathToken> asRead = MathEvaluator.CloneWithImpliedBrackets(_inputManager.RootTokens);
 
-            CalculationTokens = MathTokenCloner.CloneList(_inputManager.RootTokens);
+            string readLatex = asRead.Count == 0
+                ? "0"
+                : LatexHelper.GetListLatex(asRead, new LatexRenderContext(null, false, UseDisplayFractions));
+
+            CalculationText = readLatex + "=";
+            CalculationTokens = asRead;
 
             EvaluationResult result = _evaluator.Evaluate(_inputManager.RootTokens);
             if (result.IsSuccess)

@@ -251,7 +251,7 @@ namespace FluentMath.Engines
         // the order is also the slot index a click address carries, which MathToken hardcodes per token
         // when it renders; reordering a token here without reordering it there sends a click into the
         // wrong half of a structure
-        private static List<TokenSlot> GetSlots(MathToken token)
+        internal static List<TokenSlot> GetSlots(MathToken token)
         {
             switch (token)
             {
