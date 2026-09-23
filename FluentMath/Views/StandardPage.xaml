@@ -722,7 +722,7 @@
                                     </Style>
                                 </Flyout.FlyoutPresenterStyle>
 
-                                <!--  one layer, no latch: none of these six comes in a family  -->
+                                <!--  one layer, no latch: none of these five comes in a family  -->
                                 <Grid ColumnSpacing="{StaticResource KeySpacing}" RowSpacing="{StaticResource KeySpacing}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -774,24 +774,13 @@
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
                                         Command="{x:Bind ViewModel.InputCommand}"
-                                        CommandParameter="cmd_rand"
-                                        Style="{StaticResource NumberPadButtonStyle}">
-                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="rand" />
-                                    </Button>
-                                    <Button
-                                        Grid.Row="1"
-                                        Grid.Column="1"
-                                        Width="{StaticResource PanelKeyWidth}"
-                                        Height="{StaticResource PanelKeyHeight}"
-                                        Click="FlyoutKey_Click"
-                                        Command="{x:Bind ViewModel.InputCommand}"
                                         CommandParameter="cmd_dms"
                                         Style="{StaticResource NumberPadButtonStyle}">
                                         <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="dms" />
                                     </Button>
                                     <Button
                                         Grid.Row="1"
-                                        Grid.Column="2"
+                                        Grid.Column="1"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
                                         Click="FlyoutKey_Click"
@@ -955,7 +944,7 @@
                                     </Style>
                                 </Flyout.FlyoutPresenterStyle>
 
-                                <!--  permutations and combinations and the integer random generator, with the two rounding helpers that share their layer on a ClassWiz  -->
+                                <!--  permutations and combinations, the two random generators above each other, and the two rounding helpers that share their layer on a ClassWiz  -->
                                 <Grid ColumnSpacing="{StaticResource KeySpacing}" RowSpacing="{StaticResource KeySpacing}">
                                     <Grid.RowDefinitions>
                                         <RowDefinition Height="Auto" />
@@ -993,6 +982,18 @@
 
                                     <Button
                                         Grid.Row="0"
+                                        Grid.Column="2"
+                                        Width="{StaticResource PanelKeyWidth}"
+                                        Height="{StaticResource PanelKeyHeight}"
+                                        Click="FlyoutKey_Click"
+                                        Command="{x:Bind ViewModel.InputCommand}"
+                                        CommandParameter="cmd_rand"
+                                        Style="{StaticResource NumberPadButtonStyle}">
+                                        <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="Ran#" />
+                                    </Button>
+
+                                    <Button
+                                        Grid.Row="1"
                                         Grid.Column="2"
                                         Width="{StaticResource PanelKeyWidth}"
                                         Height="{StaticResource PanelKeyHeight}"
