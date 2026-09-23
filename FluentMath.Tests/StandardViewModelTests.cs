@@ -346,6 +346,22 @@ namespace FluentMath.Tests
             Assert.EndsWith("=", viewModel.CalculationText);
         }
 
+        // the history line carries the brackets a Casio writes into the input on =, while the formula an
+        // arrow key goes back to edit is still the one that was typed
+        [Fact]
+        public void ShowsHowAnImplicitProductWasReadWithoutRewritingTheFormula()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "6", "/", "2", "cmd_paren_open", "1", "+", "2", "cmd_paren_close", "=");
+
+            Assert.Equal("1", viewModel.InputAndResultText);
+            Assert.Equal(10, viewModel.CalculationTokens.Count);
+
+            Press(viewModel, "cmd_nav_left");
+
+            Assert.Equal(8, viewModel.InputTokens.Count);
+        }
+
 
         // === S to D ===
 

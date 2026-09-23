@@ -14,7 +14,8 @@ namespace FluentMath.Engines
     //
     // the grammar is the usual precedence ladder:
     //   expression := term (plus or minus, term)*
-    //   term       := unary (times or divided by or implicit, unary)*
+    //   term       := product (times or divided by, product)*
+    //   product    := unary (implicit, postfix)*
     //   unary      := sign* postfix
     //   postfix    := atom (factorial or reciprocal or percent)*
     //   atom       := number | constant | bracketed expression | fraction | power | root | function
@@ -98,44 +99,48 @@ namespace FluentMath.Engines
 
         private double ParseTerm(IReadOnlyList<MathToken> tokens, ref int position)
         {
-            double value = ParseUnary(tokens, ref position);
+            double value = ParseProduct(tokens, ref position);
 
             while (_error == EvaluationError.None && position < tokens.Count)
             {
                 MathToken token = tokens[position];
+                if (token.Type != TokenType.Operator) break;
+                if (token.Value != "*" && token.Value != "/") break;
 
-                if (token.Type == TokenType.Operator && (token.Value == "*" || token.Value == "/"))
+                position++;
+                double right = ParseProduct(tokens, ref position);
+                if (_error != EvaluationError.None) return 0;
+
+                if (token.Value == "*")
                 {
-                    position++;
-                    double right = ParseUnary(tokens, ref position);
-                    if (_error != EvaluationError.None) return 0;
-
-                    if (token.Value == "*")
-                    {
-                        value *= right;
-                    }
-                    else
-                    {
-                        if (right == 0) return Fail(EvaluationError.DivideByZero);
-                        value /= right;
-                    }
-                    continue;
+                    value *= right;
                 }
-
-                // no operator but something that can start an atom: implicit multiplication, so that
-                // 3(4+5) and 2sin(30) work the way they do on paper
-                //
-                // through the postfix level rather than straight to the atom, the same way the explicit
-                // times and divided by above reach it; going to the atom left the factorial in 2(3)!
-                // lying in the list with nothing to consume it, and the formula came back as a syntax
-                // error instead of 12
-                if (StartsAtom(token))
+                else
                 {
-                    value *= ParsePostfix(tokens, ref position);
-                    continue;
+                    if (right == 0) return Fail(EvaluationError.DivideByZero);
+                    value /= right;
                 }
+            }
 
-                break;
+            return value;
+        }
+
+        // a product written without a sign binds tighter than times and divided by, the way it does on a
+        // Casio: 6÷2(1+2) divides by the whole of 2(1+2) and is 1, and 1÷2π is one over two pi
+        private double ParseProduct(IReadOnlyList<MathToken> tokens, ref int position)
+        {
+            double value = ParseUnary(tokens, ref position);
+
+            // no operator but something that can start an atom: implicit multiplication, so that
+            // 3(4+5) and 2sin(30) work the way they do on paper
+            //
+            // through the postfix level rather than straight to the atom, the same way the explicit
+            // times and divided by reach it; going to the atom left the factorial in 2(3)!
+            // lying in the list with nothing to consume it, and the formula came back as a syntax
+            // error instead of 12
+            while (_error == EvaluationError.None && position < tokens.Count && StartsAtom(tokens[position]))
+            {
+                value *= ParsePostfix(tokens, ref position);
             }
 
             return value;
@@ -270,6 +275,101 @@ namespace FluentMath.Engines
                 || token is FunctionToken
                 || token is LogarithmToken
                 || token is AnsToken;
+        }
+
+
+        // === reading ===
+
+        // a copy of the formula with a bracket pair around every product that binds tighter than the
+        // divided by in front of it, which is how the history line shows the way the formula was read
+        //
+        // a Casio rewrites the input itself on =, 6÷2(1+2) into 6÷(2(1+2)); here the tree stays exactly as
+        // it was typed and only the copy the history line draws carries the brackets
+        // the scan below follows ParseProduct and has to move with it
+        public static List<MathToken> CloneWithImpliedBrackets(IReadOnlyList<MathToken> tokens)
+        {
+            List<MathToken> copy = MathTokenCloner.CloneList(tokens);
+            InsertImpliedBrackets(copy);
+
+            return copy;
+        }
+
+        private static void InsertImpliedBrackets(List<MathToken> tokens)
+        {
+            foreach (MathToken token in tokens)
+            {
+                foreach (TokenSlot slot in MathInputManager.GetSlots(token)) InsertImpliedBrackets(slot.Tokens);
+            }
+
+            for (int index = 0; index < tokens.Count; index++)
+            {
+                if (tokens[index].Type != TokenType.Operator || tokens[index].Value != "/") continue;
+
+                int start = index + 1;
+                int end = ProductEnd(tokens, start, out int factors, out int unclosed);
+                if (factors < 2) continue;
+
+                // a bracket the user left open inside the product is closed first, or the new closing
+                // bracket would pair off with it instead of with the one opened here
+                for (int count = 0; count <= unclosed; count++)
+                {
+                    tokens.Insert(end, new MathToken(TokenType.BracketClose, ")"));
+                }
+
+                tokens.Insert(start, new MathToken(TokenType.BracketOpen, "("));
+            }
+        }
+
+        // where the product starting at start ends, and how many factors it has; signs belong to the
+        // first factor, the way ParseUnary reads them
+        private static int ProductEnd(List<MathToken> tokens, int start, out int factors, out int unclosed)
+        {
+            int position = start;
+            factors = 0;
+            unclosed = 0;
+
+            while (position < tokens.Count && IsSign(tokens[position])) position++;
+
+            while (position < tokens.Count && StartsAtom(tokens[position]))
+            {
+                position = AtomEnd(tokens, position, ref unclosed);
+                while (position < tokens.Count && tokens[position].Type == TokenType.Postfix) position++;
+
+                factors++;
+            }
+
+            return position;
+        }
+
+        private static bool IsSign(MathToken token)
+        {
+            return token.Type == TokenType.Operator && (token.Value == "+" || token.Value == "-");
+        }
+
+        // a run of digits is one atom and a bracket group reaches to its partner, the same way ParseAtom
+        // reads them; a group nobody closed reaches to the end of the list
+        private static int AtomEnd(List<MathToken> tokens, int position, ref int unclosed)
+        {
+            if (tokens[position].Type == TokenType.Number)
+            {
+                while (position < tokens.Count && tokens[position].Type == TokenType.Number) position++;
+                return position;
+            }
+
+            if (tokens[position].Type != TokenType.BracketOpen) return position + 1;
+
+            int depth = 0;
+            for (int index = position; index < tokens.Count; index++)
+            {
+                if (tokens[index].Type == TokenType.BracketOpen) depth++;
+                if (tokens[index].Type != TokenType.BracketClose) continue;
+
+                depth--;
+                if (depth == 0) return index + 1;
+            }
+
+            unclosed += depth;
+            return tokens.Count;
         }
 
 
