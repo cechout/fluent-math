@@ -135,7 +135,9 @@ namespace FluentMath.Tests
         [MemberData(nameof(EveryKey))]
         public void EveryKeyThatContinuesKeepsTheResultOnScreen(string key)
         {
-            if (!Vocabulary.ContinuesFromResult.Contains(key) && !Vocabulary.Operators.Contains(key)) return;
+            if (!Vocabulary.ContinuesFromResult.Contains(key)
+                && !Vocabulary.Operators.Contains(key)
+                && !Vocabulary.OperatorCommands.Contains(key)) return;
 
             StandardViewModel viewModel = WithAShownResult();
             StandardViewModelTests.Press(viewModel, key);

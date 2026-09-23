@@ -66,6 +66,41 @@ namespace FluentMath.Tests
             Assert.Contains("\\text{Ans}", Latex("ans"));
         }
 
+        // KaTeX has a command for sec but none for sech or GCD, which go through operatorname instead
+        [Fact]
+        public void WritesAPanelFunctionThroughOperatornameWhereKaTeXHasNoCommand()
+        {
+            Assert.Contains("\\sec(", Latex("fn:sec", "1"));
+            Assert.Contains("\\operatorname{sech}(", Latex("fn:sech", "1"));
+            Assert.Contains("\\operatorname{sech}^{-1}(", Latex("fn:arsech", "1"));
+            Assert.Contains("\\operatorname{RanInt\\#}(", Latex("fn:ranint", "1", "right", "6"));
+        }
+
+        [Fact]
+        public void SeparatesTwoArgumentsWithAComma()
+        {
+            string latex = Latex("fn:gcd", "4", "right", "6");
+
+            Assert.Contains("\\operatorname{GCD}(", latex);
+            Assert.Contains("},\\mathord{", latex);
+        }
+
+        [Fact]
+        public void WritesFloorAndCeilingAsTheirBrackets()
+        {
+            Assert.Contains("\\left\\lfloor", Latex("fn:floor", "2.5"));
+            Assert.Contains("\\right\\rceil", Latex("fn:ceil", "2.5"));
+        }
+
+        [Fact]
+        public void WritesThePanelLeavesAsTheyReadOnACasio()
+        {
+            Assert.Contains("\\mathrm{k}", Latex("5", "pre:kilo"));
+            Assert.Contains("\\mu", Latex("5", "pre:micro"));
+            Assert.Contains("\\text{Ran\\#}", Latex("rand"));
+            Assert.Contains("\\htmlClass{m-op}{C}", Latex("5", "ncr", "2"));
+        }
+
         [Fact]
         public void BracesThePowerBaseSoTheExponentCannotSlipOff()
         {

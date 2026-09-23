@@ -96,7 +96,29 @@ namespace FluentMath.Tests
             FunctionToken abs = (FunctionToken)MathTokenCloner.Clone(new FunctionToken("abs"));
 
             Assert.Equal(Math.PI, pi.NumericValue);
-            Assert.True(abs.DrawsAsBars);
+            Assert.Equal(FunctionShape.Bars, abs.Shape);
+        }
+
+        // the second argument is a slot like the first and has to be copied, not recreated empty
+        [Fact]
+        public void ATwoArgumentFunctionKeepsBothArguments()
+        {
+            FunctionToken gcd = new FunctionToken("gcd");
+            gcd.Arguments[0].Add(Digit("4"));
+            gcd.Arguments[1].Add(Digit("6"));
+
+            FunctionToken copy = (FunctionToken)MathTokenCloner.Clone(gcd);
+
+            Assert.Equal("4", copy.Arguments[0].Single().Value);
+            Assert.Equal("6", copy.Arguments[1].Single().Value);
+            Assert.NotSame(gcd.Arguments[1], copy.Arguments[1]);
+        }
+
+        [Fact]
+        public void ThePanelLeavesComeBackAsWhatTheyWere()
+        {
+            Assert.IsType<RandomToken>(MathTokenCloner.Clone(new RandomToken()));
+            Assert.Equal("k", ((PostfixToken)MathTokenCloner.Clone(new PostfixToken("kilo"))).Symbol);
         }
 
         [Fact]

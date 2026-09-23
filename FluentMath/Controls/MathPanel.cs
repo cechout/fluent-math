@@ -538,6 +538,24 @@ namespace FluentMath.Controls
                     });
                     break;
 
+                // floor and ceiling are a stem with a foot, the foot at the bottom for the floor and at
+                // the top for the ceiling, always pointing in towards the content
+                case DelimiterKind.FloorOpen:
+                    AddCorner(figure, width * 0.35, 0, height, width * 0.95);
+                    break;
+
+                case DelimiterKind.FloorClose:
+                    AddCorner(figure, width * 0.65, 0, height, width * 0.05);
+                    break;
+
+                case DelimiterKind.CeilingOpen:
+                    AddCorner(figure, width * 0.35, height, 0, width * 0.95);
+                    break;
+
+                case DelimiterKind.CeilingClose:
+                    AddCorner(figure, width * 0.65, height, 0, width * 0.05);
+                    break;
+
                 default:
                     figure.StartPoint = new Point(width / 2, 0);
                     figure.Segments.Add(new LineSegment { Point = new Point(width / 2, height) });
@@ -549,6 +567,14 @@ namespace FluentMath.Controls
 
 
         // === helpers ===
+
+        // a stem from the free end down or up to the corner, and the foot from the corner across
+        private static void AddCorner(PathFigure figure, double stemX, double freeY, double cornerY, double footX)
+        {
+            figure.StartPoint = new Point(stemX, freeY);
+            figure.Segments.Add(new LineSegment { Point = new Point(stemX, cornerY) });
+            figure.Segments.Add(new LineSegment { Point = new Point(footX, cornerY) });
+        }
 
         private Path StrokedPath(PathFigure figure, double thickness)
         {

@@ -266,7 +266,11 @@ namespace FluentMath.Models.Layout
     {
         ParenthesisOpen,
         ParenthesisClose,
-        Bar
+        Bar,
+        FloorOpen,
+        FloorClose,
+        CeilingOpen,
+        CeilingClose
     }
 
     public sealed class DelimiterBox : MathBox

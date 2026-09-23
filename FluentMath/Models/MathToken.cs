@@ -16,7 +16,8 @@ namespace FluentMath.Models
         Root,
         Logarithm,
         Postfix,
-        Answer
+        Answer,
+        Random
     }
 
 
@@ -144,17 +145,54 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return "\\text{Ans}"; }
     }
 
-    // x!, the reciprocal and percent; all three stand behind their operand instead of in front of it,
-    // which is the whole reason the evaluator has a postfix level at all
+    // Ran#, a new random number every time the formula is evaluated; a leaf like Ans, since it takes no
+    // argument
+    public class RandomToken : MathToken
+    {
+        public RandomToken() : base(TokenType.Random, "Ran#") { }
+
+        public override string ToLatex(LatexRenderContext context) { return "\\text{Ran\\#}"; }
+    }
+
+    // x!, the reciprocal, percent and the decimal prefixes; all of them stand behind their operand
+    // instead of in front of it, which is the whole reason the evaluator has a postfix level at all
     //
     // the reciprocal is a bare superscript rather than a named call, so it sits on the operand the same
     // way a Casio prints it
     public class PostfixToken : MathToken
     {
+        // the decimal prefixes by name, with the power of ten each one stands for and the symbol it is
+        // written as
+        //
+        // 5k is 5000, a factor written behind a number that binds exactly as tightly as a factorial, so a
+        // prefix is a postfix like one; exa stays in, since the display writes a power of ten as ×10ⁿ and
+        // an E never stands for the exponent here
+        private static readonly Dictionary<string, (int Exponent, string Symbol)> Prefixes =
+            new Dictionary<string, (int Exponent, string Symbol)>
+            {
+                ["femto"] = (-15, "f"),
+                ["pico"] = (-12, "p"),
+                ["nano"] = (-9, "n"),
+                ["micro"] = (-6, "μ"),
+                ["milli"] = (-3, "m"),
+                ["kilo"] = (3, "k"),
+                ["mega"] = (6, "M"),
+                ["giga"] = (9, "G"),
+                ["tera"] = (12, "T"),
+                ["peta"] = (15, "P"),
+                ["exa"] = (18, "E")
+            };
+
         private readonly string _latex;
+
+        // what the display writes behind the operand; the reciprocal is drawn as a raised minus one
+        // instead and does not read it
+        public string Symbol { get; }
 
         public PostfixToken(string kind) : base(TokenType.Postfix, kind)
         {
+            Symbol = kind;
+
             switch (kind)
             {
                 case "!":
@@ -171,63 +209,155 @@ namespace FluentMath.Models
 
                 default:
                     _latex = kind;
+
+                    if (Prefixes.TryGetValue(kind, out (int Exponent, string Symbol) prefix))
+                    {
+                        Symbol = prefix.Symbol;
+                        _latex = kind == "micro" ? "\\mu" : $"\\mathrm{{{prefix.Symbol}}}";
+                    }
                     break;
             }
+        }
+
+        // the power of ten a prefix multiplies by, or null for a postfix that is not a prefix
+        public static int? PrefixExponent(string kind)
+        {
+            return Prefixes.TryGetValue(kind, out (int Exponent, string Symbol) prefix) ? prefix.Exponent : null;
         }
 
         public override string ToLatex(LatexRenderContext context) { return _latex; }
     }
 
-    // sin, cos, tan, ln and the hyperbolic family; renders as sin(x)
+    // how a function is drawn: a name in front of a bracket pair, or a pair of delimiters of its own
+    public enum FunctionShape
+    {
+        Named,
+        Bars,     // the absolute value
+        Floor,
+        Ceiling
+    }
+
+    // sin, cos, tan, ln, the hyperbolic family and the named functions of the panels; renders as sin(x)
     //
-    // the name the evaluator switches on is not always the name KaTeX is handed, so the two are kept
-    // apart: Value stays the plain function name, _latexName is the command that draws it
+    // the name the evaluator switches on is not always the name that is drawn, so the two are kept
+    // apart: Value stays the plain function name, DisplayName is what draws it
+    //
+    // a function takes one argument or two, fixed by its name; the second is a slot of its own beside the
+    // first, and the separator between them is drawn rather than typed, which is why no comma key is needed
     public class FunctionToken : MathToken
     {
-        public List<MathToken> ParameterTokens { get; } = new List<MathToken>();
+        public IReadOnlyList<List<MathToken>> Arguments { get; }
 
-        private readonly string _latexName;
-        private readonly bool _drawsAsBars;
+        // the first argument, and for everything but the two argument functions the only one
+        public List<MathToken> ParameterTokens => Arguments[0];
 
-        // whether this one draws as a pair of bars instead of a named call, which is a fact about the
-        // shape of the token rather than about either output format, so both renderers read it here
-        public bool DrawsAsBars => _drawsAsBars;
+        // what the display writes in front of the bracket, and whether it carries a raised minus one; a
+        // fact about the token rather than about either output format, so ToLatex and the layout both read
+        // it here and cannot drift apart
+        public string DisplayName { get; }
+        public bool IsInverse { get; }
+
+        // whether this one draws as a pair of delimiters instead of a named call, which is a fact about
+        // the shape of the token rather than about either output format, so both renderers read it here
+        public FunctionShape Shape { get; }
+
+        // the names KaTeX has a command of its own for; everything else goes through \operatorname
+        private static readonly HashSet<string> LatexCommands = new HashSet<string>
+        {
+            "sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth", "ln"
+        };
 
         public FunctionToken(string functionName) : base(TokenType.SimpleFunction, functionName)
         {
-            _latexName = functionName;
+            (DisplayName, IsInverse) = NameOf(functionName);
+            Shape = ShapeOf(functionName);
 
-            switch (functionName)
+            List<MathToken>[] arguments = new List<MathToken>[ArgumentCount(functionName)];
+            for (int index = 0; index < arguments.Length; index++) arguments[index] = new List<MathToken>();
+
+            Arguments = arguments;
+        }
+
+        // every inverse prints the way a Casio does and the way its key is labelled, as the plain function
+        // carrying a raised minus one; the functions of the panels print the way a Casio spells them
+        private static (string Name, bool Inverse) NameOf(string functionName)
+        {
+            return functionName switch
             {
-                // KaTeX has no command for the inverse hyperbolics, so they print the way a Casio does,
-                // as the plain function carrying a raised minus one
-                case "arsinh":
-                    _latexName = "sinh^{-1}";
-                    break;
+                "arcsin" => ("sin", true),
+                "arccos" => ("cos", true),
+                "arctan" => ("tan", true),
+                "arcsec" => ("sec", true),
+                "arccsc" => ("csc", true),
+                "arccot" => ("cot", true),
+                "arsinh" => ("sinh", true),
+                "arcosh" => ("cosh", true),
+                "artanh" => ("tanh", true),
+                "arsech" => ("sech", true),
+                "arcsch" => ("csch", true),
+                "arcoth" => ("coth", true),
+                "int" => ("Int", false),
+                "intg" => ("Intg", false),
+                "gcd" => ("GCD", false),
+                "lcm" => ("LCM", false),
+                "ranint" => ("RanInt#", false),
+                "rndfix" => ("RndFix", false),
+                _ => (functionName, false)
+            };
+        }
 
-                case "arcosh":
-                    _latexName = "cosh^{-1}";
-                    break;
+        // the absolute value is a pair of bars rather than a named call, and floor and ceiling are pairs
+        // of their own; keeping them FunctionTokens is what lets slots, navigation and Backspace stay
+        // untouched
+        private static FunctionShape ShapeOf(string functionName)
+        {
+            return functionName switch
+            {
+                "abs" => FunctionShape.Bars,
+                "floor" => FunctionShape.Floor,
+                "ceil" => FunctionShape.Ceiling,
+                _ => FunctionShape.Named
+            };
+        }
 
-                case "artanh":
-                    _latexName = "tanh^{-1}";
-                    break;
-
-                // the absolute value is a pair of bars rather than a named call; keeping it a
-                // FunctionToken is what lets slots, navigation and Backspace stay untouched
-                case "abs":
-                    _drawsAsBars = true;
-                    break;
-            }
+        private static int ArgumentCount(string functionName)
+        {
+            return functionName switch
+            {
+                "gcd" or "lcm" or "ranint" or "rndfix" => 2,
+                _ => 1
+            };
         }
 
         public override string ToLatex(LatexRenderContext context)
         {
-            string innerLatex = LatexHelper.GetSlotLatex(ParameterTokens, context, 0);
+            string[] slots = new string[Arguments.Count];
+            for (int index = 0; index < slots.Length; index++)
+            {
+                slots[index] = LatexHelper.GetSlotLatex(Arguments[index], context, index);
+            }
 
-            if (_drawsAsBars) return LatexHelper.Tagged("m-func", $"\\left|{innerLatex}\\right|");
+            string innerLatex = string.Join(",", slots);
 
-            return LatexHelper.Tagged("m-func", $"\\{_latexName}({innerLatex})");
+            switch (Shape)
+            {
+                case FunctionShape.Bars:
+                    return LatexHelper.Tagged("m-func", $"\\left|{innerLatex}\\right|");
+
+                case FunctionShape.Floor:
+                    return LatexHelper.Tagged("m-func", $"\\left\\lfloor{innerLatex}\\right\\rfloor");
+
+                case FunctionShape.Ceiling:
+                    return LatexHelper.Tagged("m-func", $"\\left\\lceil{innerLatex}\\right\\rceil");
+            }
+
+            string command = LatexCommands.Contains(DisplayName)
+                ? DisplayName
+                : $"operatorname{{{DisplayName.Replace("#", "\\#")}}}";
+
+            string raised = IsInverse ? "^{-1}" : "";
+
+            return LatexHelper.Tagged("m-func", $"\\{command}{raised}({innerLatex})");
         }
     }
 
@@ -497,7 +627,10 @@ namespace FluentMath.Models
 
                 case FunctionToken function:
                     FunctionToken functionCopy = new FunctionToken(function.Value);
-                    functionCopy.ParameterTokens.AddRange(CloneList(function.ParameterTokens));
+                    for (int index = 0; index < function.Arguments.Count; index++)
+                    {
+                        functionCopy.Arguments[index].AddRange(CloneList(function.Arguments[index]));
+                    }
                     return functionCopy;
 
                 // the leaves rebuild themselves from their own name, which is what fills the private
@@ -505,6 +638,7 @@ namespace FluentMath.Models
                 case ConstantToken constant: return new ConstantToken(constant.Value);
                 case PostfixToken postfix: return new PostfixToken(postfix.Value);
                 case AnsToken: return new AnsToken();
+                case RandomToken: return new RandomToken();
             }
 
             if (token.GetType() != typeof(MathToken))

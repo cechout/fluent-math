@@ -62,6 +62,9 @@ namespace FluentMath.Models.Layout
         public double LogarithmScale { get; set; } = 1.0;
         public double FunctionScale { get; set; } = 1.0;
 
+        // em, the air behind the comma between two arguments, where a comma in running text keeps its space
+        public double ArgumentSeparatorGap { get; set; } = 0.15;
+
 
         // === operators ===
 

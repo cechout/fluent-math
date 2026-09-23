@@ -2,13 +2,17 @@ namespace FluentMath.Models
 {
     // what went wrong, in the categories a calculator display can actually name
     // Syntax means the formula does not parse, everything else means it parses but has no real result
+    //
+    // Argument is the one a Casio names on its own: a pair of bounds that is the wrong way round or not
+    // made of whole numbers, as in RanInt#(6,1)
     public enum EvaluationError
     {
         None,
         Syntax,
         DivideByZero,
         Domain,
-        Overflow
+        Overflow,
+        Argument
     }
 
 

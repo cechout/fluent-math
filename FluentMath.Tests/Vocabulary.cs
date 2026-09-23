@@ -51,13 +51,10 @@ namespace FluentMath.Tests
         // both carry keys ahead of the engine; a name leaves this list as it lands
         public static readonly string[] NotImplemented =
         {
-            "cmd_sec", "cmd_csc", "cmd_cot", "cmd_asec", "cmd_acsc", "cmd_acot",
-            "cmd_sech", "cmd_csch", "cmd_coth", "cmd_asech", "cmd_acsch", "cmd_acoth",
-            "cmd_floor", "cmd_ceil", "cmd_rand", "cmd_dms", "cmd_degrees",
-            "cmd_gcd", "cmd_lcm", "cmd_div_r", "cmd_prime", "cmd_int", "cmd_intg",
-            "cmd_npr", "cmd_ncr", "cmd_ranint", "cmd_rnd", "cmd_rndfix",
-            "cmd_pol", "cmd_rec", "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
-            "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa",
+            "cmd_dms", "cmd_degrees",
+            "cmd_div_r", "cmd_prime",
+            "cmd_rnd",
+            "cmd_pol", "cmd_rec",
             "cmd_frac_mixed",
             "cmd_history", "cmd_memory"
         };
@@ -66,7 +63,16 @@ namespace FluentMath.Tests
         // from it; mirrors StandardViewModel.ContinuesFromResult
         public static readonly string[] ContinuesFromResult =
         {
-            "cmd_fact", "cmd_inv", "cmd_percent", "cmd_pow_2", "cmd_pow_n", "cmd_frac", "cmd_exp"
+            "cmd_fact", "cmd_inv", "cmd_percent", "cmd_pow_2", "cmd_pow_n", "cmd_frac", "cmd_exp",
+            "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
+            "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa"
+        };
+
+        // the keys that stand between two operands the way the arithmetic signs do, and carry a shown
+        // result on as their left one; mirrors the commands in StandardViewModel.IsOperator
+        public static readonly string[] OperatorCommands =
+        {
+            "cmd_npr", "cmd_ncr"
         };
 
         // the keys that change a mode instead of the formula, and must leave both the input and a shown

@@ -346,6 +346,55 @@ namespace FluentMath.Tests
             Assert.EndsWith("=", viewModel.CalculationText);
         }
 
+        // === panel keys ===
+
+        // a Casio writes AnsC here; the shown 5 is carried on as n the way a plus would carry it
+        [Fact]
+        public void ACombinationContinuesFromAShownResult()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "=", "cmd_ncr", "2", "=");
+
+            Assert.Equal("10", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void APrefixContinuesFromAShownResult()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "=", "cmd_prefix_kilo", "=");
+
+            Assert.Equal("5000", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void ATwoArgumentFunctionTakesItsSecondArgumentAfterRight()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_gcd", "12", "cmd_nav_right", "18", "=");
+
+            Assert.Equal("6", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void NamesAnArgumentErrorTheWayACasioDoes()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_ranint", "6", "cmd_nav_right", "1", "=");
+
+            Assert.Equal("Argument ERROR", viewModel.InputErrorText);
+        }
+
+        [Fact]
+        public void ShowsHowACombinationAfterADivisionWasRead()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "12", "/", "2", "cmd_ncr", "2", "=");
+
+            Assert.Equal("12", viewModel.InputAndResultText);
+            Assert.Equal(8, viewModel.CalculationTokens.Count); // 1, 2, the division, and 2C2 in its brackets
+        }
+
         // the history line carries the brackets a Casio writes into the input on =, while the formula an
         // arrow key goes back to edit is still the one that was typed
         [Fact]

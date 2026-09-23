@@ -13,13 +13,14 @@ namespace FluentMath.Engines
     // fraction inside an exponent inside a root work without a single special case
     //
     // the grammar is the usual precedence ladder:
-    //   expression := term (plus or minus, term)*
-    //   term       := product (times or divided by, product)*
-    //   product    := unary (implicit, postfix)*
-    //   unary      := sign* postfix
-    //   postfix    := atom (factorial or reciprocal or percent)*
-    //   atom       := number | constant | bracketed expression | fraction | power | root | function
-    //                  | logarithm
+    //   expression  := term (plus or minus, term)*
+    //   term        := combination (times or divided by, combination)*
+    //   combination := product (nPr or nCr, product)*
+    //   product     := unary (implicit, postfix)*
+    //   unary       := sign* postfix
+    //   postfix     := atom (factorial or reciprocal or percent or prefix)*
+    //   atom        := number | constant | Ans | Ran# | bracketed expression | fraction | power | root
+    //                   | function | logarithm
     //
     // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
     // half-typed formula is the normal state of the input rather than an exceptional one
@@ -39,9 +40,16 @@ namespace FluentMath.Engines
         // the display happened to show
         public double LastAnswer { get; set; }
 
+        // what Ran# and RanInt# draw from; settable so a test can hand in a seeded one
+        public Random RandomSource { get; set; } = new Random();
+
         // --- trigonometric results ---
         private const double TrigNoisePerRadian = 1e-14; // the most a zero of sin or cos comes out as, per radian of angle
         private const int TrigDigits = 15;               // significant digits a trigonometric result is kept to
+
+        // --- whole numbers ---
+        private const int WholeNumberDigits = 15;        // the digits a Casio computes with, at which a value is judged whole
+        private const double WholeNumberLimit = 1e15;    // above this a double no longer holds every whole number exactly
 
 
         // === constructor ===
@@ -99,7 +107,7 @@ namespace FluentMath.Engines
 
         private double ParseTerm(IReadOnlyList<MathToken> tokens, ref int position)
         {
-            double value = ParseProduct(tokens, ref position);
+            double value = ParseCombination(tokens, ref position);
 
             while (_error == EvaluationError.None && position < tokens.Count)
             {
@@ -108,7 +116,7 @@ namespace FluentMath.Engines
                 if (token.Value != "*" && token.Value != "/") break;
 
                 position++;
-                double right = ParseProduct(tokens, ref position);
+                double right = ParseCombination(tokens, ref position);
                 if (_error != EvaluationError.None) return 0;
 
                 if (token.Value == "*")
@@ -123,6 +131,33 @@ namespace FluentMath.Engines
             }
 
             return value;
+        }
+
+        // nPr and nCr bind tighter than times and divided by and looser than a product written without a
+        // sign, the way a Casio ranks them: 12÷2C2 is 12 over 2C2; a sign in front belongs to n, so −5C2
+        // has no result
+        private double ParseCombination(IReadOnlyList<MathToken> tokens, ref int position)
+        {
+            double value = ParseProduct(tokens, ref position);
+
+            while (_error == EvaluationError.None && position < tokens.Count)
+            {
+                MathToken token = tokens[position];
+                if (!IsCombinationOperator(token)) break;
+
+                position++;
+                double right = ParseProduct(tokens, ref position);
+                if (_error != EvaluationError.None) return 0;
+
+                value = token.Value == "P" ? Permutations(value, right) : Combinations(value, right);
+            }
+
+            return value;
+        }
+
+        private static bool IsCombinationOperator(MathToken token)
+        {
+            return token.Type == TokenType.Operator && (token.Value == "P" || token.Value == "C");
         }
 
         // a product written without a sign binds tighter than times and divided by, the way it does on a
@@ -223,6 +258,11 @@ namespace FluentMath.Engines
                 case AnsToken:
                     position++;
                     return LastAnswer;
+
+                // three decimals from 0.000 to 0.999, the way a Casio draws it
+                case RandomToken:
+                    position++;
+                    return Math.Floor(RandomSource.NextDouble() * 1000) / 1000;
             }
 
             if (token.Type == TokenType.Number)
@@ -274,18 +314,19 @@ namespace FluentMath.Engines
                 || token is RootToken
                 || token is FunctionToken
                 || token is LogarithmToken
-                || token is AnsToken;
+                || token is AnsToken
+                || token is RandomToken;
         }
 
 
         // === reading ===
 
-        // a copy of the formula with a bracket pair around every product that binds tighter than the
+        // a copy of the formula with a bracket pair around every operand that binds tighter than the
         // divided by in front of it, which is how the history line shows the way the formula was read
         //
         // a Casio rewrites the input itself on =, 6÷2(1+2) into 6÷(2(1+2)); here the tree stays exactly as
         // it was typed and only the copy the history line draws carries the brackets
-        // the scan below follows ParseProduct and has to move with it
+        // the scan below follows ParseCombination and ParseProduct and has to move with them
         public static List<MathToken> CloneWithImpliedBrackets(IReadOnlyList<MathToken> tokens)
         {
             List<MathToken> copy = MathTokenCloner.CloneList(tokens);
@@ -306,7 +347,7 @@ namespace FluentMath.Engines
                 if (tokens[index].Type != TokenType.Operator || tokens[index].Value != "/") continue;
 
                 int start = index + 1;
-                int end = ProductEnd(tokens, start, out int factors, out int unclosed);
+                int end = OperandEnd(tokens, start, out int factors, out int unclosed);
                 if (factors < 2) continue;
 
                 // a bracket the user left open inside the product is closed first, or the new closing
@@ -320,25 +361,30 @@ namespace FluentMath.Engines
             }
         }
 
-        // where the product starting at start ends, and how many factors it has; signs belong to the
-        // first factor, the way ParseUnary reads them
-        private static int ProductEnd(List<MathToken> tokens, int start, out int factors, out int unclosed)
+        // where the operand starting at start ends, and how many factors it has: the products
+        // ParseProduct reads, joined by the P and C of ParseCombination; signs belong to the factor they
+        // stand in front of, the way ParseUnary reads them
+        private static int OperandEnd(List<MathToken> tokens, int start, out int factors, out int unclosed)
         {
             int position = start;
             factors = 0;
             unclosed = 0;
 
-            while (position < tokens.Count && IsSign(tokens[position])) position++;
-
-            while (position < tokens.Count && StartsAtom(tokens[position]))
+            while (true)
             {
-                position = AtomEnd(tokens, position, ref unclosed);
-                while (position < tokens.Count && tokens[position].Type == TokenType.Postfix) position++;
+                while (position < tokens.Count && IsSign(tokens[position])) position++;
 
-                factors++;
+                while (position < tokens.Count && StartsAtom(tokens[position]))
+                {
+                    position = AtomEnd(tokens, position, ref unclosed);
+                    while (position < tokens.Count && tokens[position].Type == TokenType.Postfix) position++;
+
+                    factors++;
+                }
+
+                if (position >= tokens.Count || !IsCombinationOperator(tokens[position])) return position;
+                position++;
             }
-
-            return position;
         }
 
         private static bool IsSign(MathToken token)
@@ -391,6 +437,14 @@ namespace FluentMath.Engines
                 // not what this does
                 case "%":
                     return value / 100.0;
+            }
+
+            // a decimal prefix scales by its power of ten; a small one divides rather than multiplies,
+            // because 5 divided by 1000 lands on the nearest double and 5 times 0.001 does not
+            if (PostfixToken.PrefixExponent(kind) is int exponent)
+            {
+                double scale = Math.Pow(10, Math.Abs(exponent));
+                return exponent < 0 ? value / scale : value * scale;
             }
 
             return Fail(EvaluationError.Syntax);
@@ -495,14 +549,24 @@ namespace FluentMath.Engines
 
         private double EvaluateFunction(FunctionToken function)
         {
-            double parameter = EvaluateSlot(function.ParameterTokens);
+            double[] arguments = new double[function.Arguments.Count];
+            for (int index = 0; index < arguments.Length; index++)
+            {
+                arguments[index] = EvaluateSlot(function.Arguments[index]);
+            }
+
             if (_error != EvaluationError.None) return 0;
+
+            double parameter = arguments[0];
 
             switch (function.Value)
             {
                 case "sin":
                 case "cos":
                 case "tan":
+                case "sec":
+                case "csc":
+                case "cot":
                     return Trigonometric(function.Value, parameter);
 
                 case "arcsin":
@@ -515,6 +579,21 @@ namespace FluentMath.Engines
 
                 case "arctan":
                     return FromRadians(Math.Atan(parameter));
+
+                // the inverse of a reciprocal is the inverse of its partner taken at the reciprocal
+                //
+                // cot⁻¹ answers between 0° and 180° rather than between −90° and 90°, which keeps it
+                // continuous through zero and is the range a German formula collection gives it
+                case "arcsec":
+                    if (Math.Abs(parameter) < 1) return Fail(EvaluationError.Domain);
+                    return FromRadians(Math.Acos(1 / parameter));
+
+                case "arccsc":
+                    if (Math.Abs(parameter) < 1) return Fail(EvaluationError.Domain);
+                    return FromRadians(Math.Asin(1 / parameter));
+
+                case "arccot":
+                    return FromRadians(Math.PI / 2 - Math.Atan(parameter));
 
                 case "ln":
                     if (parameter <= 0) return Fail(EvaluationError.Domain);
@@ -543,11 +622,187 @@ namespace FluentMath.Engines
                     if (parameter <= -1 || parameter >= 1) return Fail(EvaluationError.Domain);
                     return Math.Atanh(parameter);
 
+                case "sech":
+                    return 1 / Math.Cosh(parameter);
+
+                case "csch":
+                    if (parameter == 0) return Fail(EvaluationError.Domain);
+                    return 1 / Math.Sinh(parameter);
+
+                case "coth":
+                    if (parameter == 0) return Fail(EvaluationError.Domain);
+                    return 1 / Math.Tanh(parameter);
+
+                case "arsech":
+                    if (parameter <= 0 || parameter > 1) return Fail(EvaluationError.Domain);
+                    return Math.Acosh(1 / parameter);
+
+                case "arcsch":
+                    if (parameter == 0) return Fail(EvaluationError.Domain);
+                    return Math.Asinh(1 / parameter);
+
+                case "arcoth":
+                    if (Math.Abs(parameter) <= 1) return Fail(EvaluationError.Domain);
+                    return Math.Atanh(1 / parameter);
+
                 case "abs":
                     return Math.Abs(parameter);
+
+                // floor and Intg are the same function from two sets of keys, the Windows one and the
+                // Casio one; Int cuts towards zero, so Int(−2.5) is −2 where Intg(−2.5) is −3
+                case "floor":
+                case "intg":
+                    return Math.Floor(AtCasioPrecision(parameter));
+
+                case "ceil":
+                    return Math.Ceiling(AtCasioPrecision(parameter));
+
+                case "int":
+                    return Math.Truncate(AtCasioPrecision(parameter));
+
+                case "gcd":
+                    return GreatestCommonDivisor(arguments[0], arguments[1]);
+
+                case "lcm":
+                    return LeastCommonMultiple(arguments[0], arguments[1]);
+
+                case "ranint":
+                    return RandomInteger(arguments[0], arguments[1]);
+
+                case "rndfix":
+                    return RoundToDecimals(arguments[0], arguments[1]);
             }
 
             return Fail(EvaluationError.Syntax);
+        }
+
+
+        // === whole numbers ===
+
+        // the value at the fifteen digits a Casio computes with
+        //
+        // 0.1×30 is 3.0000000000000004 as a double and a plain 3 on a Casio, and 1−0.9 is 0.09999999999999998;
+        // without this, Int(10(1−0.9)) would be 0 and GCD(0.1×30, 6) a Math ERROR
+        private static double AtCasioPrecision(double value)
+        {
+            return ResultFormatter.RoundToSignificantDigits(value, WholeNumberDigits);
+        }
+
+        // whether a value is a whole number at that precision, and small enough that a double still holds
+        // every whole number around it
+        private static bool TryWholeNumber(double value, out double whole)
+        {
+            whole = AtCasioPrecision(value);
+
+            return Math.Abs(whole) < WholeNumberLimit && whole == Math.Floor(whole);
+        }
+
+        // both arguments have to be whole; a sign does not change the divisor, so GCD(−12, 18) is 6 the
+        // way a Casio answers it
+        private double GreatestCommonDivisor(double first, double second)
+        {
+            if (!TryWholeNumber(first, out double a) || !TryWholeNumber(second, out double b))
+            {
+                return Fail(EvaluationError.Domain);
+            }
+
+            return Gcd((long)Math.Abs(a), (long)Math.Abs(b));
+        }
+
+        // a multiple of zero is zero, so LCM(0, 5) is 0 rather than an error, which is what a Casio shows
+        private double LeastCommonMultiple(double first, double second)
+        {
+            if (!TryWholeNumber(first, out double a) || !TryWholeNumber(second, out double b))
+            {
+                return Fail(EvaluationError.Domain);
+            }
+
+            long x = (long)Math.Abs(a);
+            long y = (long)Math.Abs(b);
+            if (x == 0 || y == 0) return 0;
+
+            return (double)(x / Gcd(x, y)) * y;
+        }
+
+        private static long Gcd(long a, long b)
+        {
+            while (b != 0) (a, b) = (b, a % b);
+
+            return a;
+        }
+
+        // n and r have to be whole, n not negative and r no larger than n; anything else counts nothing,
+        // which a Casio answers with a Math ERROR
+        private static bool TryCountPair(double n, double r, out double count, out double chosen)
+        {
+            bool whole = TryWholeNumber(n, out count) & TryWholeNumber(r, out chosen);
+
+            return whole && count >= 0 && chosen >= 0 && chosen <= count;
+        }
+
+        // the loop stops at the first overflow, which a large n reaches within a few hundred factors, so a
+        // count near the whole number limit cannot keep it running
+        private double Permutations(double n, double r)
+        {
+            if (!TryCountPair(n, r, out double count, out double chosen)) return Fail(EvaluationError.Domain);
+
+            double result = 1;
+            for (double factor = count; factor > count - chosen; factor--)
+            {
+                result *= factor;
+                if (double.IsInfinity(result)) return Fail(EvaluationError.Overflow);
+            }
+
+            return result;
+        }
+
+        // built from the smaller side one factor at a time, where every intermediate step is itself a
+        // count and therefore whole, so nothing is lost to a division until the double runs out of digits
+        private double Combinations(double n, double r)
+        {
+            if (!TryCountPair(n, r, out double count, out double chosen)) return Fail(EvaluationError.Domain);
+
+            double smaller = Math.Min(chosen, count - chosen);
+            double result = 1;
+
+            for (double step = 1; step <= smaller; step++)
+            {
+                result = result * (count - smaller + step) / step;
+                if (double.IsInfinity(result)) return Fail(EvaluationError.Overflow);
+            }
+
+            return result;
+        }
+
+        // a whole number from low to high, both included; bounds that are not whole or not in order are
+        // an Argument ERROR, the way RanInt#(6,1) is on a Casio
+        private double RandomInteger(double low, double high)
+        {
+            if (!TryWholeNumber(low, out double from) || !TryWholeNumber(high, out double to) || from >= to)
+            {
+                return Fail(EvaluationError.Argument);
+            }
+
+            return RandomSource.NextInt64((long)from, (long)to + 1);
+        }
+
+        // the value rounded to a whole number of decimals from 0 to 9, the range Fix takes
+        //
+        // rounded as a decimal from the fifteen digits a Casio holds, so 2.675 rounds up to 2.68 the way
+        // it reads, where the double just below 2.675 would round down
+        private double RoundToDecimals(double value, double decimals)
+        {
+            if (!TryWholeNumber(decimals, out double places) || places < 0 || places > 9)
+            {
+                return Fail(EvaluationError.Argument);
+            }
+
+            if (Math.Abs(value) >= WholeNumberLimit) return value; // no decimals left to round
+
+            decimal exact = decimal.Parse(value.ToString("G15", CultureInfo.InvariantCulture),
+                NumberStyles.Float, CultureInfo.InvariantCulture);
+
+            return (double)Math.Round(exact, (int)places, MidpointRounding.AwayFromZero);
         }
 
 
@@ -581,17 +836,32 @@ namespace FluentMath.Engines
         // tan is a pole wherever the cosine is an exact zero, which CleanTrigResult makes it at every odd
         // quarter turn; that holds in radians too, where no double lands on pi/2 itself, and it is what
         // makes tan(pi/2) the Math ERROR a Casio gives
+        //
+        // sec shares those poles, csc and cot have theirs wherever the sine is zero, and cot is an exact 0
+        // wherever the cosine is
         private double Trigonometric(string name, double angle)
         {
             double radians = ToRadians(angle);
             double sine = CleanTrigResult(Math.Sin(radians), radians);
             double cosine = CleanTrigResult(Math.Cos(radians), radians);
 
-            if (name == "sin") return sine;
-            if (name == "cos") return cosine;
+            switch (name)
+            {
+                case "sin": return sine;
+                case "cos": return cosine;
+                case "tan": return TrigRatio(sine, cosine, radians);
+                case "sec": return TrigRatio(1, cosine, radians);
+                case "csc": return TrigRatio(1, sine, radians);
+            }
 
-            if (cosine == 0) return Fail(EvaluationError.Domain);
-            return CleanTrigResult(sine / cosine, radians);
+            return TrigRatio(cosine, sine, radians);
+        }
+
+        private double TrigRatio(double numerator, double denominator, double radians)
+        {
+            if (denominator == 0) return Fail(EvaluationError.Domain);
+
+            return CleanTrigResult(numerator / denominator, radians);
         }
 
         // sin(180) comes out as 1.2e-16 rather than 0, because the degree to radian conversion can never
