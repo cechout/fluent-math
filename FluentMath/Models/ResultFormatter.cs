@@ -122,11 +122,14 @@ namespace FluentMath.Models
                 long whole = form == AnswerForm.Mixed ? numerator / denominator : 0;
                 if (whole == 0) return new List<MathToken> { FractionTokens(numerator, denominator) };
 
-                // the sign rides on the whole part, so the remainder is always written positive
-                List<MathToken> mixed = DigitTokens(whole.ToString(CultureInfo.InvariantCulture));
-                mixed.Add(FractionTokens(Math.Abs(numerator % denominator), denominator));
+                // the sign rides on the whole part, so the remainder is always written positive; it is the
+                // structure the mixed fraction key types, so seeding it puts back exactly what is drawn
+                MixedFractionToken mixed = new MixedFractionToken();
+                mixed.WholeTokens.AddRange(DigitTokens(whole.ToString(CultureInfo.InvariantCulture)));
+                mixed.NumeratorTokens.AddRange(DigitTokens(Math.Abs(numerator % denominator).ToString(CultureInfo.InvariantCulture)));
+                mixed.DenominatorTokens.AddRange(DigitTokens(denominator.ToString(CultureInfo.InvariantCulture)));
 
-                return mixed;
+                return new List<MathToken> { mixed };
             }
 
             return ToTokens(value);

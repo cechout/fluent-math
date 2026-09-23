@@ -66,16 +66,26 @@ namespace FluentMath.Tests
             Assert.Equal("4", Digits(fraction.DenominatorTokens));
         }
 
+        // the structure the mixed fraction key types, so seeding it puts back exactly what is drawn
         [Fact]
-        public void TheMixedFormIsAWholePartFollowedByAFraction()
+        public void TheMixedFormIsAMixedFractionToken()
         {
             List<MathToken> tokens = ResultFormatter.ToTokens(1.75, AnswerForm.Mixed, false);
 
-            Assert.Equal("1", Digits(tokens.Take(tokens.Count - 1)));
+            MixedFractionToken mixed = Assert.IsType<MixedFractionToken>(Assert.Single(tokens));
+            Assert.Equal("1", Digits(mixed.WholeTokens));
+            Assert.Equal("3", Digits(mixed.NumeratorTokens));
+            Assert.Equal("4", Digits(mixed.DenominatorTokens));
+        }
 
-            FractionToken fraction = Assert.IsType<FractionToken>(tokens.Last());
-            Assert.Equal("3", Digits(fraction.NumeratorTokens));
-            Assert.Equal("4", Digits(fraction.DenominatorTokens));
+        [Fact]
+        public void TheSignOfAMixedNumberRidesOnItsWholePart()
+        {
+            List<MathToken> tokens = ResultFormatter.ToTokens(-1.75, AnswerForm.Mixed, false);
+
+            MixedFractionToken mixed = Assert.IsType<MixedFractionToken>(Assert.Single(tokens));
+            Assert.Equal("−1", Digits(mixed.WholeTokens));
+            Assert.Equal("3", Digits(mixed.NumeratorTokens));
         }
 
         [Fact]

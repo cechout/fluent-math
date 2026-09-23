@@ -117,6 +117,18 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void WritesAMixedFractionAsItsWholePartInFrontOfAFraction()
+        {
+            string latex = Latex("2", "mixed", "1", "right", "3");
+
+            Assert.Contains("\\htmlClass{m-mixed}", latex);
+            Assert.Contains("\\frac{", latex);
+
+            string template = Keys.Press("mixed").GetLatexString(withCursor: false);
+            Assert.Equal(3, template.Split("\\square").Length - 1);
+        }
+
+        [Fact]
         public void ShowsAnEmptySlotAsABox()
         {
             Assert.Contains("\\square", Keys.Press("3", "exp").GetLatexString(withCursor: true));

@@ -1,4 +1,5 @@
-﻿using FluentMath.ViewModels;
+﻿using FluentMath.Models;
+using FluentMath.ViewModels;
 using Xunit;
 
 namespace FluentMath.Tests
@@ -90,6 +91,7 @@ namespace FluentMath.Tests
         [InlineData("cmd_inv")]
         [InlineData("cmd_percent")]
         [InlineData("cmd_frac")]
+        [InlineData("cmd_frac_mixed")]
         [InlineData("cmd_exp")]
         public void KeepsTheResultOnScreenForEveryKeyThatReadsAnOperand(string key)
         {
@@ -493,6 +495,58 @@ namespace FluentMath.Tests
 
             Press(viewModel, "1", "=");
             Assert.Equal("2.25", viewModel.InputAndResultText);
+        }
+
+        // a deliberate difference to the Casio, which starts over with an empty template here: the shown
+        // number becomes the whole part, the same as a typed one would
+        [Fact]
+        public void ContinuesAMixedFractionFromTheResult()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "=", "cmd_frac_mixed", "1", "cmd_nav_right", "2", "=");
+
+            Assert.Equal("5.5", viewModel.InputAndResultText);
+        }
+
+        // the 0 an empty display shows is not lifted into the whole part, since that is the slot the
+        // template is typed from
+        [Fact]
+        public void OpensAnEmptyMixedFractionOnAnEmptyDisplay()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_frac_mixed", "1", "cmd_nav_right", "1", "cmd_nav_right", "2", "=");
+
+            Assert.Equal("1.5", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void CarriesAShownMixedNumberOnAsAMixedFraction()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "/", "4", "=", "sd", "sd", "+");
+
+            Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
+
+            Press(viewModel, "1", "=");
+            Assert.Equal("2.25", viewModel.InputAndResultText);
+
+            // the sign is part of the whole number, so squaring a negative one comes out positive
+            var negative = new StandardViewModel();
+            Press(negative, "-", "5", "/", "4", "=", "sd", "sd", "cmd_pow_2", "=");
+            Assert.Equal("1.5625", negative.InputAndResultText);
+        }
+
+        // the address is worked out against the drawn result, so the seeded tree has to be that shape
+        [Fact]
+        public void PlacesAClickInsideAShownMixedNumber()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "5", "/", "4", "=", "sd", "sd");
+
+            viewModel.PlaceCursor("0.0@1");
+            Press(viewModel, "0", "=");
+
+            Assert.Equal("10.25", viewModel.InputAndResultText);
         }
 
         [Fact]

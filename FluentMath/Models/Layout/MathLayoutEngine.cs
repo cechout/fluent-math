@@ -128,6 +128,7 @@ namespace FluentMath.Models.Layout
             switch (token)
             {
                 case FractionToken fraction: return BuildFraction(fraction, fontSize, scriptLevel, path, tokenIndex);
+                case MixedFractionToken mixed: return BuildMixedFraction(mixed, fontSize, scriptLevel, path, tokenIndex);
                 case PowerToken power: return BuildPower(power, fontSize, scriptLevel, path, tokenIndex);
                 case RootToken root: return BuildRoot(root, fontSize, scriptLevel, path, tokenIndex);
                 case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel, path, tokenIndex);
@@ -261,6 +262,33 @@ namespace FluentMath.Models.Layout
 
         private FractionBox BuildFraction(FractionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
+            return BuildFractionBox(token.NumeratorTokens, token.DenominatorTokens, 0,
+                fontSize, scriptLevel, path, tokenIndex);
+        }
+
+        // the whole part stands in front of an ordinary fraction on the same baseline, and nothing is
+        // drawn ahead of it, which is what lets the cursor skip the place in front of the token, see
+        // MathInputManager.BeginsWithItsFirstSlot
+        //
+        // the gap keeps the end of the whole part and the start of the numerator apart on screen, the two
+        // places a press of Right steps between
+        private RowBox BuildMixedFraction(MixedFractionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
+        {
+            double size = fontSize * _style.FractionScale;
+
+            MathBox whole = BuildSlot(token.WholeTokens, size, scriptLevel, SlotPath(path, tokenIndex, 0));
+            whole.TrailingGap = size * _style.MixedFractionGap;
+
+            FractionBox fraction = BuildFractionBox(token.NumeratorTokens, token.DenominatorTokens, 1,
+                fontSize, scriptLevel, path, tokenIndex);
+
+            return new RowBox(new List<MathBox> { whole, fraction });
+        }
+
+        // firstSlot is the slot index of the numerator, which the whole part of a mixed fraction moves on
+        private FractionBox BuildFractionBox(IReadOnlyList<MathToken> numerator, IReadOnlyList<MathToken> denominator,
+            int firstSlot, double fontSize, int scriptLevel, string path, int tokenIndex)
+        {
             double size = fontSize * _style.FractionScale;
 
             // both halves drop a level, unless a display fraction is asked for, which keeps them at full
@@ -270,8 +298,8 @@ namespace FluentMath.Models.Layout
             int innerLevel = display ? scriptLevel : scriptLevel + 1;
 
             return new FractionBox(
-                BuildSlot(token.NumeratorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 0)),
-                BuildSlot(token.DenominatorTokens, innerSize, innerLevel, SlotPath(path, tokenIndex, 1)),
+                BuildSlot(numerator, innerSize, innerLevel, SlotPath(path, tokenIndex, firstSlot)),
+                BuildSlot(denominator, innerSize, innerLevel, SlotPath(path, tokenIndex, firstSlot + 1)),
                 size * _style.FractionBarThickness,
                 size * (_style.MathAxisHeight + _style.MathAxisRaise),
                 size * _style.FractionNumeratorGap,

@@ -425,6 +425,114 @@ namespace FluentMath.Tests
             Assert.Equal(0.6, Value(Keys.Press("1.5", "frac", "2.5")), 12);
         }
 
+        // === mixed fractions ===
+
+        // measured on the Casio: 2 followed by the key makes the 2 the whole part and leaves the cursor in
+        // the empty numerator
+        [Fact]
+        public void LiftsTheNumberInFrontIntoTheWholePart()
+        {
+            MathInputManager manager = Keys.Press("2", "mixed");
+            MixedFractionToken mixed = Assert.IsType<MixedFractionToken>(Assert.Single(manager.RootTokens));
+
+            Assert.Equal("2", Assert.Single(mixed.WholeTokens).Value);
+            Assert.Same(mixed.NumeratorTokens, manager.ActiveTokens);
+        }
+
+        [Fact]
+        public void OpensAnEmptyTemplateInTheWholePart()
+        {
+            MathInputManager manager = Keys.Press("mixed");
+            MixedFractionToken mixed = Assert.IsType<MixedFractionToken>(Assert.Single(manager.RootTokens));
+
+            Assert.Same(mixed.WholeTokens, manager.ActiveTokens);
+        }
+
+        // the minus stays a sign in front of the token, which is what makes it negate the whole number
+        [Fact]
+        public void LeavesALeadingMinusInFrontOfTheMixedFraction()
+        {
+            MathInputManager manager = Keys.Press("-", "2", "mixed");
+
+            Assert.Equal(2, manager.RootTokens.Count);
+            Assert.Equal("-", manager.RootTokens[0].Value);
+            Assert.IsType<MixedFractionToken>(manager.RootTokens[1]);
+        }
+
+        [Fact]
+        public void WalksTheWholePartTheNumeratorAndTheDenominatorInThatOrder()
+        {
+            Assert.Equal(1 + 2.0 / 3.0 + 1, Value(Keys.Press("mixed", "1", "right", "2", "right", "3", "right", "+", "1")), 12);
+            Assert.Equal(25 + 1.0 / 3.0, Value(Keys.Press("2", "mixed", "left", "5", "right", "1", "right", "3")), 12);
+        }
+
+        [Fact]
+        public void CrossesBetweenNumeratorAndDenominatorWithUpAndDownButNotOutOfTheWholePart()
+        {
+            Assert.Equal(7.0 / 3.0, Value(Keys.Press("2", "mixed", "1", "down", "3")), 12);
+
+            MathInputManager whole = Keys.Press("mixed", "up", "down", "5");
+            Assert.Same(((MixedFractionToken)whole.RootTokens[0]).WholeTokens, whole.ActiveTokens);
+        }
+
+        // the whole part begins where the token does, so the place in front of the token is never a stop
+        // of its own and Left carries straight on past it
+        [Fact]
+        public void NeverStandsInFrontOfTheMixedFraction()
+        {
+            MathInputManager manager = Keys.Press("5", "+", "2", "mixed", "left", "left", "left", "9");
+
+            Assert.Equal(4, manager.RootTokens.Count);
+            Assert.Equal("9", manager.RootTokens[1].Value);
+
+            MathInputManager atTheStart = Keys.Press("2", "mixed", "left", "left", "left", "9");
+            Assert.Equal(2, ((MixedFractionToken)atTheStart.RootTokens[0]).WholeTokens.Count);
+            Assert.True(atTheStart.SetCursorPosition("@0"));
+            Assert.Same(((MixedFractionToken)atTheStart.RootTokens[0]).WholeTokens, atTheStart.ActiveTokens);
+        }
+
+        [Fact]
+        public void DissolvesTheMixedFractionIntoItsDigits()
+        {
+            // straight after the key, Backspace takes it back and leaves the 2 with the caret behind it
+            MathInputManager undone = Keys.Press("2", "mixed", "back", "7");
+            Assert.Equal(27, Value(undone));
+
+            MathInputManager filled = Keys.Press("2", "mixed", "1", "right", "3", "left", "left", "left", "back");
+            Assert.Equal(213, Value(filled));
+            Assert.Equal(1, filled.ActiveCursorIndex);
+        }
+
+        [Fact]
+        public void PlacesTheCursorInEveryPartOfAMixedFraction()
+        {
+            MathInputManager manager = Keys.Press("2", "mixed", "1", "right", "3");
+
+            Assert.True(manager.SetCursorPosition("0.2@0"));
+            manager.AddNumber("1");
+            Assert.Equal(2 + 1.0 / 13.0, Value(manager), 12);
+
+            Assert.True(manager.SetCursorPosition("0.0@1"));
+            manager.AddNumber("0");
+            Assert.Equal(20 + 1.0 / 13.0, Value(manager), 12);
+        }
+
+        [Fact]
+        public void SeedsAShownMixedNumberAsTheStructureItIsDrawnAs()
+        {
+            MathInputManager manager = new MathInputManager();
+            manager.SeedWithMixedFraction(-1, 1, 4);
+
+            Assert.IsType<MixedFractionToken>(Assert.Single(manager.RootTokens));
+            Assert.Equal(-1.25, Value(manager));
+
+            // the sign is inside the token, so squaring it squares the negative number
+            manager.StartPower();
+            manager.AddNumber("2");
+            Assert.Equal(1.5625, Value(manager));
+        }
+
+
         // === continuing from a result ===
 
         [Fact]

@@ -115,6 +115,22 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void AMixedFractionKeepsItsThreeParts()
+        {
+            MixedFractionToken mixed = new MixedFractionToken();
+            mixed.WholeTokens.Add(Digit("2"));
+            mixed.NumeratorTokens.Add(Digit("1"));
+            mixed.DenominatorTokens.Add(Digit("3"));
+
+            MixedFractionToken copy = (MixedFractionToken)MathTokenCloner.Clone(mixed);
+
+            Assert.Equal("2", copy.WholeTokens.Single().Value);
+            Assert.Equal("1", copy.NumeratorTokens.Single().Value);
+            Assert.Equal("3", copy.DenominatorTokens.Single().Value);
+            Assert.NotSame(mixed.WholeTokens, copy.WholeTokens);
+        }
+
+        [Fact]
         public void ThePanelLeavesComeBackAsWhatTheyWere()
         {
             Assert.IsType<RandomToken>(MathTokenCloner.Clone(new RandomToken()));

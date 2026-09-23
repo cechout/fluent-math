@@ -16,7 +16,8 @@ namespace FluentMath.Models
         RootRadicand,
         FunctionParameter,
         LogBase,
-        LogParameter
+        LogParameter,
+        WholePart
     }
 
     public enum NavDirection

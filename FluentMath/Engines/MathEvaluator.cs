@@ -235,6 +235,10 @@ namespace FluentMath.Engines
                     position++;
                     return EvaluateFraction(fraction);
 
+                case MixedFractionToken mixed:
+                    position++;
+                    return EvaluateMixedFraction(mixed);
+
                 case PowerToken power:
                     position++;
                     return EvaluatePower(power);
@@ -310,6 +314,7 @@ namespace FluentMath.Engines
             if (token.Type == TokenType.BracketOpen) return true;
 
             return token is FractionToken
+                || token is MixedFractionToken
                 || token is PowerToken
                 || token is RootToken
                 || token is FunctionToken
@@ -492,6 +497,34 @@ namespace FluentMath.Engines
 
             if (denominator == 0) return Fail(EvaluationError.DivideByZero);
             return numerator / denominator;
+        }
+
+        // every part has to be a whole number, the one input rule a Casio has for it, which it enforces by
+        // not taking a decimal point there; here anything goes in and the check happens on =
+        //
+        // the magnitudes add and the signs multiply: a minus on any one part makes the whole number
+        // negative, so a whole part of 1 with −1 over 2 is −3/2, as on the Casio. Two negative parts
+        // cancel, which is the same rule carried on; nothing measured that case
+        private double EvaluateMixedFraction(MixedFractionToken mixed)
+        {
+            double whole = EvaluateSlot(mixed.WholeTokens);
+            double numerator = EvaluateSlot(mixed.NumeratorTokens);
+            double denominator = EvaluateSlot(mixed.DenominatorTokens);
+            if (_error != EvaluationError.None) return 0;
+
+            if (!TryWholeNumber(whole, out whole)
+                || !TryWholeNumber(numerator, out numerator)
+                || !TryWholeNumber(denominator, out denominator))
+            {
+                return Fail(EvaluationError.Syntax);
+            }
+
+            if (denominator == 0) return Fail(EvaluationError.DivideByZero);
+
+            double magnitude = Math.Abs(whole) + Math.Abs(numerator) / Math.Abs(denominator);
+            bool negative = (whole < 0) ^ (numerator < 0) ^ (denominator < 0);
+
+            return negative ? -magnitude : magnitude;
         }
 
         private double EvaluatePower(PowerToken power)

@@ -55,7 +55,6 @@ namespace FluentMath.Tests
             "cmd_div_r", "cmd_prime",
             "cmd_rnd",
             "cmd_pol", "cmd_rec",
-            "cmd_frac_mixed",
             "cmd_history", "cmd_memory"
         };
 
@@ -63,7 +62,7 @@ namespace FluentMath.Tests
         // from it; mirrors StandardViewModel.ContinuesFromResult
         public static readonly string[] ContinuesFromResult =
         {
-            "cmd_fact", "cmd_inv", "cmd_percent", "cmd_pow_2", "cmd_pow_n", "cmd_frac", "cmd_exp",
+            "cmd_fact", "cmd_inv", "cmd_percent", "cmd_pow_2", "cmd_pow_n", "cmd_frac", "cmd_frac_mixed", "cmd_exp",
             "cmd_prefix_milli", "cmd_prefix_micro", "cmd_prefix_nano", "cmd_prefix_pico", "cmd_prefix_femto",
             "cmd_prefix_kilo", "cmd_prefix_mega", "cmd_prefix_giga", "cmd_prefix_tera", "cmd_prefix_peta", "cmd_prefix_exa"
         };
