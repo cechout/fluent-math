@@ -73,7 +73,7 @@ FluentMath/
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
-└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage
+└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
