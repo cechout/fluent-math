@@ -11,6 +11,11 @@ namespace FluentMath.Views
     {
         public CalculatorViewModel ViewModel { get; }
 
+        // --- display ---
+        // font sizes in pixels; the scientific page has its own pair
+        private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
+        private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
+
 
         // === constructor ===
 
@@ -18,6 +23,9 @@ namespace FluentMath.Views
         {
             ViewModel = new CalculatorViewModel(App.Settings);
             this.InitializeComponent();
+
+            Display.InputFontSize = InputLineFontSize;
+            Display.HistoryFontSize = HistoryLineFontSize;
 
             this.Loaded += StandardPage_Loaded;
         }

@@ -12,6 +12,8 @@ namespace FluentMath.Models.Layout
         // === the two display lines ===
 
         // the two lines only differ in their font size
+        // these two are the defaults; each calculator page sets its own pair in its code-behind, so a
+        // size is tuned there
         public const double InputLineFontSize = 30;
         public const double HistoryLineFontSize = 16;
 

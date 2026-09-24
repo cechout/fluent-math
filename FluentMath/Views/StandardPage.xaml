@@ -94,7 +94,10 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <controls:CalculatorDisplay Grid.Row="0" ViewModel="{x:Bind ViewModel}" />
+            <controls:CalculatorDisplay
+                x:Name="Display"
+                Grid.Row="0"
+                ViewModel="{x:Bind ViewModel}" />
 
             <!--  caret bar  -->
             <!--

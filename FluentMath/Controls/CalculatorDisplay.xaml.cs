@@ -39,6 +39,11 @@ namespace FluentMath.Controls
             }
         }
 
+        // the font size of each line, set by the page so the two calculators can differ; read whenever the
+        // styles are built, which is on every Loaded, so a page sets them once in its constructor
+        public double InputFontSize { get; set; } = MathLayoutStyle.InputLineFontSize;
+        public double HistoryFontSize { get; set; } = MathLayoutStyle.HistoryLineFontSize;
+
 
         // === constructor ===
 
@@ -157,6 +162,10 @@ namespace FluentMath.Controls
         {
             _historyStyle = MathLayoutStyle.ForHistoryLine();
             _inputStyle = MathLayoutStyle.ForInputLine();
+
+            // the page picks the sizes; everything else in a style is in em and scales along with them
+            _historyStyle.FontSizePx = HistoryFontSize;
+            _inputStyle.FontSizePx = InputFontSize;
 
             // this runs again every time the page comes back into view, so a change on the settings page
             // is in force by the time these are read
