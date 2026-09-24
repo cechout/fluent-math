@@ -246,9 +246,13 @@ namespace FluentMath.Models.Layout
             Width = IndexWidth + hookWidth + leadingPad + radicand.Width + trailingPad;
             Descent = Math.Max(radicand.Descent, signDescent);
 
+            // the box reaches at least as high as the radicand, even though the bar is pulled down into the
+            // empty room above its digits; cut to the bar, a root would be shorter than the digits beside
+            // it, and a fraction or an exponent would place it differently once anything else joins it
+            //
             // the index may stand higher than the sign it sits on, and then it is what sets the height
             double indexTop = index == null ? 0 : SignAscent * indexRaise + index.Height;
-            Ascent = Math.Max(SignAscent, indexTop);
+            Ascent = Math.Max(Math.Max(SignAscent, radicand.Ascent), indexTop);
 
             _indexRaise = indexRaise;
         }
