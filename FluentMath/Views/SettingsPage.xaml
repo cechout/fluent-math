@@ -215,6 +215,46 @@
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
 
+
+                <!--  about and open source  -->
+                <TextBlock
+                    Margin="4,20,0,6"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="About &amp; Open Source" />
+
+                <!--  third-party libraries  -->
+                <controls:SettingsExpander
+                    Description="Open source projects used in this app"
+                    Header="Third-Party Libraries"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE8F1;}"
+                    IsExpanded="False">
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="Windows App SDK">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/microsoft/WindowsAppSDK" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="Windows Community Toolkit">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/CommunityToolkit/Windows" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="WinUIEx">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/dotMorten/WinUIEx" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <!--  quick links  -->
+                <controls:WrapPanel
+                    Margin="0,4,0,8"
+                    HorizontalSpacing="4"
+                    VerticalSpacing="0">
+                    <HyperlinkButton Content="Documentation" NavigateUri="https://github.com/cechout/fluent-math" />
+                    <HyperlinkButton Content="Bug Report" NavigateUri="https://github.com/cechout/fluent-math/issues/new" />
+                    <HyperlinkButton Content="Developer Profile" NavigateUri="https://github.com/cechout" />
+                    <HyperlinkButton Content="GitHub Sponsoring" NavigateUri="https://github.com/sponsors/cechout" />
+                </controls:WrapPanel>
+
             </StackPanel>
         </ScrollViewer>
     </Grid>
