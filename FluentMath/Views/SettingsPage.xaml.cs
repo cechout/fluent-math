@@ -111,7 +111,7 @@ namespace FluentMath.Views
         // Norm writes every digit it has, so the digit count only means something for Fix and Sci
         private void UpdateDigitsAvailability()
         {
-            DigitsComboBox.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
+            DigitsCard.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
         }
     }
 }
