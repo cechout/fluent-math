@@ -492,8 +492,8 @@ namespace FluentMath.Controls
             Rect bounds = BoundsOf(root);
 
             double hookLeft = root.IndexWidth;
-            double ruleY = root.Ascent - root.SignAscent; // the index may stand higher than the sign
-            double bottom = bounds.Height;
+            double ruleY = root.Ascent - root.SignAscent; // the index and the room above the radicand may stand higher than the sign
+            double bottom = root.Ascent + root.SignDescent; // the radicand may reach lower than the sign
             double drop = bottom - ruleY;
 
             // two strokes and not one: the sign is a letter stroke and the bar over the radicand is a

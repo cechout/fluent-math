@@ -12,8 +12,8 @@ namespace FluentMath.Models.Layout
         // === the two display lines ===
 
         // the two lines only differ in their font size
-        public const double InputLineFontSize = 32;
-        public const double HistoryLineFontSize = 18;
+        public const double InputLineFontSize = 30;
+        public const double HistoryLineFontSize = 16;
 
         public static MathLayoutStyle ForInputLine()
         {
@@ -32,7 +32,7 @@ namespace FluentMath.Models.Layout
 
         // true keeps both halves of a fraction at full size instead of the smaller script size, which makes
         // a fraction much taller; the evaluator reads it too
-        public bool UseDisplayFractions { get; set; } = false;
+        public bool UseDisplayFractions { get; set; } = true;
 
         // the smallest a formula that is too tall for its line is shrunk to, 0.45 being 45 percent; below
         // that it is cut off instead
@@ -59,12 +59,15 @@ namespace FluentMath.Models.Layout
 
         // === script sizes ===
 
-        // numerators, denominators, exponents and bounds are drawn smaller: one level in at ScriptScale,
-        // two or more levels in at ScriptScriptScale, and never smaller than that
+        // exponents, the base of a logarithm, the raised −1 and the bounds of Σ, Π and ∫ are drawn smaller:
+        // one level in at ScriptScale, two or more levels in at ScriptScriptScale, and never smaller than that
+        //
+        // numerators and denominators only join them while UseDisplayFractions is off; with it on, a
+        // fraction keeps its content at the size of the text around it
         //
         // both are compared to the full text size, not to the level above, so deep nesting stops shrinking
-        public double ScriptScale { get; set; } = 0.7;
-        public double ScriptScriptScale { get; set; } = 0.4;
+        public double ScriptScale { get; set; } = 0.6;       // an exponent, 0.5 being half the text; smaller shrinks it
+        public double ScriptScriptScale { get; set; } = 0.5; // an exponent inside an exponent, and the index of a root
 
 
         // === structures ===
@@ -178,16 +181,21 @@ namespace FluentMath.Models.Layout
         // === roots ===
 
         public double RadicalHookWidth { get; set; } = 0.55;     // width of the √ sign in front of the radicand
-        public double RadicalRuleThickness { get; set; } = 0.08; // thickness of the bar over the radicand
+        public double RadicalRuleThickness { get; set; } = 0.07; // thickness of the bar over the radicand
 
         // thickness of the √ sign itself; a number of its own, so the sign and the bar can differ, and the
         // round joins where the two meet hide the step between them
-        public double RadicalHookThickness { get; set; } = 0.06;
+        public double RadicalHookThickness { get; set; } = 0.05;
 
         // space between the bar and the radicand below it; negative, because the box of the digits reaches
         // well above the digits themselves and the bar is pulled down into that empty room, and closer to 0
         // moves the bar up
-        public double RadicalVerticalGap { get; set; } = -0.18;
+        public double RadicalVerticalGap { get; set; } = -0.20;
+
+        // how far below the baseline the tip of the √ sign reaches, the line the digits stand on; bigger
+        // moves it down, and a radicand that reaches lower than a digit, a fraction for example, takes the
+        // tip down with it by the extra depth
+        public double RadicalBottomDrop { get; set; } = 0.10;
 
         // space between the √ sign and the radicand, so the two do not touch
         public double RadicalLeadingPad { get; set; } = 0.08;

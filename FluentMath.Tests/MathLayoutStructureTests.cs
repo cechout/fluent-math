@@ -29,6 +29,7 @@ namespace FluentMath.Tests
             return new MathLayoutStyle
             {
                 FontSizePx = FontSize,
+                UseDisplayFractions = false, // most tests reach a deeper level through a fraction, so its halves shrink here
                 ScriptScale = 0.5,
                 ScriptScriptScale = 0.25,
                 MathAxisHeight = 0.2,
@@ -350,6 +351,43 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void TheTipOfARootStandsItsDropBelowTheBaselineOfTheDigits()
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalBottomDrop = 0.1;
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(Digit("2"));
+
+            RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
+
+            // the digit box reaches 0.25 below the baseline, so the tip sits inside it and the box keeps
+            // the depth of the digit
+            Assert.Equal(FontSize * 0.1, box.SignDescent, 9);
+            Assert.Equal(FontSize * 0.25, box.Descent, 9);
+        }
+
+        [Fact]
+        public void ARadicandDeeperThanADigitTakesTheTipDownByTheExtraDepth()
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalBottomDrop = 0.1;
+
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.Add(Digit("1"));
+            fraction.DenominatorTokens.Add(Digit("2"));
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(fraction);
+
+            RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
+
+            double extra = box.Radicand.Descent - FontSize * 0.25;
+            Assert.True(extra > 0);
+            Assert.Equal(FontSize * 0.1 + extra, box.SignDescent, 9);
+        }
+
+        [Fact]
         public void TheRadicandSitsAfterTheIndexAndTheHookAndTheAirBehindIt()
         {
             MathLayoutStyle style = Style();
@@ -422,7 +460,50 @@ namespace FluentMath.Tests
 
             RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
 
-            Assert.True(box.Ascent > box.SignAscent);
+            Assert.Equal(box.SignAscent + box.Index.Height, box.Ascent, 9);
+        }
+
+        [Fact]
+        public void ARootStaysAsTallAsItsRadicandWhenTheBarIsPulledDownIntoIt()
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalVerticalGap = -0.2;
+            style.RadicalRuleThickness = 0.05;
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(Digit("9"));
+
+            RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
+
+            Assert.True(box.SignAscent < box.Radicand.Ascent);
+            Assert.Equal(box.Radicand.Ascent, box.Ascent, 9);
+        }
+
+        [Fact]
+        public void AnOperatorBesideARootInADenominatorDoesNotMoveTheRoot()
+        {
+            MathLayoutStyle style = Style();
+            style.UseDisplayFractions = true;
+            style.RadicalVerticalGap = -0.2;
+            style.MathAxisRaise = 0.05; // lifts the operator box above the bar but not above a digit, as Segoe UI does in the app
+
+            double RuleTopInDenominator(bool withOperator)
+            {
+                RootToken root = new RootToken();
+                root.RadicandTokens.Add(Digit("9"));
+
+                FractionToken fraction = new FractionToken();
+                fraction.NumeratorTokens.Add(Digit("1"));
+                fraction.DenominatorTokens.Add(root);
+                if (withOperator) fraction.DenominatorTokens.Add(new MathToken(TokenType.Operator, "+"));
+
+                FractionBox box = (FractionBox)Engine(style).BuildRow(new List<MathToken> { fraction }).Children.Single();
+                box.Place(0, 100);
+
+                return ((RootBox)((RowBox)box.Denominator).Children[0]).RuleTop;
+            }
+
+            Assert.Equal(RuleTopInDenominator(false), RuleTopInDenominator(true), 9);
         }
 
 
