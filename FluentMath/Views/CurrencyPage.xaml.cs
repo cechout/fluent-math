@@ -25,16 +25,15 @@ namespace FluentMath.Views
         }
 
 
-        // a Flyout stays open after a ListView selection, so both currency pickers have to be closed
-        // by hand to feel like a normal dropdown
-        private void ListView1_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        // each currency button opens the invisible combo box under it, which does the selecting
+        private void CurrencyButton1_Click(object sender, RoutedEventArgs e)
         {
-            FlyoutCurrency1.Hide();
+            CurrencyComboBox1.IsDropDownOpen = true;
         }
 
-        private void ListView2_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void CurrencyButton2_Click(object sender, RoutedEventArgs e)
         {
-            FlyoutCurrency2.Hide();
+            CurrencyComboBox2.IsDropDownOpen = true;
         }
     }
 }
