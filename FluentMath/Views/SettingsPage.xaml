@@ -9,7 +9,12 @@
     xmlns:ui="using:CommunityToolkit.WinUI"
     mc:Ignorable="d">
 
-    <Grid Margin="4,4,4,4">
+    <!--
+        no margin on the page itself, unlike the other pages: the scroll viewer runs to the edges of
+        the window, so the cards scroll out at the edge and the scroll bar sits on it; the header and
+        the cards carry the 4 the other pages put around everything in their own margins
+    -->
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -20,7 +25,7 @@
         <Grid
             Grid.Row="0"
             Height="38"
-            Margin="45,0,0,0"
+            Margin="49,4,4,0"
             Background="Transparent">
 
             <TextBlock
@@ -33,7 +38,7 @@
         <ScrollViewer Grid.Row="1">
             <StackPanel
                 MaxWidth="1000"
-                Margin="12,12,12,16"
+                Margin="16,12,16,20"
                 HorizontalAlignment="Stretch"
                 Spacing="4">
 
