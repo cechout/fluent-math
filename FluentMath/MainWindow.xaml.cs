@@ -81,7 +81,7 @@ namespace FluentMath
             ShowPage(page);
         }
 
-        // every page switches in without the frames slide; the calculator pages bring their own entrance,
+        // every page switches in without the frames slide; the pages with a pad bring their own entrance,
         // which grows the pad in rather than moving the whole page
         private void ShowPage(Type page)
         {

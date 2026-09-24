@@ -6,8 +6,8 @@ using Windows.Foundation;
 
 namespace FluentMath.Views
 {
-    // how a calculator page comes into view: the page itself switches without a transition, and the pad
-    // under the display grows in from a little under its full size
+    // how a page with a pad comes into view, the two calculators and the currency converter: the page
+    // itself switches without a transition, and the pad grows in from a little under its full size
     //
     // the shape is the one the Windows Calculator plays on its keypad when it changes mode, the same
     // duration and the same exponential ease out; it starts from 0.92 there

@@ -403,11 +403,9 @@
                 Grid.Column="2"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_exp"
-                Style="{StaticResource NumberPadButtonStyle}">
-                <!--  the multiplication sign is the one the display prints, not the asterisk it is typed as  -->
-                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="×10ⁿ" />
+                Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <FontIcon FontSize="14" Glyph="&#xE8AB;" />
             </Button>
             <Button
                 Grid.Row="5"

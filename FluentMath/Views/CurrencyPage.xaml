@@ -226,7 +226,9 @@
 
 
         <!--  input buttons  -->
+        <!--  (grows in when the page is shown, like the pads of the two calculators, see PadEntrance)  -->
         <Grid
+            x:Name="Pad"
             Grid.Row="6"
             Grid.Column="0"
             Grid.ColumnSpan="3"
