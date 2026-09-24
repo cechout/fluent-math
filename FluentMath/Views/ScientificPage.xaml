@@ -93,56 +93,18 @@
 
         <!--  calculator display  -->
         <!--
-            both lines are drawn by a MathPanel out of ordinary XAML elements
-            top is the previous calculation, bottom is what is being typed; content is pushed in from
-            the code-behind, since neither line can be bound to
-            the caret bar is the third row of this block rather than a band of its own; the splitter
+            both lines are one CalculatorDisplay
+            the caret bar is the second row of this block rather than a band of its own; the splitter
             resizes the block as a whole, so a bar that has to keep its height belongs in an Auto row
             inside it
         -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="2*" />
-                <RowDefinition Height="3*" MinHeight="40" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <controls:MathPanel
-                x:Name="MathDisplay1"
-                Grid.Row="0"
-                Margin="4,0,4,0"
-                Ink="{ThemeResource TextFillColorSecondaryBrush}" />
-
-            <!--  the input line scrolls sideways once the formula is wider than the display  -->
-            <!--
-                the tap is taken here rather than on the panel, and the transparent background is what
-                makes that work: the formula is only as wide as it is, and aiming at the air beside it
-                is how a short one is clicked into at all
-                the scroller reaches to 4px above the caret bar and the panel inside it gives those
-                4px back at the bottom, which leaves the formula exactly where it was and opens a
-                strip underneath it; a ScrollViewer draws its scrollbar inside its own bounds, so
-                without that strip the bar is drawn over the formula rather than below it
-            -->
-            <ScrollViewer
-                x:Name="InputScroller"
-                Grid.Row="1"
-                Margin="4,0,4,4"
-                Background="Transparent"
-                HorizontalScrollBarVisibility="Auto"
-                HorizontalScrollMode="Auto"
-                Tapped="InputDisplay_Tapped"
-                VerticalScrollBarVisibility="Disabled"
-                VerticalScrollMode="Disabled">
-
-                <controls:MathPanel
-                    x:Name="MathDisplay2"
-                    Margin="0,0,0,4"
-                    Background="Transparent"
-                    CaretInk="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                    Ink="{ThemeResource TextFillColorPrimaryBrush}"
-                    PreviewCaretInk="{ThemeResource TextFillColorSecondaryBrush}"
-                    PreviewCaretPressedInk="{ThemeResource TextFillColorTertiaryBrush}" />
-            </ScrollViewer>
+            <controls:CalculatorDisplay Grid.Row="0" ViewModel="{x:Bind ViewModel}" />
 
             <!--  caret bar  -->
             <!--
@@ -155,7 +117,7 @@
                 height: everything above the divider is read from or switched, and the raised fill below
                 it is what marks a key that writes something
             -->
-            <Grid Grid.Row="2" Height="{StaticResource BarKeyHeight}">
+            <Grid Grid.Row="1" Height="{StaticResource BarKeyHeight}">
 
                 <Button
                     Height="{StaticResource BarKeyHeight}"
