@@ -8,6 +8,9 @@ namespace FluentMath.Models
     //
     // Argument is the one a Casio names on its own: a pair of bounds that is the wrong way round or not
     // made of whole numbers, as in RanInt#(6,1)
+    //
+    // TimeOut is the other one: a calculus structure that ran out of the work it may do before its answer
+    // was good enough
     public enum EvaluationError
     {
         None,
@@ -15,7 +18,8 @@ namespace FluentMath.Models
         DivideByZero,
         Domain,
         Overflow,
-        Argument
+        Argument,
+        TimeOut
     }
 
 

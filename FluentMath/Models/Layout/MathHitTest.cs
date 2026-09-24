@@ -155,6 +155,10 @@ namespace FluentMath.Models.Layout
                     if (root.Index != null) Collect(root.Index, depth, lines);
                     Collect(root.Radicand, depth, lines);
                     break;
+
+                case StackBox stack:
+                    foreach (MathBox child in stack.Children) Collect(child, depth, lines);
+                    break;
             }
         }
 

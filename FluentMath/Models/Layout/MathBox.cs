@@ -261,6 +261,40 @@ namespace FluentMath.Models.Layout
     }
 
 
+    // boxes drawn above each other instead of side by side: the bounds of Σ and Π above and below their
+    // sign, and the bounds of an integral at the top right and the bottom right of its sign
+    //
+    // each child has its own LeadingGap, how far it stands from the left edge, and its own Raise, how far
+    // it sits above the baseline; the layout engine sets both, so this box only adds them up and draws
+    // nothing itself
+    public sealed class StackBox : MathBox
+    {
+        public IReadOnlyList<MathBox> Children { get; }
+
+        public StackBox(IReadOnlyList<MathBox> children)
+        {
+            Children = children;
+
+            foreach (MathBox child in children)
+            {
+                Width = Math.Max(Width, child.LeadingGap + child.Width + child.TrailingGap);
+                Ascent = Math.Max(Ascent, child.Ascent + child.Raise);
+                Descent = Math.Max(Descent, child.Descent - child.Raise);
+            }
+        }
+
+        public override void Place(double x, double baseline)
+        {
+            base.Place(x, baseline);
+
+            foreach (MathBox child in Children)
+            {
+                child.Place(X + child.LeadingGap, Baseline);
+            }
+        }
+    }
+
+
     // a bar drawn over what it stands on, which is the period of a recurring decimal
     //
     // the bar is drawn rather than set as an accent, the way the rule over a radicand is, so it spans
@@ -344,18 +378,28 @@ namespace FluentMath.Models.Layout
         // way a row does
         public double FontSize { get; internal set; }
 
+        private readonly double _squareRaise;
+
         // the two reaches are those of the text that would fill the slot, not those of the square
         //
         // an empty slot has to occupy exactly what a filled one does, or a fraction is half height until
         // the first digit arrives and jumps the moment it does
-        public PlaceholderBox(double side, double thickness, TextMetrics strut)
+        public PlaceholderBox(double side, double thickness, double squareRaise, TextMetrics strut)
         {
             Side = side;
             Thickness = thickness;
+            _squareRaise = squareRaise;
 
             Width = side;
             Ascent = strut.Ascent;
             Descent = strut.Descent;
         }
+
+        // where the square is drawn, once the box has been placed: its middle squareRaise above the
+        // baseline, where the middle of a digit is
+        //
+        // it used to sit in the middle of the box, and the box reaches far above the digits, so the square
+        // stood a few pixels higher than the digit that replaces it; beside x= under a Σ that showed
+        public double SquareTop => Baseline - _squareRaise - Side / 2;
     }
 }

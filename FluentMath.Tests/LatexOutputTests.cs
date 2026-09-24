@@ -44,6 +44,15 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void WritesTheCalculusStructuresWithTheirBoundsAndTheirVariable()
+        {
+            Assert.Contains("\\sum_{x=\\mathord{1}}^{\\mathord{3}}(\\mathord{x})", Latex("sum", "1", "right", "3", "right", "x"));
+            Assert.Contains("\\prod_{x=\\mathord{1}}^{\\mathord{5}}(\\mathord{x})", Latex("prod", "1", "right", "5", "right", "x"));
+            Assert.Contains("\\int_{\\mathord{0}}^{\\mathord{1}}\\mathord{x}\\,dx", Latex("integral", "0", "right", "1", "right", "x"));
+            Assert.Contains("\\frac{d}{dx}(\\mathord{x})\\Big|_{x=\\mathord{2}}", Latex("deriv", "x", "right", "2"));
+        }
+
+        [Fact]
         public void WritesAnAbsoluteValueAsAPairOfBars()
         {
             string latex = Latex("fn:abs", "7");

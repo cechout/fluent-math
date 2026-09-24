@@ -590,6 +590,27 @@ namespace FluentMath.ViewModels
                         _inputManager.AddOperator("C");
                         break;
 
+                    // the calculus structures open in their first slot, and x is the variable they run over
+                    case "cmd_integral":
+                        _inputManager.StartLargeOperator(LargeOperatorKind.Integral);
+                        break;
+
+                    case "cmd_derivative":
+                        _inputManager.StartDerivative();
+                        break;
+
+                    case "cmd_sum":
+                        _inputManager.StartLargeOperator(LargeOperatorKind.Sum);
+                        break;
+
+                    case "cmd_product":
+                        _inputManager.StartLargeOperator(LargeOperatorKind.Product);
+                        break;
+
+                    case "cmd_x":
+                        _inputManager.AddVariable();
+                        break;
+
                     // the eleven decimal prefixes, each a postfix under the name its key carries
                     default:
                         if (sign.StartsWith(PrefixCommand))

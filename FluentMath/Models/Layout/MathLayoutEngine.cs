@@ -30,6 +30,8 @@ namespace FluentMath.Models.Layout
 
         // signs the display draws that no token carries as its value
         private const string MinusOne = "−1"; // the reciprocal and the inverse hyperbolics
+        private const string VariableEquals = "x="; // in front of the lower bound of Σ and Π and the point of a derivative
+        private const string Differential = "dx"; // behind an integrand, and under the d of a derivative
 
 
         // === construction ===
@@ -141,6 +143,10 @@ namespace FluentMath.Models.Layout
                 case RootToken root: return BuildRoot(root, fontSize, scriptLevel, path, tokenIndex);
                 case LogarithmToken logarithm: return BuildLogarithm(logarithm, fontSize, scriptLevel, path, tokenIndex);
                 case FunctionToken function: return BuildFunction(function, fontSize, scriptLevel, path, tokenIndex);
+                case LargeOperatorToken integral when integral.Kind == LargeOperatorKind.Integral:
+                    return BuildIntegral(integral, fontSize, scriptLevel, path, tokenIndex);
+                case LargeOperatorToken series: return BuildSeries(series, fontSize, scriptLevel, path, tokenIndex);
+                case DerivativeToken derivative: return BuildDerivative(derivative, fontSize, scriptLevel, path, tokenIndex);
                 case PostfixToken postfix: return BuildPostfix(postfix, fontSize, scriptLevel);
                 case RecurringToken recurring: return BuildRecurring(recurring, fontSize);
             }
@@ -539,6 +545,136 @@ namespace FluentMath.Models.Layout
             return new RowBox(arguments);
         }
 
+        // Σ and Π: the upper bound above the sign, the lower bound below it with x= in front the way a Casio
+        // writes it, and the body in brackets on the right
+        //
+        // the bounds are drawn a level smaller, like an exponent, and the three are centred over each other
+        // in one StackBox; the numbers are the Σ and Π section of MathLayoutStyle
+        private RowBox BuildSeries(LargeOperatorToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
+        {
+            double boundSize = ScriptSize(fontSize, scriptLevel);
+            TextRunBox sign = BuildLargeSign(token, fontSize, _style.SumSignScale, _style.SumSignRaise);
+
+            MathBox upper = BuildSlot(token.UpperTokens, boundSize, scriptLevel + 1, SlotPath(path, tokenIndex, 1));
+            RowBox lower = new RowBox(new List<MathBox>
+            {
+                TextRun(VariableEquals, boundSize, token),
+                BuildSlot(token.LowerTokens, boundSize, scriptLevel + 1, SlotPath(path, tokenIndex, 0))
+            });
+
+            PlaceBounds(upper, lower, sign, boundSize,
+                fontSize * _style.SumUpperBoundRaise, fontSize * _style.SumLowerBoundDrop);
+
+            double width = Math.Max(sign.Width, Math.Max(upper.Width, lower.Width));
+            upper.LeadingGap = (width - upper.Width) / 2;
+            sign.LeadingGap = (width - sign.Width) / 2;
+            lower.LeadingGap = (width - lower.Width) / 2;
+
+            List<MathBox> parts = new List<MathBox>
+            {
+                new StackBox(new List<MathBox> { upper, sign, lower }) { TrailingGap = fontSize * _style.SumGap }
+            };
+
+            AddDelimited(parts, BuildSlot(token.BodyTokens, fontSize, scriptLevel, SlotPath(path, tokenIndex, 2)),
+                DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, fontSize);
+
+            return new RowBox(parts);
+        }
+
+        // the integral: the sign, the upper bound at its top right and the lower bound at its bottom right,
+        // the integrand, and dx at the end; the dx ends the integrand, so it needs no brackets
+        //
+        // the numbers are the integral section of MathLayoutStyle
+        private RowBox BuildIntegral(LargeOperatorToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
+        {
+            double boundSize = ScriptSize(fontSize, scriptLevel);
+            TextRunBox sign = BuildLargeSign(token, fontSize, _style.IntegralSignScale, _style.IntegralSignRaise);
+
+            MathBox lower = BuildSlot(token.LowerTokens, boundSize, scriptLevel + 1, SlotPath(path, tokenIndex, 0));
+            MathBox upper = BuildSlot(token.UpperTokens, boundSize, scriptLevel + 1, SlotPath(path, tokenIndex, 1));
+
+            PlaceBounds(upper, lower, sign, boundSize,
+                fontSize * _style.IntegralUpperBoundRaise, fontSize * _style.IntegralLowerBoundDrop);
+
+            TextRunBox differential = TextRun(Differential, fontSize, token);
+            differential.LeadingGap = fontSize * _style.IntegralDxGap;
+
+            return new RowBox(new List<MathBox>
+            {
+                sign,
+                new StackBox(new List<MathBox> { upper, lower }) { TrailingGap = fontSize * _style.IntegralGap },
+                BuildSlot(token.BodyTokens, fontSize, scriptLevel, SlotPath(path, tokenIndex, 2)),
+                differential
+            });
+        }
+
+        // Σ, Π or ∫ as a letter of the font, scale times the size of the text and moved up by raise em of
+        // the text
+        private TextRunBox BuildLargeSign(LargeOperatorToken token, double fontSize, double scale, double raise)
+        {
+            TextRunBox sign = TextRun(LargeSign(token.Kind), fontSize * scale, token);
+            sign.Raise = fontSize * raise;
+
+            return sign;
+        }
+
+        // puts the upper bound upperRaise above and the lower bound lowerDrop below the baseline of the
+        // sign, measured from baseline to baseline
+        //
+        // a bound taller than a line of digits, a fraction for example, moves further away by the extra
+        // height, so it never runs into the sign
+        private void PlaceBounds(MathBox upper, MathBox lower, TextRunBox sign, double boundSize,
+            double upperRaise, double lowerDrop)
+        {
+            TextMetrics digits = _measurer.Measure(StrutText, boundSize);
+
+            upper.Raise = sign.Raise + upperRaise + Math.Max(0, upper.Descent - digits.Descent);
+            lower.Raise = sign.Raise - lowerDrop - Math.Max(0, lower.Ascent - digits.Ascent);
+        }
+
+        // d/dx drawn like a fraction, the function in brackets, a bar, and the point at the bottom right of
+        // the bar, the way a Casio writes the derivative at a point
+        //
+        // the numbers are the derivative section of MathLayoutStyle
+        private RowBox BuildDerivative(DerivativeToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
+        {
+            double size = fontSize * _style.FractionScale;
+            double innerSize = _style.UseDisplayFractions ? size : ScriptSize(size, scriptLevel);
+
+            List<MathBox> parts = new List<MathBox>
+            {
+                new FractionBox(
+                    TextRun("d", innerSize, token),
+                    TextRun(Differential, innerSize, token),
+                    size * _style.FractionBarThickness,
+                    size * (_style.MathAxisHeight + _style.MathAxisRaise),
+                    size * _style.FractionNumeratorGap,
+                    size * _style.FractionDenominatorGap,
+                    size * _style.FractionSidePadding)
+            };
+
+            MathBox function = BuildSlot(token.FunctionTokens, fontSize, scriptLevel, SlotPath(path, tokenIndex, 0));
+            AddDelimited(parts, function, DelimiterKind.ParenthesisOpen, DelimiterKind.ParenthesisClose, fontSize);
+
+            // the bar is exactly as tall as the brackets in front of it
+            (double ascent, double descent) = DelimiterReach(function.Ascent, function.Descent, fontSize);
+            parts.Add(new DelimiterBox(DelimiterKind.Bar, fontSize * _style.DelimiterWidth, ascent, descent,
+                fontSize * _style.DelimiterThickness));
+
+            double pointSize = ScriptSize(fontSize, scriptLevel);
+            RowBox point = new RowBox(new List<MathBox>
+            {
+                TextRun(VariableEquals, pointSize, token),
+                BuildSlot(token.PointTokens, pointSize, scriptLevel + 1, SlotPath(path, tokenIndex, 1))
+            });
+
+            point.Raise = -fontSize * _style.DerivativePointDrop;
+            point.TrailingGap = fontSize * _style.DerivativePointPad;
+            parts.Add(point);
+
+            return new RowBox(parts);
+        }
+
         // the factorial and the percent stand behind their operand as plain signs; the reciprocal is a
         // raised minus one, the way a Casio prints it
         private MathBox BuildPostfix(PostfixToken token, double fontSize, int scriptLevel)
@@ -569,6 +705,7 @@ namespace FluentMath.Models.Layout
             PlaceholderBox placeholder = new PlaceholderBox(
                 fontSize * _style.PlaceholderSize,
                 fontSize * _style.PlaceholderThickness,
+                fontSize * _style.PlaceholderRaise,
                 _measurer.Measure(StrutText, fontSize));
 
             placeholder.CursorAddress = Address(path, 0);
@@ -777,6 +914,17 @@ namespace FluentMath.Models.Layout
                 "÷R" => "÷", // the R is drawn beside it, see BuildRemainderDivision
                 "-" => "−", // real minus, which is wider and sits higher than a hyphen
                 _ => value
+            };
+        }
+
+        // the Greek capitals a Casio prints for the sum and the product, and the integral sign
+        private static string LargeSign(LargeOperatorKind kind)
+        {
+            return kind switch
+            {
+                LargeOperatorKind.Sum => "Σ",
+                LargeOperatorKind.Product => "Π",
+                _ => "∫"
             };
         }
 

@@ -19,7 +19,10 @@ namespace FluentMath.Models
         Answer,
         Random,
         MixedFraction,
-        Recurring
+        Recurring,
+        Variable,
+        LargeOperator,
+        Derivative
     }
 
 
@@ -182,6 +185,15 @@ namespace FluentMath.Models
         public RandomToken() : base(TokenType.Random, "Ran#") { }
 
         public override string ToLatex(LatexRenderContext context) { return "\\text{Ran\\#}"; }
+    }
+
+    // x, the variable a calculus structure runs over; anywhere else it is 0, the way an empty variable is
+    // on a Casio, until there is a variable store to give it a value
+    public class VariableToken : MathToken
+    {
+        public VariableToken() : base(TokenType.Variable, "x") { }
+
+        public override string ToLatex(LatexRenderContext context) { return "x"; }
     }
 
     // the period of a recurring decimal, drawn under a bar the way a Casio draws 1÷3 as 0.3 with a bar
@@ -547,6 +559,68 @@ namespace FluentMath.Models
     }
 
 
+    // the three structures that run x from a lower bound to an upper one
+    public enum LargeOperatorKind
+    {
+        Sum,
+        Product,
+        Integral
+    }
+
+    // Σ, Π and the integral: a lower bound, an upper bound, and the body x runs through between them
+    //
+    // the slots are walked lower, upper, body, the order the structure is typed in; a Casio walks Σ body
+    // first, but every structure here walks the way it is drawn, so Σ from 1 to 10 of x² is typed with
+    // Right alone
+    public class LargeOperatorToken : MathToken
+    {
+        public LargeOperatorKind Kind { get; }
+
+        public List<MathToken> LowerTokens { get; } = new List<MathToken>();
+        public List<MathToken> UpperTokens { get; } = new List<MathToken>();
+        public List<MathToken> BodyTokens { get; } = new List<MathToken>();
+
+        public LargeOperatorToken(LargeOperatorKind kind) : base(TokenType.LargeOperator, kind.ToString())
+        {
+            Kind = kind;
+        }
+
+        public override string ToLatex(LatexRenderContext context)
+        {
+            string lowerStr = LatexHelper.GetSlotLatex(LowerTokens, context, 0);
+            string upperStr = LatexHelper.GetSlotLatex(UpperTokens, context, 1);
+            string bodyStr = LatexHelper.GetSlotLatex(BodyTokens, context, 2);
+
+            if (Kind == LargeOperatorKind.Integral)
+            {
+                return LatexHelper.Tagged("m-int", $"\\int_{{{lowerStr}}}^{{{upperStr}}}{bodyStr}\\,dx");
+            }
+
+            string command = Kind == LargeOperatorKind.Sum ? "sum" : "prod";
+
+            return LatexHelper.Tagged("m-series", $"\\{command}_{{x={lowerStr}}}^{{{upperStr}}}({bodyStr})");
+        }
+    }
+
+    // the derivative of a function of x at one point, written d/dx of the function with the point under a
+    // bar behind it
+    public class DerivativeToken : MathToken
+    {
+        public List<MathToken> FunctionTokens { get; } = new List<MathToken>();
+        public List<MathToken> PointTokens { get; } = new List<MathToken>();
+
+        public DerivativeToken() : base(TokenType.Derivative) { }
+
+        public override string ToLatex(LatexRenderContext context)
+        {
+            string functionStr = LatexHelper.GetSlotLatex(FunctionTokens, context, 0);
+            string pointStr = LatexHelper.GetSlotLatex(PointTokens, context, 1);
+
+            return LatexHelper.Tagged("m-deriv", $"\\frac{{d}}{{dx}}({functionStr})\\Big|_{{x={pointStr}}}");
+        }
+    }
+
+
     // walks a token list and concatenates the LaTeX of every node; the recursion into nested lists
     // happens through the ToLatex overrides above, which call back in here
     //
@@ -742,12 +816,26 @@ namespace FluentMath.Models
                     }
                     return functionCopy;
 
+                case LargeOperatorToken largeOperator:
+                    LargeOperatorToken largeOperatorCopy = new LargeOperatorToken(largeOperator.Kind);
+                    largeOperatorCopy.LowerTokens.AddRange(CloneList(largeOperator.LowerTokens));
+                    largeOperatorCopy.UpperTokens.AddRange(CloneList(largeOperator.UpperTokens));
+                    largeOperatorCopy.BodyTokens.AddRange(CloneList(largeOperator.BodyTokens));
+                    return largeOperatorCopy;
+
+                case DerivativeToken derivative:
+                    DerivativeToken derivativeCopy = new DerivativeToken();
+                    derivativeCopy.FunctionTokens.AddRange(CloneList(derivative.FunctionTokens));
+                    derivativeCopy.PointTokens.AddRange(CloneList(derivative.PointTokens));
+                    return derivativeCopy;
+
                 // the leaves rebuild themselves from their own name, which is what fills the private
                 // fields a constant, a postfix and a function keep beside Value
                 case ConstantToken constant: return new ConstantToken(constant.Value);
                 case PostfixToken postfix: return new PostfixToken(postfix.Value);
                 case AnsToken: return new AnsToken();
                 case RandomToken: return new RandomToken();
+                case VariableToken: return new VariableToken();
                 case RecurringToken recurring: return new RecurringToken(recurring.Value);
             }
 

@@ -229,6 +229,18 @@ namespace FluentMath.Engines
                     lower = ScopeRole.LogBase;
                     break;
 
+                // the body of Σ, Π and the integral stands beside both bounds, so it has nothing above or
+                // below it either
+                case LargeOperatorToken:
+                    upper = ScopeRole.UpperBound;
+                    lower = ScopeRole.LowerBound;
+                    break;
+
+                case DerivativeToken:
+                    upper = ScopeRole.CalculusBody;
+                    lower = ScopeRole.DerivativePoint;
+                    break;
+
                 default:
                     return; // a function argument stands alone, so Up and Down do nothing there
             }
@@ -305,6 +317,21 @@ namespace FluentMath.Engines
                         arguments.Add(new TokenSlot(argument, ScopeRole.FunctionParameter));
                     }
                     return arguments;
+
+                case LargeOperatorToken largeOperator:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(largeOperator.LowerTokens, ScopeRole.LowerBound),
+                        new TokenSlot(largeOperator.UpperTokens, ScopeRole.UpperBound),
+                        new TokenSlot(largeOperator.BodyTokens, ScopeRole.CalculusBody)
+                    };
+
+                case DerivativeToken derivative:
+                    return new List<TokenSlot>
+                    {
+                        new TokenSlot(derivative.FunctionTokens, ScopeRole.CalculusBody),
+                        new TokenSlot(derivative.PointTokens, ScopeRole.DerivativePoint)
+                    };
             }
 
             return new List<TokenSlot>();
@@ -425,6 +452,14 @@ namespace FluentMath.Engines
             var ctx = CurrentContext;
 
             ctx.Tokens.Insert(ctx.CursorIndex, new RandomToken());
+            ctx.CursorIndex++;
+        }
+
+        public void AddVariable()
+        {
+            var ctx = CurrentContext;
+
+            ctx.Tokens.Insert(ctx.CursorIndex, new VariableToken());
             ctx.CursorIndex++;
         }
 
@@ -684,6 +719,31 @@ namespace FluentMath.Engines
             }
 
             _scopeStack.Push(new ScopeContext(mixedToken.WholeTokens, mixedToken, ScopeRole.WholePart));
+        }
+
+        // Σ, Π and the integral open in the lower bound, the first slot they are walked through; nothing on
+        // the left is lifted, since none of them reads an operand
+        public void StartLargeOperator(LargeOperatorKind kind)
+        {
+            var ctx = CurrentContext;
+            var largeOperator = new LargeOperatorToken(kind);
+
+            ctx.Tokens.Insert(ctx.CursorIndex, largeOperator);
+            ctx.CursorIndex++;
+
+            _scopeStack.Push(new ScopeContext(largeOperator.LowerTokens, largeOperator, ScopeRole.LowerBound));
+        }
+
+        // the derivative opens in the function, and the point comes after it
+        public void StartDerivative()
+        {
+            var ctx = CurrentContext;
+            var derivative = new DerivativeToken();
+
+            ctx.Tokens.Insert(ctx.CursorIndex, derivative);
+            ctx.CursorIndex++;
+
+            _scopeStack.Push(new ScopeContext(derivative.FunctionTokens, derivative, ScopeRole.CalculusBody));
         }
 
         // customBase starts in the subscript for log_b(x), otherwise straight in the argument

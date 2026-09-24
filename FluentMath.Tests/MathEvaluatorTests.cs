@@ -51,7 +51,6 @@ namespace FluentMath.Tests
             return result.Error;
         }
 
-
         // === associativity ===
 
         [Fact]
@@ -1378,6 +1377,171 @@ namespace FluentMath.Tests
             manager.AddNumber("5");
 
             Assert.NotEqual(seventh, new MathEvaluator().Evaluate(manager.RootTokens).FirstValue.Exact);
+        }
+
+
+        // === calculus ===
+
+        // measured on the Casio: the sum of 1/x from 1 to 3 is exactly 11/6, and the product of x from 1
+        // to 5 is 120
+        [Fact]
+        public void AddsUpAndMultipliesOutEveryWholeNumberBetweenTheBounds()
+        {
+            Assert.Equal(11.0 / 6.0, Value("sum", "1", "right", "3", "right", "1", "/", "x"), 15);
+            Assert.Equal(ExactValue.FromRational(new Rational(11, 6)), Exact("sum", "1", "right", "3", "right", "1", "/", "x"));
+
+            Assert.Equal(120, Value("prod", "1", "right", "5", "right", "x"));
+            Assert.Equal(12, Value("sum", "1", "right", "3", "right", "2", "x"));
+            Assert.Equal(2, Value("sum", "2", "right", "2", "right", "x"));
+        }
+
+        [Fact]
+        public void ReadsTheBodyOfASumAsOneOperand()
+        {
+            Assert.Equal(15, Value("sum", "1", "right", "3", "right", "x", "pow", "2", "right", "right", "+", "1"));
+            Assert.Equal(28, Value("2", "sum", "1", "right", "3", "right", "x", "pow", "2"));
+        }
+
+        // the Argument ERROR is the one the Casio names for bounds of Σ and Π that are not whole or the
+        // wrong way round
+        [Theory]
+        [InlineData("sum", "3", "right", "1", "right", "x")]
+        [InlineData("sum", "1.5", "right", "3", "right", "x")]
+        [InlineData("prod", "1", "right", "2.5", "right", "x")]
+        public void RefusesBoundsThatAreNotWholeOrNotInOrder(params string[] keys)
+        {
+            Assert.Equal(EvaluationError.Argument, Error(keys));
+        }
+
+        [Fact]
+        public void GivesUpOnMoreTermsThanItMayWorkThrough()
+        {
+            Assert.Equal(EvaluationError.TimeOut, Error("sum", "1", "right", "100001", "right", "x"));
+            Assert.Equal(100000, Value("sum", "1", "right", "100000", "right", "1"));
+        }
+
+        // x on its own is an empty variable, the way it is on a Casio before anything is stored in it
+        [Fact]
+        public void ReadsXAsZeroOutsideACalculusStructure()
+        {
+            Assert.Equal(1, Value("x", "+", "1"));
+            Assert.Equal(0, Value("2", "x"));
+            Assert.Equal(5, Value("sum", "x", "right", "x", "pow", "2", "right", "right", "5"));
+        }
+
+        [Theory]
+        [InlineData("sum", "1", "right", "2", "right", "sum", "1", "right", "2", "right", "x")]
+        [InlineData("sum", "integral", "0", "right", "1", "right", "x", "right", "right", "2", "right", "x")]
+        [InlineData("integral", "0", "right", "1", "right", "deriv", "x", "right", "x")]
+        [InlineData("deriv", "prod", "1", "right", "2", "right", "x", "right", "right", "1")]
+        public void RefusesACalculusStructureInsideAnother(params string[] keys)
+        {
+            Assert.Equal(EvaluationError.Syntax, Error(keys));
+        }
+
+        [Theory]
+        [InlineData("sum", "1", "right", "3")]
+        [InlineData("integral", "0", "right", "1")]
+        [InlineData("deriv", "right", "1")]
+        [InlineData("deriv", "x")]
+        public void RefusesAnEmptySlot(params string[] keys)
+        {
+            Assert.Equal(EvaluationError.Syntax, Error(keys));
+        }
+
+        [Fact]
+        public void IntegratesAPolynomialToTheLastDigit()
+        {
+            Assert.Equal(1.0 / 3.0, Value("integral", "0", "right", "1", "right", "x", "pow", "2"), 15);
+            Assert.Equal(-0.5, Value("integral", "1", "right", "0", "right", "x"), 15);
+            Assert.Equal(0, Value("integral", "2", "right", "2", "right", "x"));
+        }
+
+        [Fact]
+        public void IntegratesInTheAngleUnitSelected()
+        {
+            Assert.Equal(2, Value(AngleMode.Radians, "integral", "0", "right", "pi", "right", "fn:sin", "x"), 13);
+            Assert.Equal(180 / Math.PI * 2, Value("integral", "0", "right", "180", "right", "fn:sin", "x"), 9);
+        }
+
+        // what cancels itself out is 0 rather than the rounding left over from the cancellation
+        [Fact]
+        public void LeavesNoNoiseWhereTheBodyCancelsItselfOut()
+        {
+            Assert.Equal(0, Value(AngleMode.Radians, "integral", "0", "right", "2", "pi", "right", "fn:sin", "x"));
+            Assert.Equal(0, Value("integral", "-", "1", "right", "1", "right", "x", "pow", "3"));
+        }
+
+        [Fact]
+        public void IntegratesUpToAnEndWhereTheBodyHasNoValue()
+        {
+            Assert.Equal(2, Value("integral", "0", "right", "1", "right", "1", "/", "sqrt", "x"), 9);
+            Assert.Equal(-1, Value("integral", "0", "right", "1", "right", "fn:ln", "x"), 9);
+        }
+
+        [Fact]
+        public void StopsAtAPointInsideTheRangeWhereTheBodyHasNoValue()
+        {
+            Assert.Equal(EvaluationError.DivideByZero, Error("integral", "-", "1", "right", "1", "right", "1", "/", "x"));
+        }
+
+        [Fact]
+        public void GivesUpOnAnIntegralThatDoesNotSettle()
+        {
+            Assert.Equal(EvaluationError.TimeOut, Error("integral", "0", "right", "1", "right", "1", "/", "x"));
+        }
+
+        // the integral and the derivative are double only, like a logarithm
+        [Fact]
+        public void CarriesNoExactValueOutOfTheIntegralOrTheDerivative()
+        {
+            Assert.Null(Exact("integral", "0", "right", "1", "right", "x"));
+            Assert.Null(Exact("deriv", "x", "pow", "2", "right", "right", "3"));
+        }
+
+        [Fact]
+        public void DifferentiatesAtAPoint()
+        {
+            Assert.Equal(6, Value("deriv", "x", "pow", "2", "right", "right", "3"), 9);
+            Assert.Equal(Math.E, Value("deriv", "powe", "x", "right", "right", "1"), 9);
+            Assert.Equal(1 / 3.0, Value("deriv", "fn:ln", "x", "right", "right", "3"), 9);
+            Assert.Equal(-1 / 9.0, Value("deriv", "1", "/", "x", "right", "3"), 9);
+            Assert.Equal(3, Value("deriv", "x", "pow", "3", "right", "right", "1000000") / 1e12, 9);
+        }
+
+        [Fact]
+        public void DifferentiatesInTheAngleUnitSelected()
+        {
+            Assert.Equal(Math.Cos(Math.PI / 6) * Math.PI / 180, Value("deriv", "fn:sin", "x", "right", "right", "30"), 12);
+            Assert.Equal(Math.Cos(1000000), Value(AngleMode.Radians, "deriv", "fn:sin", "x", "right", "right", "1000000"), 6);
+        }
+
+        [Fact]
+        public void LeavesNoNoiseWhereTheSlopeIsZero()
+        {
+            Assert.Equal(0, Value("deriv", "x", "pow", "3", "right", "-", "3", "x", "right", "1"));
+            Assert.Equal(0, Value(AngleMode.Radians, "deriv", "fn:sin", "x", "right", "right", "pi", "/", "2"));
+            Assert.Equal(0, Value("deriv", "x", "pow", "3", "right", "right", "0"));
+        }
+
+        // a step that reaches past the edge of the domain gives way to a smaller one
+        [Fact]
+        public void DifferentiatesCloseToTheEdgeOfTheDomain()
+        {
+            Assert.Equal(1 / (2 * Math.Sqrt(0.05)), Value("deriv", "sqrt", "x", "right", "right", "0.05"), 8);
+        }
+
+        [Fact]
+        public void HasNoDerivativeWhereTheFunctionHasNoValue()
+        {
+            Assert.Equal(EvaluationError.DivideByZero, Error("deriv", "1", "/", "x", "right", "0"));
+            Assert.Equal(EvaluationError.Domain, Error("deriv", "sqrt", "x", "right", "right", "0"));
+        }
+
+        [Fact]
+        public void GivesUpOnASlopeThatDoesNotSettle()
+        {
+            Assert.Equal(EvaluationError.TimeOut, Error("deriv", "root", "3", "right", "x", "right", "right", "0"));
         }
     }
 }

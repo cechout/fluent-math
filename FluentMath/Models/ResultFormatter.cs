@@ -202,6 +202,7 @@ namespace FluentMath.Models
         {
             if (error == EvaluationError.Syntax) return "Syntax ERROR";
             if (error == EvaluationError.Argument) return "Argument ERROR";
+            if (error == EvaluationError.TimeOut) return "Time Out";
 
             return "Math ERROR";
         }

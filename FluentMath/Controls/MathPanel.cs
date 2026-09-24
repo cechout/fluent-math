@@ -336,6 +336,12 @@ namespace FluentMath.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
+                // the bounds and the sign they stand around are boxes of their own, so a stack has nothing
+                // to draw but them
+                case StackBox stack:
+                    foreach (MathBox child in stack.Children) Realize(child);
+                    break;
+
                 case OverlineBox overline:
                     Add(new Rectangle { Fill = Ink },
                         new Rect(overline.X, overline.BarTop, overline.Width, overline.BarThickness));
@@ -345,12 +351,9 @@ namespace FluentMath.Controls
 
                 case PlaceholderBox placeholder:
                     // the box is as tall as the text that would fill the slot, the square is not, so it
-                    // sits in the middle of it
-                    double middle = (placeholder.Top + placeholder.Bottom) / 2;
-
+                    // stands where a digit would, see PlaceholderBox.SquareTop
                     Add(new Rectangle { Stroke = Ink, StrokeThickness = placeholder.Thickness },
-                        new Rect(placeholder.X, middle - placeholder.Side / 2,
-                            placeholder.Side, placeholder.Side));
+                        new Rect(placeholder.X, placeholder.SquareTop, placeholder.Side, placeholder.Side));
                     break;
             }
         }

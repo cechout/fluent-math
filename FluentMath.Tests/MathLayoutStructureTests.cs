@@ -827,6 +827,154 @@ namespace FluentMath.Tests
         }
 
 
+        // === calculus ===
+
+        // round knobs for the calculus structures on top of the round ones above
+        private static MathLayoutStyle CalculusStyle()
+        {
+            MathLayoutStyle style = Style();
+            style.SumSignScale = 2;
+            style.SumSignRaise = -0.2;
+            style.SumUpperBoundRaise = 1;
+            style.SumLowerBoundDrop = 0.5;
+            style.IntegralSignScale = 2;
+            style.IntegralSignRaise = -0.2;
+            style.IntegralUpperBoundRaise = 1;
+            style.IntegralLowerBoundDrop = 0.4;
+            style.DerivativePointDrop = 0.3;
+
+            return style;
+        }
+
+        private static LargeOperatorToken LargeOperator(LargeOperatorKind kind)
+        {
+            LargeOperatorToken token = new LargeOperatorToken(kind);
+            token.LowerTokens.Add(Digit("1"));
+            token.UpperTokens.Add(Digit("3"));
+            token.BodyTokens.Add(new VariableToken());
+
+            return token;
+        }
+
+        [Fact]
+        public void ASumIsItsSignWithTheBoundsOverAndUnderItAndTheBodyInBrackets()
+        {
+            RowBox box = (RowBox)Engine(CalculusStyle()).BuildRow(new List<MathToken> { LargeOperator(LargeOperatorKind.Sum) }).Children.Single();
+
+            StackBox stack = Assert.IsType<StackBox>(box.Children[0]);
+            Assert.Equal(DelimiterKind.ParenthesisOpen, ((DelimiterBox)box.Children[1]).Kind);
+            Assert.Equal(DelimiterKind.ParenthesisClose, ((DelimiterBox)box.Children[3]).Kind);
+
+            MathBox upper = stack.Children[0];
+            TextRunBox sign = Assert.IsType<TextRunBox>(stack.Children[1]);
+            RowBox lower = Assert.IsType<RowBox>(stack.Children[2]);
+
+            Assert.Equal("Σ", sign.Text);
+            Assert.Equal(FontSize * 2, sign.FontSize);
+            Assert.Equal(-FontSize * 0.2, sign.Raise, 9);
+            Assert.Equal("x=", ((TextRunBox)lower.Children[0]).Text);
+
+            // the bounds are scripts, measured from the baseline of the sign to their own
+            Assert.Equal(FontSize * 0.5, ((TextRunBox)((RowBox)upper).Children.Single()).FontSize);
+            Assert.Equal(sign.Raise + FontSize * 1, upper.Raise, 9);
+            Assert.Equal(sign.Raise - FontSize * 0.5, lower.Raise, 9);
+
+            // and all three are centred over each other
+            Assert.Equal(stack.Width / 2, upper.LeadingGap + upper.Width / 2, 9);
+            Assert.Equal(stack.Width / 2, sign.LeadingGap + sign.Width / 2, 9);
+            Assert.Equal(stack.Width / 2, lower.LeadingGap + lower.Width / 2, 9);
+        }
+
+        // a fraction reaches further below its baseline than a digit, and the bound moves up by the difference
+        [Fact]
+        public void ABoundTallerThanADigitMovesAwayFromTheSign()
+        {
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.Add(Digit("1"));
+            fraction.DenominatorTokens.Add(Digit("2"));
+
+            LargeOperatorToken sum = LargeOperator(LargeOperatorKind.Sum);
+            sum.UpperTokens.Clear();
+            sum.UpperTokens.Add(fraction);
+
+            RowBox box = (RowBox)Engine(CalculusStyle()).BuildRow(new List<MathToken> { sum }).Children.Single();
+            StackBox stack = (StackBox)box.Children[0];
+            MathBox upper = stack.Children[0];
+
+            double digitDescent = FontSize * 0.5 * 0.25;
+            Assert.True(upper.Descent > digitDescent);
+            Assert.Equal(stack.Children[1].Raise + FontSize * 1 + upper.Descent - digitDescent, upper.Raise, 9);
+        }
+
+        [Fact]
+        public void AProductDrawsACapitalPi()
+        {
+            RowBox box = (RowBox)Row(LargeOperator(LargeOperatorKind.Product)).Children.Single();
+
+            Assert.Equal("Π", ((TextRunBox)((StackBox)box.Children[0]).Children[1]).Text);
+        }
+
+        [Fact]
+        public void TheBoundsOfAnIntegralStandBesideTheTopAndTheFootOfItsSign()
+        {
+            RowBox row = Engine(CalculusStyle()).BuildRow(new List<MathToken> { LargeOperator(LargeOperatorKind.Integral) });
+            row.Place(0, row.Ascent);
+
+            RowBox box = (RowBox)row.Children.Single();
+            TextRunBox sign = Assert.IsType<TextRunBox>(box.Children[0]);
+            StackBox bounds = Assert.IsType<StackBox>(box.Children[1]);
+            Assert.Equal("dx", ((TextRunBox)box.Children[3]).Text);
+
+            Assert.Equal("∫", sign.Text);
+
+            MathBox upper = bounds.Children[0];
+            MathBox lower = bounds.Children[1];
+
+            Assert.Equal(sign.Raise + FontSize * 1, upper.Raise, 9);
+            Assert.Equal(sign.Raise - FontSize * 0.4, lower.Raise, 9);
+            Assert.Equal(upper.X, lower.X, 9);
+            Assert.True(upper.Bottom <= lower.Top);
+        }
+
+        [Fact]
+        public void ADerivativeIsDOverDxTheFunctionInBracketsAndThePointAtTheFootOfABar()
+        {
+            DerivativeToken derivative = new DerivativeToken();
+            derivative.FunctionTokens.Add(new VariableToken());
+            derivative.PointTokens.Add(Digit("2"));
+
+            RowBox box = (RowBox)Engine(CalculusStyle()).BuildRow(new List<MathToken> { derivative }).Children.Single();
+
+            FractionBox operatorBox = Assert.IsType<FractionBox>(box.Children[0]);
+            Assert.Equal("d", ((TextRunBox)operatorBox.Numerator).Text);
+            Assert.Equal("dx", ((TextRunBox)operatorBox.Denominator).Text);
+
+            DelimiterBox open = (DelimiterBox)box.Children[1];
+            DelimiterBox bar = (DelimiterBox)box.Children[4];
+            Assert.Equal(DelimiterKind.Bar, bar.Kind);
+            Assert.Equal(open.Ascent, bar.Ascent);
+            Assert.Equal(open.Descent, bar.Descent);
+
+            RowBox point = Assert.IsType<RowBox>(box.Children[5]);
+            Assert.Equal("x=", ((TextRunBox)point.Children[0]).Text);
+            Assert.Equal(-FontSize * 0.3, point.Raise, 9);
+            Assert.True(point.TrailingGap > 0);
+        }
+
+        [Fact]
+        public void AnEmptyCalculusStructureStillHoldsEverySlotOpen()
+        {
+            RowBox row = Row(new LargeOperatorToken(LargeOperatorKind.Sum), new LargeOperatorToken(LargeOperatorKind.Integral),
+                new DerivativeToken());
+
+            foreach (MathBox child in row.Children)
+            {
+                Assert.True(child.Width > 0);
+                Assert.True(child.Height > 0);
+            }
+        }
+
+
         // === empty slots ===
 
         [Fact]
@@ -840,6 +988,37 @@ namespace FluentMath.Tests
             PlaceholderBox placeholder = Assert.IsType<PlaceholderBox>(box.Numerator);
             Assert.Equal(FontSize * 0.5 * 0.6, placeholder.Width); // script size times PlaceholderSize
             Assert.True(placeholder.Width > 0);
+        }
+
+        // the square is centred on the middle of a digit rather than on the middle of the box, which reaches
+        // well above the digits
+        [Fact]
+        public void TheSquareOfAnEmptySlotStandsWhereADigitWould()
+        {
+            MathLayoutStyle style = Style();
+            style.PlaceholderRaise = 0.35;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { new FractionToken() });
+            row.Place(0, row.Ascent);
+
+            PlaceholderBox placeholder = (PlaceholderBox)((FractionBox)row.Children.Single()).Numerator;
+
+            double side = FontSize * 0.5 * 0.6;
+            Assert.Equal(placeholder.Baseline - FontSize * 0.5 * 0.35 - side / 2, placeholder.SquareTop, 9);
+        }
+
+        // x= and the bound behind it are one row, so a digit typed into the bound stands on the baseline of
+        // the x=
+        [Fact]
+        public void TheLowerBoundOfASumStandsOnTheBaselineOfItsXEquals()
+        {
+            RowBox row = Engine(CalculusStyle()).BuildRow(new List<MathToken> { LargeOperator(LargeOperatorKind.Sum) });
+            row.Place(0, row.Ascent);
+
+            RowBox lower = (RowBox)((StackBox)((RowBox)row.Children.Single()).Children[0]).Children[2];
+            MathBox digit = ((RowBox)lower.Children[1]).Children.Single();
+
+            Assert.Equal(lower.Children[0].Baseline, digit.Baseline, 9);
         }
 
         [Fact]

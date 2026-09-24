@@ -141,6 +141,32 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void ACalculusStructureKeepsItsKindAndEverySlot()
+        {
+            LargeOperatorToken product = new LargeOperatorToken(LargeOperatorKind.Product);
+            product.LowerTokens.Add(Digit("1"));
+            product.UpperTokens.Add(Digit("5"));
+            product.BodyTokens.Add(new VariableToken());
+
+            LargeOperatorToken copy = (LargeOperatorToken)MathTokenCloner.Clone(product);
+
+            Assert.Equal(LargeOperatorKind.Product, copy.Kind);
+            Assert.Equal("1", copy.LowerTokens.Single().Value);
+            Assert.Equal("5", copy.UpperTokens.Single().Value);
+            Assert.IsType<VariableToken>(copy.BodyTokens.Single());
+            Assert.NotSame(product.BodyTokens, copy.BodyTokens);
+
+            DerivativeToken derivative = new DerivativeToken();
+            derivative.FunctionTokens.Add(new VariableToken());
+            derivative.PointTokens.Add(Digit("2"));
+
+            DerivativeToken derivativeCopy = (DerivativeToken)MathTokenCloner.Clone(derivative);
+
+            Assert.IsType<VariableToken>(derivativeCopy.FunctionTokens.Single());
+            Assert.Equal("2", derivativeCopy.PointTokens.Single().Value);
+        }
+
+        [Fact]
         public void ThePanelLeavesComeBackAsWhatTheyWere()
         {
             Assert.IsType<RandomToken>(MathTokenCloner.Clone(new RandomToken()));
