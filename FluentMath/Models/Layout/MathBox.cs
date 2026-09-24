@@ -261,6 +261,40 @@ namespace FluentMath.Models.Layout
     }
 
 
+    // boxes set over each other rather than beside each other: the bounds of Σ and Π over and under their
+    // sign, and the bounds of an integral at the top and at the foot of its sign
+    //
+    // every child stands at its own leading gap from the left edge and at its own raise off the baseline,
+    // both worked out by the layout, so all this box does is add them up; that is also why it draws
+    // nothing of its own
+    public sealed class StackBox : MathBox
+    {
+        public IReadOnlyList<MathBox> Children { get; }
+
+        public StackBox(IReadOnlyList<MathBox> children)
+        {
+            Children = children;
+
+            foreach (MathBox child in children)
+            {
+                Width = Math.Max(Width, child.LeadingGap + child.Width + child.TrailingGap);
+                Ascent = Math.Max(Ascent, child.Ascent + child.Raise);
+                Descent = Math.Max(Descent, child.Descent - child.Raise);
+            }
+        }
+
+        public override void Place(double x, double baseline)
+        {
+            base.Place(x, baseline);
+
+            foreach (MathBox child in Children)
+            {
+                child.Place(X + child.LeadingGap, Baseline);
+            }
+        }
+    }
+
+
     // a bar drawn over what it stands on, which is the period of a recurring decimal
     //
     // the bar is drawn rather than set as an accent, the way the rule over a radicand is, so it spans

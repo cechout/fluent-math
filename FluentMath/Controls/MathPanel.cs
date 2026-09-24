@@ -336,6 +336,12 @@ namespace FluentMath.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
+                // the bounds and the sign they stand around are boxes of their own, so a stack has nothing
+                // to draw but them
+                case StackBox stack:
+                    foreach (MathBox child in stack.Children) Realize(child);
+                    break;
+
                 case OverlineBox overline:
                     Add(new Rectangle { Fill = Ink },
                         new Rect(overline.X, overline.BarTop, overline.Width, overline.BarThickness));

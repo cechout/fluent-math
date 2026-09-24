@@ -91,6 +91,13 @@ namespace FluentMath.Tests
         [InlineData("5", "+", "mixed")]                // the empty template behind an operator
         [InlineData("17", "divr", "5")]
         [InlineData("fn:pol", "3", "right", "4")]
+        [InlineData("sum", "1", "right", "3", "right", "x")]
+        [InlineData("prod", "right", "right")]            // every slot of it empty
+        [InlineData("integral", "0", "right", "1", "right", "x")]
+        [InlineData("integral")]
+        [InlineData("deriv", "x", "right", "2")]
+        [InlineData("deriv")]
+        [InlineData("2", "+", "sum", "right", "right", "x", "pow", "2")]
         public void EveryPressOfAnArrowKeyMovesTheCaretSomewhereTheEyeCanFollow(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);

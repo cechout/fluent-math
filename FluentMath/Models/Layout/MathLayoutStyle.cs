@@ -129,6 +129,34 @@ namespace FluentMath.Models.Layout
         public double MixedFractionGap { get; set; } = 0.1; // between the whole part of a mixed number and its bar
 
 
+        // === calculus ===
+
+        // the sign of Σ, Π and the integral is set larger than the text around it and dropped a little, so
+        // its middle rides near the axis the fraction bars and the operators share
+        public double LargeOperatorScale { get; set; } = 1.4;
+        public double LargeOperatorRaise { get; set; } = -0.1; // em of the sign, negative drops it
+        public double LargeOperatorGap { get; set; } = 0.1;    // em, between the sign with its bounds and what follows
+
+        // the bounds of Σ and Π hang off the line box of the sign, which reaches well above and below the
+        // glyph, so both gaps are negative the way the one over a radicand is
+        public double LargeOperatorUpperGap { get; set; } = -0.45; // em of the sign
+        public double LargeOperatorLowerGap { get; set; } = -0.38; // em of the sign
+
+        // the bounds of an integral stand beside its sign, the upper one at its top and the lower at its foot
+        public double IntegralUpperRaise { get; set; } = 0.5; // em of the sign, from its baseline to the one of the upper bound
+        public double IntegralLowerDrop { get; set; } = 0.2;  // em of the sign, from its baseline down to the one of the lower bound
+        public double DifferentialGap { get; set; } = 0.15;   // em, between the integrand and the dx behind it
+
+        // the point of a derivative is written at the foot of the bar behind the brackets
+        public double EvaluationPointDrop { get; set; } = 0.3; // em, from the baseline down to the one of the point
+
+        // how far past the point the derivative reaches
+        //
+        // load bearing like the trailing pad of a radical: without it the end of the point and the position
+        // behind the whole derivative are the same pixel
+        public double EvaluationPointPad { get; set; } = 0.06;
+
+
         // === recurring decimals ===
 
         // the bar over the period hangs off the top of the line box of its digits, which sits well above

@@ -827,6 +827,131 @@ namespace FluentMath.Tests
         }
 
 
+        // === calculus ===
+
+        // round knobs for the calculus structures on top of the round ones above
+        private static MathLayoutStyle CalculusStyle()
+        {
+            MathLayoutStyle style = Style();
+            style.LargeOperatorScale = 2;
+            style.LargeOperatorRaise = -0.1;
+            style.LargeOperatorUpperGap = -0.5;
+            style.LargeOperatorLowerGap = -0.25;
+            style.IntegralUpperRaise = 0.5;
+            style.IntegralLowerDrop = 0.2;
+            style.EvaluationPointDrop = 0.3;
+
+            return style;
+        }
+
+        private static LargeOperatorToken LargeOperator(LargeOperatorKind kind)
+        {
+            LargeOperatorToken token = new LargeOperatorToken(kind);
+            token.LowerTokens.Add(Digit("1"));
+            token.UpperTokens.Add(Digit("3"));
+            token.BodyTokens.Add(new VariableToken());
+
+            return token;
+        }
+
+        [Fact]
+        public void ASumIsItsSignWithTheBoundsOverAndUnderItAndTheBodyInBrackets()
+        {
+            RowBox box = (RowBox)Engine(CalculusStyle()).BuildRow(new List<MathToken> { LargeOperator(LargeOperatorKind.Sum) }).Children.Single();
+
+            StackBox stack = Assert.IsType<StackBox>(box.Children[0]);
+            Assert.Equal(DelimiterKind.ParenthesisOpen, ((DelimiterBox)box.Children[1]).Kind);
+            Assert.Equal(DelimiterKind.ParenthesisClose, ((DelimiterBox)box.Children[3]).Kind);
+
+            MathBox upper = stack.Children[0];
+            TextRunBox sign = Assert.IsType<TextRunBox>(stack.Children[1]);
+            RowBox lower = Assert.IsType<RowBox>(stack.Children[2]);
+
+            Assert.Equal("Σ", sign.Text);
+            Assert.Equal(FontSize * 2, sign.FontSize);
+            Assert.Equal(-FontSize * 2 * 0.1, sign.Raise, 9);
+            Assert.Equal("x=", ((TextRunBox)lower.Children[0]).Text);
+
+            // the bounds are scripts, and each hangs off the line box of the sign less its gap
+            Assert.Equal(FontSize * 0.5, ((TextRunBox)((RowBox)upper).Children.Single()).FontSize);
+            Assert.Equal(sign.Raise + sign.Ascent - FontSize * 2 * 0.5 + upper.Descent, upper.Raise, 9);
+            Assert.Equal(sign.Raise - sign.Descent + FontSize * 2 * 0.25 - lower.Ascent, lower.Raise, 9);
+
+            // and all three are centred over each other
+            Assert.Equal(stack.Width / 2, upper.LeadingGap + upper.Width / 2, 9);
+            Assert.Equal(stack.Width / 2, sign.LeadingGap + sign.Width / 2, 9);
+            Assert.Equal(stack.Width / 2, lower.LeadingGap + lower.Width / 2, 9);
+        }
+
+        [Fact]
+        public void AProductDrawsACapitalPi()
+        {
+            RowBox box = (RowBox)Row(LargeOperator(LargeOperatorKind.Product)).Children.Single();
+
+            Assert.Equal("Π", ((TextRunBox)((StackBox)box.Children[0]).Children[1]).Text);
+        }
+
+        [Fact]
+        public void TheBoundsOfAnIntegralStandBesideTheTopAndTheFootOfItsSign()
+        {
+            RowBox row = Engine(CalculusStyle()).BuildRow(new List<MathToken> { LargeOperator(LargeOperatorKind.Integral) });
+            row.Place(0, row.Ascent);
+
+            RowBox box = (RowBox)row.Children.Single();
+            TextRunBox sign = Assert.IsType<TextRunBox>(box.Children[0]);
+            StackBox bounds = Assert.IsType<StackBox>(box.Children[1]);
+            Assert.Equal("dx", ((TextRunBox)box.Children[3]).Text);
+
+            Assert.Equal("∫", sign.Text);
+
+            MathBox upper = bounds.Children[0];
+            MathBox lower = bounds.Children[1];
+
+            Assert.Equal(sign.Raise + FontSize * 2 * 0.5, upper.Raise, 9);
+            Assert.Equal(sign.Raise - FontSize * 2 * 0.2, lower.Raise, 9);
+            Assert.Equal(upper.X, lower.X, 9);
+            Assert.True(upper.Bottom <= lower.Top);
+        }
+
+        [Fact]
+        public void ADerivativeIsDOverDxTheFunctionInBracketsAndThePointAtTheFootOfABar()
+        {
+            DerivativeToken derivative = new DerivativeToken();
+            derivative.FunctionTokens.Add(new VariableToken());
+            derivative.PointTokens.Add(Digit("2"));
+
+            RowBox box = (RowBox)Engine(CalculusStyle()).BuildRow(new List<MathToken> { derivative }).Children.Single();
+
+            FractionBox operatorBox = Assert.IsType<FractionBox>(box.Children[0]);
+            Assert.Equal("d", ((TextRunBox)operatorBox.Numerator).Text);
+            Assert.Equal("dx", ((TextRunBox)operatorBox.Denominator).Text);
+
+            DelimiterBox open = (DelimiterBox)box.Children[1];
+            DelimiterBox bar = (DelimiterBox)box.Children[4];
+            Assert.Equal(DelimiterKind.Bar, bar.Kind);
+            Assert.Equal(open.Ascent, bar.Ascent);
+            Assert.Equal(open.Descent, bar.Descent);
+
+            RowBox point = Assert.IsType<RowBox>(box.Children[5]);
+            Assert.Equal("x=", ((TextRunBox)point.Children[0]).Text);
+            Assert.Equal(-FontSize * 0.3, point.Raise, 9);
+            Assert.True(point.TrailingGap > 0);
+        }
+
+        [Fact]
+        public void AnEmptyCalculusStructureStillHoldsEverySlotOpen()
+        {
+            RowBox row = Row(new LargeOperatorToken(LargeOperatorKind.Sum), new LargeOperatorToken(LargeOperatorKind.Integral),
+                new DerivativeToken());
+
+            foreach (MathBox child in row.Children)
+            {
+                Assert.True(child.Width > 0);
+                Assert.True(child.Height > 0);
+            }
+        }
+
+
         // === empty slots ===
 
         [Fact]

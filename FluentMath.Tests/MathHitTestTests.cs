@@ -81,6 +81,10 @@ namespace FluentMath.Tests
                     Walk(root.Radicand, found);
                     break;
 
+                case StackBox stack:
+                    foreach (MathBox child in stack.Children) Walk(child, found);
+                    break;
+
                 case TextRunBox run when run.TokenAddresses != null:
                     found.AddRange(run.TokenAddresses);
                     break;
@@ -108,6 +112,9 @@ namespace FluentMath.Tests
         [InlineData("5", "+", "mixed")]
         [InlineData("17", "divr", "5")]
         [InlineData("fn:rec", "2", "right", "30")]
+        [InlineData("sum", "1", "right", "3", "right", "x")]
+        [InlineData("integral", "0", "right", "1", "right", "x")]
+        [InlineData("deriv", "x", "right", "2")]
         public void EveryAddressTheLayoutWritesIsOneTheInputManagerAccepts(params string[] keys)
         {
             MathInputManager manager = Keys.Press(keys);
@@ -340,6 +347,10 @@ namespace FluentMath.Tests
         [InlineData("12", "mixed", "1", "right", "34")]
         [InlineData("5", "+", "mixed", "right", "right")]
         [InlineData("17", "divr", "5")]
+        [InlineData("sum", "1", "right", "3", "right", "x")]
+        [InlineData("prod", "right", "right")]
+        [InlineData("integral", "0", "right", "1", "right", "x")]
+        [InlineData("deriv", "x", "right", "2")]
         public void AClickOnTheCaretLeavesItExactlyWhereItStands(params string[] keys)
         {
             // every position the cursor reaches walking left out of the formula it just typed
@@ -383,6 +394,9 @@ namespace FluentMath.Tests
         [InlineData("frac", "down", "2")]
         [InlineData("(", "1", "+", "2", ")")]
         [InlineData("(", "1", "frac", "2", "down", "3", ")")]
+        [InlineData("sum", "1", "right", "3", "right", "x")]
+        [InlineData("integral", "0", "right", "1", "right", "x")]
+        [InlineData("deriv", "x", "right", "2")]
         public void APreviewStandsExactlyWhereAClickPutsTheCaret(params string[] keys)
         {
             RowBox laid = Laid(Keys.Press(keys).RootTokens);
