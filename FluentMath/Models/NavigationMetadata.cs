@@ -17,7 +17,11 @@ namespace FluentMath.Models
         FunctionParameter,
         LogBase,
         LogParameter,
-        WholePart
+        WholePart,
+        LowerBound,
+        UpperBound,
+        CalculusBody, // the body of Σ, Π and the integral, and the function of a derivative
+        DerivativePoint
     }
 
     public enum NavDirection

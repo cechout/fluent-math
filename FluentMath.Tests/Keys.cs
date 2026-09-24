@@ -30,7 +30,8 @@ namespace FluentMath.Tests
             "fn:floor", "fn:ceil", "fn:int", "fn:intg",
             "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix", "fn:rnd",
             "npr", "ncr", "rand", "pre:kilo", "pre:micro",
-            "mixed", "divr", "fn:pol", "fn:rec", "dms"
+            "mixed", "divr", "fn:pol", "fn:rec", "dms",
+            "sum", "prod", "integral", "deriv", "x"
         };
 
         public static MathInputManager Press(params string[] keys)
@@ -101,6 +102,27 @@ namespace FluentMath.Tests
 
                 case "frac":
                     manager.StartFraction();
+                    return;
+
+                // the calculus structures and their variable
+                case "sum":
+                    manager.StartLargeOperator(LargeOperatorKind.Sum);
+                    return;
+
+                case "prod":
+                    manager.StartLargeOperator(LargeOperatorKind.Product);
+                    return;
+
+                case "integral":
+                    manager.StartLargeOperator(LargeOperatorKind.Integral);
+                    return;
+
+                case "deriv":
+                    manager.StartDerivative();
+                    return;
+
+                case "x":
+                    manager.AddVariable();
                     return;
 
                 case "mixed":

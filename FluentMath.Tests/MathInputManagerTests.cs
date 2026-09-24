@@ -534,6 +534,95 @@ namespace FluentMath.Tests
         }
 
 
+        // === calculus structures ===
+
+        // Σ opens in the lower bound and walks on to the upper one and into the body, the way it is drawn
+        [Fact]
+        public void WalksTheBoundsAndThenTheBodyOfASum()
+        {
+            MathInputManager manager = Keys.Press("sum");
+            LargeOperatorToken sum = Assert.IsType<LargeOperatorToken>(Assert.Single(manager.RootTokens));
+
+            Assert.Same(sum.LowerTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Right);
+            Assert.Same(sum.UpperTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Right);
+            Assert.Same(sum.BodyTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Right);
+            Assert.Same(manager.RootTokens, manager.ActiveTokens);
+        }
+
+        [Fact]
+        public void CrossesBetweenTheBoundsWithUpAndDownButNotOutOfTheBody()
+        {
+            MathInputManager manager = Keys.Press("integral", "up");
+            LargeOperatorToken integral = (LargeOperatorToken)manager.RootTokens[0];
+            Assert.Same(integral.UpperTokens, manager.ActiveTokens);
+
+            manager.Move(NavDirection.Down);
+            Assert.Same(integral.LowerTokens, manager.ActiveTokens);
+
+            MathInputManager body = Keys.Press("prod", "right", "right", "up", "down");
+            Assert.Same(((LargeOperatorToken)body.RootTokens[0]).BodyTokens, body.ActiveTokens);
+        }
+
+        [Fact]
+        public void WalksFromTheFunctionOfADerivativeToItsPoint()
+        {
+            MathInputManager manager = Keys.Press("deriv");
+            DerivativeToken derivative = Assert.IsType<DerivativeToken>(Assert.Single(manager.RootTokens));
+
+            Assert.Same(derivative.FunctionTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Down);
+            Assert.Same(derivative.PointTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Up);
+            Assert.Same(derivative.FunctionTokens, manager.ActiveTokens);
+            manager.Move(NavDirection.Right);
+            Assert.Same(derivative.PointTokens, manager.ActiveTokens);
+        }
+
+        // the structures read no operand on their left, so a number in front stays in front
+        [Fact]
+        public void LeavesTheNumberInFrontOfACalculusStructureWhereItIs()
+        {
+            MathInputManager manager = Keys.Press("2", "sum");
+
+            Assert.Equal(2, manager.RootTokens.Count);
+            Assert.Equal("2", manager.RootTokens[0].Value);
+            Assert.Empty(((LargeOperatorToken)manager.RootTokens[1]).LowerTokens);
+        }
+
+        [Fact]
+        public void DissolvesACalculusStructureIntoWhatWasTyped()
+        {
+            MathInputManager sum = Keys.Press("sum", "1", "right", "3", "right", "x", "left", "left", "left", "left", "left", "back");
+            Assert.Equal(3, sum.RootTokens.Count);
+            Assert.IsType<VariableToken>(sum.RootTokens[2]);
+
+            MathInputManager derivative = Keys.Press("deriv", "x", "right", "2", "left", "back");
+            Assert.Equal(2, derivative.RootTokens.Count);
+            Assert.Equal(1, derivative.ActiveCursorIndex);
+        }
+
+        [Fact]
+        public void PlacesTheCursorInEverySlotOfACalculusStructure()
+        {
+            MathInputManager manager = Keys.Press("sum", "1", "right", "3", "right", "x");
+            LargeOperatorToken sum = (LargeOperatorToken)manager.RootTokens[0];
+
+            Assert.True(manager.SetCursorPosition("0.0@1"));
+            Assert.Same(sum.LowerTokens, manager.ActiveTokens);
+            Assert.True(manager.SetCursorPosition("0.1@0"));
+            Assert.Same(sum.UpperTokens, manager.ActiveTokens);
+            Assert.True(manager.SetCursorPosition("0.2@1"));
+            Assert.Same(sum.BodyTokens, manager.ActiveTokens);
+
+            MathInputManager derivative = Keys.Press("deriv", "x", "right", "2");
+            Assert.True(derivative.SetCursorPosition("0.1@0"));
+            Assert.Same(((DerivativeToken)derivative.RootTokens[0]).PointTokens, derivative.ActiveTokens);
+        }
+
+
         // === sexagesimal markers ===
 
         // one key for all three markers: a number gets the marker after the one in front of it

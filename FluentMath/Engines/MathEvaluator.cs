@@ -20,8 +20,8 @@ namespace FluentMath.Engines
     //   product     := unary (implicit, postfix)*
     //   unary       := sign* postfix
     //   postfix     := atom (factorial or reciprocal or percent or prefix or sexagesimal marker)*
-    //   atom        := number | constant | Ans | Ran# | bracketed expression | fraction | mixed fraction
-    //                   | power | root | function | logarithm
+    //   atom        := number | constant | Ans | Ran# | x | bracketed expression | fraction | mixed fraction
+    //                   | power | root | function | logarithm | Σ | Π | integral | derivative
     //
     // every value carries its exact value beside the double, see MathValue; a step with no exact answer,
     // a logarithm, e or a sine of 18°, drops it and the rest of the calculation goes on with the double
@@ -29,6 +29,9 @@ namespace FluentMath.Engines
     // an angle in degrees, minutes and seconds stays one through the operations the Casio manual names:
     // plus and minus between two of them, times and divided by a plain number, and a sign; the display
     // opens such a result in the same form
+    //
+    // x is the variable of Σ, Π, the integral and the derivative, which set it while they evaluate their
+    // body over and over; anywhere else it is 0
     //
     // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
     // half-typed formula is the normal state of the input rather than an exceptional one
@@ -70,6 +73,19 @@ namespace FluentMath.Engines
         private const int WholeNumberDigits = 15;        // the digits a Casio computes with, at which a value is judged whole
         private const double WholeNumberLimit = 1e15;    // above this a double no longer holds every whole number exactly
 
+        // --- calculus ---
+        // what x stands for while a calculus structure evaluates its body, and 0 outside one; no calculus
+        // structure can stand inside another, so one value is all there ever is
+        private MathValue _variable = MathValue.Whole(0);
+
+        private const int MaxCalculusEvaluations = 100000; // the most times one structure evaluates its body before it is a Time Out
+        private const double IntegralTolerance = 1e-11;   // relative, what the integral is refined to
+        private const double IntegralNoise = 1e-12;       // of the integral of the absolute value, what a body that cancels itself out is refined to
+        private const double DerivativeTolerance = 1e-9;  // relative, what the derivative has to settle to
+        private const double DerivativeNoise = 1e-13;     // of the size of a difference quotient, the rounding a slope of 0 comes out as
+        private const double RiddersShrink = 1.4;         // what each step of the derivative divides the step by
+        private const int RiddersSteps = 10;              // the most steps it takes from one starting step
+
 
         // === constructor ===
 
@@ -85,6 +101,7 @@ namespace FluentMath.Engines
         {
             _error = EvaluationError.None;
             _topLevelRemainder = null;
+            _variable = MathValue.Whole(0);
 
             if (tokens.Count == 0) return EvaluationResult.Success(MathValue.Whole(0)); // empty input reads as 0, same as the display
 
@@ -330,6 +347,18 @@ namespace FluentMath.Engines
                     position++;
                     return EvaluateFunction(function);
 
+                case LargeOperatorToken largeOperator:
+                    position++;
+                    return EvaluateLargeOperator(largeOperator);
+
+                case DerivativeToken derivative:
+                    position++;
+                    return EvaluateDerivative(derivative);
+
+                case VariableToken:
+                    position++;
+                    return _variable;
+
                 case ConstantToken constant:
                     position++;
                     return new MathValue(constant.NumericValue, constant.Exact);
@@ -416,7 +445,10 @@ namespace FluentMath.Engines
                 || token is FunctionToken
                 || token is LogarithmToken
                 || token is AnsToken
-                || token is RandomToken;
+                || token is RandomToken
+                || token is VariableToken
+                || token is LargeOperatorToken
+                || token is DerivativeToken;
         }
 
 
@@ -950,6 +982,342 @@ namespace FluentMath.Engines
             _coordinateSecond = r * Trigonometric("sin", angle);
 
             return x;
+        }
+
+
+        // === calculus ===
+
+        // Σ, Π and the integral; a calculus structure anywhere inside one, in a bound as much as in the body,
+        // is the Syntax ERROR it is on a Casio
+        private MathValue EvaluateLargeOperator(LargeOperatorToken largeOperator)
+        {
+            if (ContainsCalculus(largeOperator)) return Fail(EvaluationError.Syntax);
+
+            MathValue lower = EvaluateSlot(largeOperator.LowerTokens);
+            MathValue upper = EvaluateSlot(largeOperator.UpperTokens);
+            if (_error != EvaluationError.None) return 0;
+
+            if (largeOperator.Kind == LargeOperatorKind.Integral)
+            {
+                return Integrate(largeOperator.BodyTokens, lower.Value, upper.Value);
+            }
+
+            return Series(largeOperator.BodyTokens, lower, upper, product: largeOperator.Kind == LargeOperatorKind.Product);
+        }
+
+        private static bool ContainsCalculus(MathToken token)
+        {
+            foreach (TokenSlot slot in MathInputManager.GetSlots(token))
+            {
+                foreach (MathToken inner in slot.Tokens)
+                {
+                    if (inner is LargeOperatorToken || inner is DerivativeToken || ContainsCalculus(inner)) return true;
+                }
+            }
+
+            return false;
+        }
+
+        // the body with x standing for the value given, and x back to what it was afterwards
+        private MathValue EvaluateBodyAt(List<MathToken> body, MathValue x)
+        {
+            MathValue outer = _variable;
+            _variable = x;
+
+            MathValue value = EvaluateSlot(body);
+
+            _variable = outer;
+            return value;
+        }
+
+        // x runs through every whole number from the lower bound to the upper one, both included, and the
+        // terms are added up or multiplied out; exact wherever every term is, so Σ(1/x) from 1 to 3 is 11/6
+        // as on the Casio
+        //
+        // bounds that are not whole or the wrong way round are the Argument ERROR a Casio gives, and more
+        // terms than the work allows are a Time Out before the first one is evaluated
+        private MathValue Series(List<MathToken> body, MathValue lower, MathValue upper, bool product)
+        {
+            if (!TryWholeNumber(lower.Value, out double from) || !TryWholeNumber(upper.Value, out double to) || from > to)
+            {
+                return Fail(EvaluationError.Argument);
+            }
+
+            if (to - from >= MaxCalculusEvaluations) return Fail(EvaluationError.TimeOut);
+
+            MathValue total = MathValue.Whole(product ? 1 : 0);
+
+            for (double x = from; x <= to; x++)
+            {
+                MathValue term = EvaluateBodyAt(body, MathValue.Whole(x));
+                if (_error != EvaluationError.None) return 0;
+
+                total = product ? total * term : total + term;
+
+                // past the range of a double it stays past it, so the terms still to come change nothing
+                if (!double.IsFinite(total.Value)) return total;
+            }
+
+            return total;
+        }
+
+
+        // --- the integral ---
+
+        // the 15 point Kronrod rule on −1 to 1 with the 7 point Gauss rule inside it, as QUADPACK tabulates
+        // them: the outermost node first and the centre last, the Gauss nodes being the odd ones and the
+        // centre
+        private static readonly double[] KronrodNodes =
+        {
+            0.991455371120812639206854697526329, 0.949107912342758524526189684047851,
+            0.864864423359769072789712788640926, 0.741531185599394439863864773280788,
+            0.586087235467691130294144845693013, 0.405845151377397166906606412076961,
+            0.207784955007898467600689403773245, 0
+        };
+
+        private static readonly double[] KronrodWeights =
+        {
+            0.022935322010529224963732008058970, 0.063092092629978553290700663189204,
+            0.104790010322250183839876322541518, 0.140653259715525918745189590510238,
+            0.169004726639267902826583426598550, 0.190350578064785409913256402421014,
+            0.204432940075298892414161999234649, 0.209482141084727828012999174891714
+        };
+
+        private static readonly double[] GaussWeights = // the nodes 1, 3 and 5, then the centre
+        {
+            0.129484966168869693270611432679082, 0.279705391489276667901467771423780,
+            0.381830050505118944950369775488975, 0.417959183673469387755102040816327
+        };
+
+        private const int KronrodPoints = 15;
+        private const double MachineEpsilon = 2.220446049250313e-16; // the gap between 1 and the next double
+
+        // adaptive Gauss-Kronrod: the range starts as one piece, and the piece that may be furthest off is
+        // halved until the whole is good enough, the way QUADPACK integrates
+        //
+        // good enough is eleven digits of the value, or twelve of the integral of the absolute value where
+        // the body cancels itself out; a value smaller than what it may be off is noise around 0, which is
+        // what ∫ sin x from 0 to 2π leaves in radians
+        // running out of work, or of room to halve a piece in, is a Time Out, and so is a piece that runs
+        // out of the range of a double on the way to an end the body has no value at, 1/x towards 0; the
+        // answer is a double only, and a fraction is found for it the way it is for a logarithm
+        private MathValue Integrate(List<MathToken> body, double from, double to)
+        {
+            var pieces = new List<(double From, double To, double Value, double Error, double Magnitude)>
+            {
+                IntegratePiece(body, from, to)
+            };
+
+            if (_error != EvaluationError.None) return 0;
+
+            // a body out of range across the whole of it, which the caller reports the way it reports any
+            // other value out of range
+            if (!double.IsFinite(pieces[0].Value)) return pieces[0].Value;
+
+            int evaluations = KronrodPoints;
+
+            while (true)
+            {
+                double value = 0;
+                double error = 0;
+                double magnitude = 0;
+                int worst = 0;
+
+                for (int index = 0; index < pieces.Count; index++)
+                {
+                    value += pieces[index].Value;
+                    error += pieces[index].Error;
+                    magnitude += pieces[index].Magnitude;
+
+                    if (pieces[index].Error > pieces[worst].Error) worst = index;
+                }
+
+                if (error <= Math.Max(IntegralTolerance * Math.Abs(value), IntegralNoise * magnitude))
+                {
+                    return Math.Abs(value) <= error ? 0 : value;
+                }
+
+                if (evaluations + 2 * KronrodPoints > MaxCalculusEvaluations) return Fail(EvaluationError.TimeOut);
+
+                var piece = pieces[worst];
+                double middle = (piece.From + piece.To) / 2;
+                if (middle == piece.From || middle == piece.To) return Fail(EvaluationError.TimeOut);
+
+                var left = IntegratePiece(body, piece.From, middle);
+                var right = IntegratePiece(body, middle, piece.To);
+                if (_error != EvaluationError.None) return 0;
+
+                if (!double.IsFinite(left.Value + right.Value)) return Fail(EvaluationError.TimeOut);
+
+                evaluations += 2 * KronrodPoints;
+                pieces[worst] = left;
+                pieces.Add(right);
+            }
+        }
+
+        // the Kronrod value over one piece and how far it may be off: its difference to the Gauss value,
+        // scaled against how far the values spread the way QUADPACK scales it, and never below the rounding
+        // in the sum itself
+        private (double From, double To, double Value, double Error, double Magnitude) IntegratePiece(
+            List<MathToken> body, double from, double to)
+        {
+            double centre = (from + to) / 2;
+            double half = (to - from) / 2;
+
+            double centreValue = Integrand(body, centre);
+            double gauss = centreValue * GaussWeights[3];
+            double kronrod = centreValue * KronrodWeights[7];
+            double magnitude = Math.Abs(kronrod);
+
+            double[] below = new double[7];
+            double[] above = new double[7];
+
+            for (int node = 0; node < 7; node++)
+            {
+                double offset = half * KronrodNodes[node];
+                below[node] = Integrand(body, centre - offset);
+                above[node] = Integrand(body, centre + offset);
+
+                double pair = below[node] + above[node];
+                kronrod += KronrodWeights[node] * pair;
+                magnitude += KronrodWeights[node] * (Math.Abs(below[node]) + Math.Abs(above[node]));
+
+                if (node % 2 == 1) gauss += GaussWeights[node / 2] * pair;
+            }
+
+            double mean = kronrod / 2;
+            double spread = KronrodWeights[7] * Math.Abs(centreValue - mean);
+            for (int node = 0; node < 7; node++)
+            {
+                spread += KronrodWeights[node] * (Math.Abs(below[node] - mean) + Math.Abs(above[node] - mean));
+            }
+
+            double width = Math.Abs(half);
+            spread *= width;
+            magnitude *= width;
+
+            double error = Math.Abs((kronrod - gauss) * half);
+            if (spread != 0 && error != 0) error = spread * Math.Min(1, Math.Pow(200 * error / spread, 1.5));
+
+            error = Math.Max(error, 50 * MachineEpsilon * magnitude);
+
+            return (from, to, kronrod * half, error, magnitude);
+        }
+
+        private double Integrand(List<MathToken> body, double x)
+        {
+            return EvaluateBodyAt(body, new MathValue(x)).Value;
+        }
+
+
+        // --- the derivative ---
+
+        // Ridders extrapolation from up to three starting steps: the first scaled to the point, so a
+        // polynomial far out is still differentiated at a step that means something there, then fixed
+        // ones, for a function with no value a whole step away from the point or one that turns faster than
+        // the point is large, a sine far out in radians
+        //
+        // the function needs a value at the point itself, and without one the derivative is the error it
+        // has there, the way d/dx of 1/x at 0 is a Math ERROR; a starting step whose samples have no value
+        // gives way to the next smaller one, and when none of them settles the derivative is a Time Out
+        private MathValue EvaluateDerivative(DerivativeToken derivative)
+        {
+            if (ContainsCalculus(derivative)) return Fail(EvaluationError.Syntax);
+
+            MathValue point = EvaluateSlot(derivative.PointTokens);
+            if (_error != EvaluationError.None) return 0;
+
+            double x = point.Value;
+            double atPoint = EvaluateBodyAt(derivative.FunctionTokens, point).Value;
+            if (_error != EvaluationError.None) return 0;
+
+            if (!double.IsFinite(x) || !double.IsFinite(atPoint)) return Fail(EvaluationError.Overflow);
+
+            double scale = Math.Max(1, Math.Abs(x));
+            double[] steps = scale == 1 ? new[] { 0.1, 1e-3, 1e-5 } : new[] { 0.1 * scale, 0.1, 1e-3 };
+
+            EvaluationError sampleError = EvaluationError.None;
+            bool sampled = false;
+
+            foreach (double step in steps)
+            {
+                if (!TryRidders(derivative.FunctionTokens, x, step, out double slope, out double error, out double first))
+                {
+                    if (sampleError == EvaluationError.None) sampleError = _error;
+                    _error = EvaluationError.None;
+                    continue;
+                }
+
+                sampled = true;
+
+                // the rounding a difference quotient carries, which a slope of 0 comes out as instead
+                double noise = DerivativeNoise * Math.Max(Math.Abs(first), Math.Abs(atPoint) / step);
+                if (error > Math.Max(DerivativeTolerance * Math.Abs(slope), noise)) continue;
+
+                return Math.Abs(slope) <= Math.Max(error, noise) ? 0 : slope;
+            }
+
+            return Fail(sampled ? EvaluationError.TimeOut : sampleError);
+        }
+
+        // central differences at a step that shrinks by RiddersShrink every time, extrapolated towards a step
+        // of 0 in a Neville tableau; the answer is the entry that differs least from its neighbours, by how
+        // much it differs, and it stops once a higher order comes out clearly worse, which is rounding
+        // taking over
+        //
+        // first is the plain difference quotient at the starting step; false when the function has no
+        // value at one of the points it samples
+        private bool TryRidders(List<MathToken> function, double x, double step,
+            out double slope, out double error, out double first)
+        {
+            double[,] table = new double[RiddersSteps, RiddersSteps];
+            slope = 0;
+            error = double.MaxValue;
+
+            double h = step;
+            first = CentralDifference(function, x, h);
+            if (_error != EvaluationError.None) return false;
+
+            table[0, 0] = first;
+
+            for (int column = 1; column < RiddersSteps; column++)
+            {
+                h /= RiddersShrink;
+                table[0, column] = CentralDifference(function, x, h);
+                if (_error != EvaluationError.None) return false;
+
+                double factor = RiddersShrink * RiddersShrink;
+                for (int order = 1; order <= column; order++)
+                {
+                    table[order, column] = (table[order - 1, column] * factor - table[order - 1, column - 1]) / (factor - 1);
+                    factor *= RiddersShrink * RiddersShrink;
+
+                    double change = Math.Max(Math.Abs(table[order, column] - table[order - 1, column]),
+                        Math.Abs(table[order, column] - table[order - 1, column - 1]));
+
+                    if (change > error) continue;
+
+                    error = change;
+                    slope = table[order, column];
+                }
+
+                if (Math.Abs(table[column, column] - table[column - 1, column - 1]) >= 2 * error) break;
+            }
+
+            return true;
+        }
+
+        // the step is read back off the two points it lands on, so the quotient divides by the distance the
+        // samples really are apart
+        private double CentralDifference(List<MathToken> function, double x, double h)
+        {
+            double above = x + h;
+            double below = x - h;
+
+            double rise = EvaluateBodyAt(function, new MathValue(above)).Value
+                - EvaluateBodyAt(function, new MathValue(below)).Value;
+
+            return rise / (above - below);
         }
 
 
