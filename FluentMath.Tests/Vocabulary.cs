@@ -121,9 +121,9 @@ namespace FluentMath.Tests
         //
         // CallerFilePath resolves when the test project is compiled, which is what makes this work both
         // here and on a runner without anything having to know a working directory
-        public static string PageMarkupPath()
+        public static string PageMarkupPath(string page)
         {
-            return Path.Combine(RepositoryRoot(), "FluentMath", "Views", "ScientificPage.xaml");
+            return Path.Combine(RepositoryRoot(), "FluentMath", "Views", page + ".xaml");
         }
 
         private static string RepositoryRoot([CallerFilePath] string testSourcePath = "")

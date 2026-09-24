@@ -10,9 +10,9 @@ namespace FluentMath.ViewModels
 {
     // the only translator between the keypad and the input engine
     //
-    // every button in ScientificPage is bound to the same InputCommand and identifies itself through its
-    // CommandParameter, so adding a key is a XAML change plus one arm in the switch below; the page
-    // itself stays free of input logic
+    // every button on the standard and the scientific page is bound to the same InputCommand and
+    // identifies itself through its CommandParameter, so adding a key is a XAML change plus one arm in
+    // the switch below; the pages themselves stay free of input logic, and each has a ViewModel of its own
     public class CalculatorViewModel : INotifyPropertyChanged
     {
         // === fields ===

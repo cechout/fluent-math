@@ -34,10 +34,14 @@ namespace FluentMath.Tests
 
         // === the markup and the ViewModel agree ===
 
-        [Fact]
-        public void EveryKeyInTheMarkupIsInTheVocabulary()
+        // a typo on either calculator page is a dead key, so both are read; only the scientific pad has to
+        // carry every command, the standard one holds a subset of them by design
+        [Theory]
+        [InlineData("ScientificPage")]
+        [InlineData("StandardPage")]
+        public void EveryKeyInTheMarkupIsInTheVocabulary(string page)
         {
-            foreach (string command in CommandsInMarkup())
+            foreach (string command in CommandsInMarkup(page))
             {
                 Assert.Contains(command, Vocabulary.Commands);
             }
@@ -46,7 +50,7 @@ namespace FluentMath.Tests
         [Fact]
         public void EveryCommandInTheVocabularyHasAButton()
         {
-            List<string> inMarkup = CommandsInMarkup();
+            List<string> inMarkup = CommandsInMarkup("ScientificPage");
 
             foreach (string command in Vocabulary.Commands)
             {
@@ -56,9 +60,9 @@ namespace FluentMath.Tests
             }
         }
 
-        private static List<string> CommandsInMarkup()
+        private static List<string> CommandsInMarkup(string page)
         {
-            string markup = File.ReadAllText(Vocabulary.PageMarkupPath());
+            string markup = File.ReadAllText(Vocabulary.PageMarkupPath(page));
             var found = new List<string>();
 
             foreach (Match match in Regex.Matches(markup, "CommandParameter=\"(cmd_[a-z_0-9]+)\""))

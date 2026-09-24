@@ -4,6 +4,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using System;
+using System.Linq;
 using WinUIEx;
 
 namespace FluentMath
@@ -30,8 +31,10 @@ namespace FluentMath
             Instance = this;
             this.AppWindow.SetIcon("Assets\\Icon\\Icon.ico");
 
-            MainFrame.Navigate(typeof(ScientificPage));
-            NavView.SelectedItem = NavView.MenuItems[0];
+            // the app opens on the standard calculator; its item is looked up by the tag, since the list
+            // opens with a group header
+            MainFrame.Navigate(typeof(StandardPage));
+            NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == "Standard");
 
             // draw our own title bar into the client area; the caption buttons keep transparent
             // backgrounds so the Mica backdrop stays visible behind them
@@ -64,7 +67,8 @@ namespace FluentMath
 
             Type? page = itemTag switch
             {
-                "Standard" => typeof(ScientificPage),
+                "Standard" => typeof(StandardPage),
+                "Scientific" => typeof(ScientificPage),
                 "Currency" => typeof(CurrencyPage),
                 "Settings" => typeof(SettingsPage),
                 _ => null

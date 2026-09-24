@@ -60,12 +60,23 @@
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
             </NavigationView.Resources>
 
+            <!--  menu items: the calculators and the converters, each group under a header  -->
             <NavigationView.MenuItems>
+                <NavigationViewItemHeader Content="Calculator" />
+
                 <NavigationViewItem Content="Standard" Tag="Standard">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE8EF;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
+
+                <NavigationViewItem Content="Scientific" Tag="Scientific">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE94B;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
+                <NavigationViewItemHeader Content="Converter" />
 
                 <NavigationViewItem Content="Currency" Tag="Currency">
                     <NavigationViewItem.Icon>
