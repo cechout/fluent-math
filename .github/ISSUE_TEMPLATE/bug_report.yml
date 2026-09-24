@@ -34,7 +34,7 @@ body:
     id: app-version
     attributes:
       label: App version
-      description: Shown in Windows Settings under Apps > Installed apps, next to "Fluent Math".
+      description: Shown in the app settings, under "About & Open Source".
       placeholder: "v2.0.0"
     validations:
       required: true

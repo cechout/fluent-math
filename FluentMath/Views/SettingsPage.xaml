@@ -112,7 +112,7 @@
                     </ComboBox>
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Which of the two a result shows first; SHIFT S⇔D swaps them" Header="Fraction Form">
+                        <controls:SettingsCard Header="Fraction Form">
                             <ComboBox
                                 x:Name="FractionFormComboBox"
                                 Width="150"
@@ -122,7 +122,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="A bar over the period on the way to the decimal, 2.3 with a bar for 7/3" Header="Recurring Decimals">
+                        <controls:SettingsCard Header="Recurring Decimals">
                             <ToggleSwitch
                                 x:Name="RecurringToggle"
                                 OffContent="Off"
@@ -153,10 +153,7 @@
 
                     <controls:SettingsExpander.Items>
                         <!--  (stays disabled under Norm, see UpdateDigitsAvailability)  -->
-                        <controls:SettingsCard
-                            x:Name="DigitsCard"
-                            Description="Decimals for Fix, significant digits for Sci"
-                            Header="Digits">
+                        <controls:SettingsCard x:Name="DigitsCard" Header="Digits">
                             <ComboBox
                                 x:Name="DigitsComboBox"
                                 Width="70"
@@ -174,7 +171,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="The ENG keys write a result as 1.234k instead of 1.234×10³" Header="Decimal Prefixes">
+                        <controls:SettingsCard Header="Decimal Prefixes">
                             <ToggleSwitch
                                 x:Name="PrefixesToggle"
                                 OffContent="Off"
@@ -194,7 +191,7 @@
                     IsExpanded="False">
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="With a comma, two arguments are separated by a semicolon" Header="Decimal Mark">
+                        <controls:SettingsCard Header="Decimal Mark">
                             <ComboBox
                                 x:Name="DecimalMarkComboBox"
                                 Width="150"
@@ -205,7 +202,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="A thin gap every three digits" Header="Digit Grouping">
+                        <controls:SettingsCard Header="Digit Grouping">
                             <ToggleSwitch
                                 x:Name="GroupDigitsToggle"
                                 OffContent="Off"
@@ -214,6 +211,66 @@
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
+
+
+                <!--  about and open source  -->
+                <TextBlock
+                    Margin="4,20,0,6"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="About &amp; Open Source" />
+
+                <!--  app info  -->
+                <!--  (the version in the header slot is read off the assembly, see VersionLabel)  -->
+                <controls:SettingsExpander
+                    Description="© 2026 Daniel Čech · MIT License"
+                    Header="Fluent Math"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE946;}"
+                    IsExpanded="False">
+
+                    <TextBlock
+                        x:Name="VersionTextBlock"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        IsTextSelectionEnabled="True" />
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="Documentation">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout/fluent-math" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="Developer Profile">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <!--  third-party libraries  -->
+                <controls:SettingsExpander
+                    Description="Open source projects used in this app"
+                    Header="Third-Party Libraries"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE8F1;}"
+                    IsExpanded="False">
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="Windows App SDK">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/microsoft/WindowsAppSDK" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="Windows Community Toolkit">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/CommunityToolkit/Windows" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="WinUIEx">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/dotMorten/WinUIEx" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <!--  feedback  -->
+                <!--  (opens the issue template picker, so a bug report and a blank issue are both one click away)  -->
+                <HyperlinkButton
+                    Margin="0,4,0,8"
+                    Content="Send Feedback"
+                    NavigateUri="https://github.com/cechout/fluent-math/issues/new/choose" />
 
             </StackPanel>
         </ScrollViewer>
