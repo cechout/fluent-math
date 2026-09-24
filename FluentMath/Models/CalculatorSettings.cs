@@ -43,8 +43,8 @@ namespace FluentMath.Models
 
     // the calculator setup, one object for the whole app
     //
-    // the standard page builds a new ViewModel on every navigation, so the settings live outside it and a
-    // choice survives a trip to another page; nothing persists them across a restart yet
+    // every calculator page has a ViewModel of its own and they all follow the same setup, so the settings
+    // live outside them; nothing persists them across a restart yet
     public sealed class CalculatorSettings
     {
         // the unit the caret bar selector and the settings page both edit

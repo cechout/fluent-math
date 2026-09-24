@@ -3,6 +3,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using System;
 using WinUIEx;
 
 namespace FluentMath
@@ -61,18 +62,18 @@ namespace FluentMath
         {
             string itemTag = args.InvokedItemContainer.Tag.ToString();
 
-            switch (itemTag)
+            Type? page = itemTag switch
             {
-                case "Standard":
-                    MainFrame.Navigate(typeof(ScientificPage));
-                    break;
-                case "Currency":
-                    MainFrame.Navigate(typeof(CurrencyPage));
-                    break;
-                case "Settings":
-                    MainFrame.Navigate(typeof(SettingsPage));
-                    break;
-            }
+                "Standard" => typeof(ScientificPage),
+                "Currency" => typeof(CurrencyPage),
+                "Settings" => typeof(SettingsPage),
+                _ => null
+            };
+
+            // a second click on the item already shown would navigate the page onto itself
+            if (page == null || MainFrame.CurrentSourcePageType == page) return;
+
+            MainFrame.Navigate(page);
         }
 
 

@@ -3,6 +3,7 @@ using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Linq;
 using Windows.UI;
@@ -25,6 +26,18 @@ namespace FluentMath.Views
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
+        }
+
+
+        // === navigation ===
+
+        // the page is cached and comes back with whatever it was left with, so the two labels the settings
+        // page can change are read again here; the display lines do the same when they are loaded
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            ViewModel.RefreshSettingLabels();
         }
 
 

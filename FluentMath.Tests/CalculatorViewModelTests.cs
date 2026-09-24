@@ -1,5 +1,6 @@
 ﻿using FluentMath.Models;
 using FluentMath.ViewModels;
+using System.Collections.Generic;
 using Xunit;
 
 namespace FluentMath.Tests
@@ -861,6 +862,25 @@ namespace FluentMath.Tests
         {
             Assert.Equal(",", new CalculatorViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Comma }).DecimalMarkLabel);
             Assert.Equal(".", new CalculatorViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Dot }).DecimalMarkLabel);
+        }
+
+        // the settings page writes the setup behind the back of a view model that lives on in a cached page
+        [Fact]
+        public void RefreshingTheLabelsAnnouncesWhatTheSettingsPageChanged()
+        {
+            var settings = new CalculatorSettings { DecimalMark = DecimalMark.Dot };
+            var viewModel = new CalculatorViewModel(settings);
+            var raised = new List<string>();
+            viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            settings.AngleMode = AngleMode.Radians;
+            settings.DecimalMark = DecimalMark.Comma;
+            viewModel.RefreshSettingLabels();
+
+            Assert.Contains(nameof(CalculatorViewModel.AngleModeLabel), raised);
+            Assert.Contains(nameof(CalculatorViewModel.DecimalMarkLabel), raised);
+            Assert.Equal("RAD", viewModel.AngleModeLabel);
+            Assert.Equal(",", viewModel.DecimalMarkLabel);
         }
 
 

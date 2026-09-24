@@ -63,9 +63,9 @@
                     Text="Calculator" />
 
                 <!--
-                    the calculator setup, held by App.Settings for the session and read by the standard
-                    page whenever it is built; every combo box lists its options in the order of the
-                    values they stand for, which the code-behind relies on
+                    the calculator setup, held by App.Settings for the session and read by the calculator
+                    pages whenever they come back into view; every combo box lists its options in the
+                    order of the values they stand for, which the code-behind relies on
                 -->
                 <controls:SettingsCard
                     Description="The unit sin, cos and tan read an angle in"

@@ -683,6 +683,15 @@ namespace FluentMath.ViewModels
         // as the mark the settings ask for
         public string DecimalMarkLabel => _settings.DecimalMarkText;
 
+        // the settings page writes into the settings directly, while a page kept alive across the visit
+        // still shows the labels it read before it; the page calls this on its way back into view
+        public void RefreshSettingLabels()
+        {
+            OnPropertyChanged(nameof(CurrentAngleMode));
+            OnPropertyChanged(nameof(AngleModeLabel));
+            OnPropertyChanged(nameof(DecimalMarkLabel));
+        }
+
         // the input line is the only one that can be clicked, so it is the only one that asks for the
         // addresses that make a click resolvable back into a cursor position
         private void PublishInput()

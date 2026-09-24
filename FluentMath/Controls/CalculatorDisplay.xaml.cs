@@ -158,8 +158,8 @@ namespace FluentMath.Controls
             _historyStyle = MathLayoutStyle.ForHistoryLine();
             _inputStyle = MathLayoutStyle.ForInputLine();
 
-            // the page is built anew on every navigation, so a change on the settings page is in force
-            // by the time these are read
+            // this runs again every time the page comes back into view, so a change on the settings page
+            // is in force by the time these are read
             foreach (MathLayoutStyle style in new[] { _historyStyle, _inputStyle })
             {
                 style.DecimalMark = App.Settings.DecimalMarkText;
