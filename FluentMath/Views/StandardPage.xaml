@@ -26,14 +26,38 @@
             Height="38"
             Margin="45,0,0,0"
             Background="Transparent">
-            <TextBlock
+            <StackPanel
                 HorizontalAlignment="Left"
-                VerticalAlignment="Center"
-                Style="{ThemeResource SubtitleTextBlockStyle}"
-                Text="Standard" />
+                Orientation="Horizontal"
+                Spacing="8">
+
+                <TextBlock
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Style="{ThemeResource SubtitleTextBlockStyle}"
+                    Text="Standard" />
+
+                <!--  compact mode toggle  -->
+                <!--  revisit: keys drawn before they work  -->
+                <!--
+                    drawn and disabled until compact mode exists, along with history and memory; the
+                    glyph is the one the Windows Calculator puts on its keep on top button
+                -->
+                <Button
+                    Width="32"
+                    Height="32"
+                    Padding="0"
+                    IsEnabled="False"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xEE49;" />
+                </Button>
+            </StackPanel>
 
             <!--  history and memory  -->
-            <!--  (the same two keys as on the scientific page, so the two calculators read alike)  -->
+            <!--
+                the same two keys as on the scientific page, so the two calculators read alike, and
+                disabled there as well until the history list and the variable store exist
+            -->
             <StackPanel
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
@@ -44,6 +68,7 @@
                     Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_history"
+                    IsEnabled="False"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="16" Glyph="&#xE81C;" />
                 </Button>
@@ -53,6 +78,7 @@
                     Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_memory"
+                    IsEnabled="False"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="16" Glyph="&#xE8F1;" />
                 </Button>

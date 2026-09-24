@@ -60,7 +60,7 @@
             <!--  history and memory  -->
             <!--
                 both open a panel of their own once there is something to put in it; the keys are
-                here now because the header is laid out around them
+                here now because the header is laid out around them, and disabled until then
                 history carries the Segoe glyph the Windows Calculator uses for the same button
                 memory carries the Segoe library glyph rather than the M a calculator prints: M is
                 one register on a physical calculator, MR and M plus and M minus, and this opens a
@@ -76,6 +76,7 @@
                     Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_history"
+                    IsEnabled="False"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="16" Glyph="&#xE81C;" />
                 </Button>
@@ -85,6 +86,7 @@
                     Padding="0"
                     Command="{x:Bind ViewModel.InputCommand}"
                     CommandParameter="cmd_memory"
+                    IsEnabled="False"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="16" Glyph="&#xE8F1;" />
                 </Button>
