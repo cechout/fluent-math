@@ -66,8 +66,8 @@ namespace FluentMath.Models.Layout
         // fraction keeps its content at the size of the text around it
         //
         // both are compared to the full text size, not to the level above, so deep nesting stops shrinking
-        public double ScriptScale { get; set; } = 0.5;       // an exponent, 0.5 being half the text; smaller shrinks it
-        public double ScriptScriptScale { get; set; } = 0.4; // an exponent inside an exponent, and the index of a root
+        public double ScriptScale { get; set; } = 0.6;       // an exponent, 0.5 being half the text; smaller shrinks it
+        public double ScriptScriptScale { get; set; } = 0.5; // an exponent inside an exponent, and the index of a root
 
 
         // === structures ===
