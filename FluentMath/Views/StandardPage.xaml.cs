@@ -304,6 +304,7 @@ namespace FluentMath.Views
         {
             TrigonometryFlyout.Hide();
             FunctionFlyout.Hide();
+            CalculusFlyout.Hide();
             NumberTheoryFlyout.Hide();
             ProbabilityFlyout.Hide();
             CoordinatesFlyout.Hide();
@@ -311,7 +312,7 @@ namespace FluentMath.Views
         }
 
         // a button whose panel is open reads as the accent color, which is the only thing that says
-        // which of the six is showing; a Button raises nothing for it, so the state is entered from
+        // which of the seven is showing; a Button raises nothing for it, so the state is entered from
         // here and the look of it lives in the FlyoutStates group of SubtleBarButtonStyle
         //
         // the handler closes over the button it belongs to rather than reading FlyoutBase.Target,

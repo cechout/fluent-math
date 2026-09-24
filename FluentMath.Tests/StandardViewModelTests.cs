@@ -1027,6 +1027,51 @@ namespace FluentMath.Tests
         }
 
 
+        // === calculus ===
+
+        // measured on the Casio: Σ of 1/x from 1 to 3 is an exact 11/6
+        [Fact]
+        public void ShowsASumAsTheFractionItIs()
+        {
+            Assert.Equal("\\frac{11}{6}", ResultOf("cmd_sum", "1", "cmd_nav_right", "3", "cmd_nav_right", "1", "/", "cmd_x"));
+            Assert.Equal("120", ResultOf("cmd_product", "1", "cmd_nav_right", "5", "cmd_nav_right", "cmd_x"));
+        }
+
+        // the integral and the derivative are doubles, and a fraction is found for them the way it is for
+        // a logarithm
+        [Fact]
+        public void ShowsAnIntegralAndADerivativeTheWayItShowsAnyOtherDouble()
+        {
+            Assert.Contains("frac{1}{3}", ResultOf("cmd_integral", "0", "cmd_nav_right", "1", "cmd_nav_right", "cmd_x", "cmd_pow_2"));
+            Assert.Equal("6", ResultOf("cmd_derivative", "cmd_x", "cmd_pow_2", "cmd_nav_right", "3"));
+        }
+
+        [Fact]
+        public void NamesATimeOutTheWayACasioDoes()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "cmd_sum", "1", "cmd_nav_right", "100001", "cmd_nav_right", "cmd_x", "=");
+
+            Assert.Equal("Time Out", viewModel.InputErrorText);
+        }
+
+        [Fact]
+        public void ReadsXAsZeroOutsideTheCalculusStructures()
+        {
+            Assert.Equal("1", ResultOf("cmd_x", "+", "1"));
+        }
+
+        // none of the calculus keys reads an operand, so on a result they start over
+        [Fact]
+        public void StartsOverWhenACalculusKeyIsPressedOnAResult()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "+", "1", "=", "cmd_sum");
+
+            Assert.IsType<LargeOperatorToken>(Assert.Single(viewModel.InputTokens));
+        }
+
+
         // === a result taken as the operand of the next key ===
 
         // a Casio squares Ans, so a negative result squares to a positive number; −5² typed by hand is
