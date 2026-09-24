@@ -1936,8 +1936,21 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
-                Style="{StaticResource OperatorButtonStyle}">
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsNormalLayer, Mode=OneWay}">
                 <FontIcon FontSize="14" Glyph="&#xE8AB;" />
+            </Button>
+            <!--  the shift of S⇔D swaps a fraction between improper and mixed, the a b/c ⇔ d/c of a Casio  -->
+            <Button
+                Grid.Row="5"
+                Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_frac_swap"
+                Style="{StaticResource OperatorButtonStyle}"
+                Visibility="{x:Bind ViewModel.IsShiftLayer, Mode=OneWay}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="ab/c" />
             </Button>
             <Button
                 Grid.Row="5"

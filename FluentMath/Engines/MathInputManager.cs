@@ -855,17 +855,17 @@ namespace FluentMath.Engines
         // digit by digit
         // fullValue is the value behind the twelve digits on screen; the digits carry it with them, so
         // 1÷3 followed by ×3 is 1 again, until one of them is edited, see SeededValue
-        public void SeedWithValue(string numberText, double? fullValue = null)
+        public void SeedWithValue(string numberText, MathValue? fullValue = null)
         {
             Clear();
 
             FillWithDigits(_rootTokens, numberText);
             _rootContext.CursorIndex = _rootTokens.Count;
 
-            if (fullValue is not double value) return;
+            if (fullValue is not MathValue value) return;
 
             List<MathToken> digits = _rootTokens.FindAll(token => token.Type == TokenType.Number);
-            SeededValue seed = new SeededValue(Math.Abs(value), digits.Count);
+            SeededValue seed = new SeededValue(new MathValue(Math.Abs(value.Value), ExactValue.Abs(value.Exact)), digits.Count);
             foreach (MathToken digit in digits) digit.Seed = seed;
         }
 
@@ -902,7 +902,8 @@ namespace FluentMath.Engines
         }
 
         // and as the tokens a result is drawn as, when those are real tokens already: the prime factors,
-        // whose powers and times signs carry on as the product they are
+        // whose powers and times signs carry on as the product they are, and an exact form with roots or π,
+        // whose roots are real roots
         public void SeedWithTokens(IEnumerable<MathToken> tokens)
         {
             Clear();
@@ -913,7 +914,7 @@ namespace FluentMath.Engines
 
         // and as a number with a power of ten behind it, typed the way the EXP key types one; the digits
         // carry the full mantissa, the power is exact as it stands
-        public void SeedWithScientific(string mantissaText, double fullMantissa, int exponent)
+        public void SeedWithScientific(string mantissaText, MathValue fullMantissa, int exponent)
         {
             SeedWithValue(mantissaText, fullMantissa);
 
@@ -927,7 +928,7 @@ namespace FluentMath.Engines
         }
 
         // and as a number with a decimal prefix behind it, the way the ENG view writes one
-        public void SeedWithPrefix(string mantissaText, double fullMantissa, string prefix)
+        public void SeedWithPrefix(string mantissaText, MathValue fullMantissa, string prefix)
         {
             SeedWithValue(mantissaText, fullMantissa);
 
@@ -936,7 +937,7 @@ namespace FluentMath.Engines
         }
 
         // puts a seeded result in brackets when it is more than the one operand a key to its right would
-        // take: a negative number, a power of ten, the prime factors
+        // take: a negative number, a power of ten, the prime factors, a sum of roots
         //
         // squaring −5 is then 25, the way a Casio squares Ans, rather than the −25 that −5² typed by hand
         // is; a single operand, a number, a fraction or a number with a prefix, is left bare

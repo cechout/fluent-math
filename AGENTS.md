@@ -66,9 +66,9 @@ FluentMath/
 ├── Assets/       the app icon and the package logos
 ├── Controls/     the formula display: MathPanel, XamlTextMeasurer
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
-├── Models/       the token model, the calculator setup and the currency logic: MathToken,
-│                 NavigationMetadata, EvaluationMetadata, ResultFormatter, CalculatorSettings,
-│                 ConvertCurrency, GetCurrencyData, CurrencyHelper
+├── Models/       the token model, the exact values, the calculator setup and the currency logic:
+│                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
+│                 CalculatorSettings, ConvertCurrency, GetCurrencyData, CurrencyHelper
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings

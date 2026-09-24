@@ -442,14 +442,15 @@ namespace FluentMath.Tests
             Assert.StartsWith("x=0.5, y=0.866025403784", viewModel.InputAndResultText);
 
             Press(viewModel, "sd");
-            Assert.StartsWith("x=\\frac{1}{2}, y=0.866025403784", viewModel.InputAndResultText);
+            Assert.Equal("x=\\frac{1}{2}, y=\\frac{\\sqrt{3}}{2}", viewModel.InputAndResultText);
         }
 
+        // a logarithm has no exact value and its decimal no fraction, so there is nothing to switch to
         [Fact]
         public void DoesNothingOnAResultWithNoFraction()
         {
             var viewModel = new StandardViewModel();
-            Press(viewModel, "cmd_sqrt", "2", "=");
+            Press(viewModel, "cmd_ln", "2", "=");
 
             string before = viewModel.InputAndResultText;
             Press(viewModel, "sd");
@@ -457,8 +458,9 @@ namespace FluentMath.Tests
             Assert.Equal(before, viewModel.InputAndResultText);
         }
 
+        // measured on the Casio: 1÷3 goes through 0.3 with a bar on its way to the decimal
         [Fact]
-        public void CyclesStraightBackWhenThereIsNoMixedForm()
+        public void CyclesThroughTheRecurringDecimal()
         {
             var viewModel = DecimalFirst();
             Press(viewModel, "1", "/", "3", "=");
@@ -469,11 +471,15 @@ namespace FluentMath.Tests
             Assert.Contains("frac{1}{3}", viewModel.InputAndResultText);
 
             Press(viewModel, "sd");
+            Assert.Equal("0.\\overline{3}", viewModel.InputAndResultText);
+            Assert.IsType<RecurringToken>(viewModel.InputTokens[2]);
+
+            Press(viewModel, "sd");
             Assert.Equal(asDecimal, viewModel.InputAndResultText);
         }
 
         [Fact]
-        public void CyclesThroughAllThreeFormsWhenTheyExist()
+        public void CyclesStraightBackWhenTheDecimalEnds()
         {
             var viewModel = DecimalFirst();
             Press(viewModel, "5", "/", "4", "=");
@@ -483,11 +489,53 @@ namespace FluentMath.Tests
             Assert.Contains("frac{5}{4}", viewModel.InputAndResultText);
 
             Press(viewModel, "sd");
-            Assert.StartsWith("1", viewModel.InputAndResultText);
-            Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
-
-            Press(viewModel, "sd");
             Assert.Equal("1.25", viewModel.InputAndResultText);
+        }
+
+        [Fact]
+        public void LeavesTheRecurringDecimalOutWhenTheSettingsSaySo()
+        {
+            var viewModel = new StandardViewModel(new CalculatorSettings { RecurringDecimals = false });
+            Press(viewModel, "1", "/", "3", "=", "sd");
+
+            Assert.Equal("0.333333333333", viewModel.InputAndResultText);
+        }
+
+        // measured on the Casio: 7÷3 is 7/3, then 2.3 with a bar, then the decimal, and the mixed 2 1/3 is
+        // on the shift of S⇔D
+        [Fact]
+        public void SwapsBetweenImproperAndMixedOnTheShiftOfSToD()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "7", "/", "3", "=");
+            Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
+
+            Press(viewModel, "cmd_frac_swap");
+            Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
+
+            // the cycle keeps the form that was swapped to
+            Press(viewModel, "sd", "sd", "sd");
+            Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
+
+            Press(viewModel, "cmd_frac_swap");
+            Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
+
+            // from the decimal it shows the fraction in the other form
+            Press(viewModel, "sd", "sd", "cmd_frac_swap");
+            Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
+        }
+
+        // a proper fraction has no mixed form and a root no fraction; neither changes on the shift
+        [Fact]
+        public void LeavesAResultWithoutAMixedFormAloneOnTheShiftOfSToD()
+        {
+            var fraction = new StandardViewModel();
+            Press(fraction, "1", "/", "4", "=", "cmd_frac_swap");
+            Assert.Equal("\\frac{1}{4}", fraction.InputAndResultText);
+
+            var root = new StandardViewModel();
+            Press(root, "cmd_sqrt", "2", "=", "sd", "cmd_frac_swap");
+            Assert.StartsWith("1.41421356237", root.InputAndResultText);
         }
 
         [Fact]
@@ -540,7 +588,7 @@ namespace FluentMath.Tests
         public void CarriesAShownMixedNumberOnAsAMixedFraction()
         {
             var viewModel = DecimalFirst();
-            Press(viewModel, "5", "/", "4", "=", "sd", "sd", "+");
+            Press(viewModel, "5", "/", "4", "=", "cmd_frac_swap", "+");
 
             Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
 
@@ -549,7 +597,7 @@ namespace FluentMath.Tests
 
             // the sign is part of the whole number, so squaring a negative one comes out positive
             var negative = DecimalFirst();
-            Press(negative, "-", "5", "/", "4", "=", "sd", "sd", "cmd_pow_2", "=");
+            Press(negative, "-", "5", "/", "4", "=", "cmd_frac_swap", "cmd_pow_2", "=");
             Assert.Equal("1.5625", negative.InputAndResultText);
         }
 
@@ -558,7 +606,7 @@ namespace FluentMath.Tests
         public void PlacesAClickInsideAShownMixedNumber()
         {
             var viewModel = DecimalFirst();
-            Press(viewModel, "5", "/", "4", "=", "sd", "sd");
+            Press(viewModel, "5", "/", "4", "=", "cmd_frac_swap");
 
             viewModel.PlaceCursor("0.0@1");
             Press(viewModel, "0", "=");
@@ -742,9 +790,12 @@ namespace FluentMath.Tests
             Press(viewModel, "sd");
             Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
 
-            // a root has no fraction and opens as the decimal
+            // a root opens in its exact form as well, and a logarithm, which has none, as the decimal
             Press(viewModel, "AC", "cmd_sqrt", "2", "=");
-            Assert.StartsWith("1.41421356237", viewModel.InputAndResultText);
+            Assert.Equal("\\sqrt{2}", viewModel.InputAndResultText);
+
+            Press(viewModel, "AC", "cmd_ln", "2", "=");
+            Assert.StartsWith("0.69314718056", viewModel.InputAndResultText);
         }
 
         [Fact]
@@ -754,7 +805,7 @@ namespace FluentMath.Tests
             Press(viewModel, "5", "/", "4", "=");
             Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
 
-            Press(viewModel, "sd");
+            Press(viewModel, "cmd_frac_swap");
             Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
 
             // a proper fraction has no mixed form and opens as the improper one

@@ -129,6 +129,14 @@ namespace FluentMath.Models.Layout
         public double MixedFractionGap { get; set; } = 0.1; // between the whole part of a mixed number and its bar
 
 
+        // === recurring decimals ===
+
+        // the bar over the period hangs off the top of the line box of its digits, which sits well above
+        // the digits themselves, so the gap is negative the way the one over a radicand is
+        public double RecurringBarThickness { get; set; } = 0.05;
+        public double RecurringBarGap { get; set; } = -0.18;
+
+
         // === scripts ===
 
         // of the ascent of whatever carries the exponent, so a tall base lifts it further

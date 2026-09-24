@@ -757,6 +757,42 @@ namespace FluentMath.Tests
         }
 
 
+        // === recurring decimals ===
+
+        [Fact]
+        public void ThePeriodStandsUnderABarThatSpansExactlyIt()
+        {
+            MathLayoutStyle style = Style();
+            style.RecurringBarThickness = 0.1;
+            style.RecurringBarGap = 0.2;
+
+            RowBox row = Engine(style).BuildRow(new List<MathToken> { Digit("0"), Digit("."), new RecurringToken("36") });
+            Assert.IsType<TextRunBox>(row.Children[0]);
+
+            OverlineBox period = Assert.IsType<OverlineBox>(row.Children[1]);
+            TextRunBox digits = Assert.IsType<TextRunBox>(period.Content);
+            Assert.Equal("36", digits.Text);
+            Assert.Equal(digits.Width, period.Width);
+
+            // the digits reach 0.75 em up, the gap and the bar sit on top of that
+            double reach = FontSize * (0.75 + 0.2 + 0.1);
+            Assert.Equal(reach, period.Ascent, 9);
+
+            period.Place(0, 100);
+            Assert.Equal(100 - reach, period.BarTop, 9);
+        }
+
+        // the period is one token, so the caret has a place in front of it and one behind it
+        [Fact]
+        public void ThePeriodIsOnePlaceForTheCaret()
+        {
+            RowBox row = Row(Digit("0"), Digit("."), new RecurringToken("3"));
+
+            Assert.Equal("@2", row.Children[1].CursorAddress);
+            Assert.Equal("@3", row.EndAddress);
+        }
+
+
         // === postfix ===
 
         [Fact]

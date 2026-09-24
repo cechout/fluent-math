@@ -128,6 +128,67 @@ namespace FluentMath.Tests
         }
 
 
+        // === exact forms ===
+
+        private static MathValue Exact(ExactValue value) => new MathValue(0, value);
+
+        private static ExactValue Root(long radicand) => ExactValue.SquareRoot(ExactValue.FromInteger(radicand))!;
+
+        [Fact]
+        public void ARecurringDecimalIsItsDigitsAndThePeriodAsAToken()
+        {
+            MathValue sevenThirds = Exact(ExactValue.FromRational(new Rational(7, 3)));
+            List<MathToken> tokens = ResultFormatter.ToTokens(sevenThirds, AnswerForm.Recurring, false);
+
+            Assert.Equal("2.", Digits(tokens));
+
+            RecurringToken period = Assert.IsType<RecurringToken>(tokens.Last());
+            Assert.Equal("3", period.Value);
+        }
+
+        // real roots over a real bar, so seeding them carries the exact value on
+        [Fact]
+        public void ARootFormIsAFractionOverRealRoots()
+        {
+            ExactValue sine15 = ExactValue.Multiply(ExactValue.Subtract(Root(6), Root(2)),
+                ExactValue.FromRational(new Rational(1, 4)))!;
+
+            FractionToken fraction = Assert.IsType<FractionToken>(Assert.Single(
+                ResultFormatter.ToTokens(Exact(sine15), AnswerForm.Improper, false)));
+
+            Assert.Equal("6", Digits(Assert.IsType<RootToken>(fraction.NumeratorTokens[0]).RadicandTokens));
+            Assert.Equal("-", fraction.NumeratorTokens[1].Value);
+            Assert.Equal(TokenType.Operator, fraction.NumeratorTokens[1].Type);
+            Assert.Equal("2", Digits(Assert.IsType<RootToken>(fraction.NumeratorTokens[2]).RadicandTokens));
+            Assert.Equal("4", Digits(fraction.DenominatorTokens));
+        }
+
+        // the minus in front of the whole value is drawn as part of it and seeded as a sign
+        [Fact]
+        public void ALeadingMinusIsDrawnWithTheNumberAndSeededAsASign()
+        {
+            MathValue value = Exact(ExactValue.Subtract(Root(2), Root(3))!);
+
+            MathToken drawn = ResultFormatter.ExactFormTokens(value, asInput: false)![0];
+            Assert.Equal(TokenType.Number, drawn.Type);
+            Assert.Equal(Minus, drawn.Value);
+
+            MathToken seeded = ResultFormatter.ExactFormTokens(value, asInput: true)![0];
+            Assert.Equal(TokenType.Operator, seeded.Type);
+            Assert.Equal("-", seeded.Value);
+        }
+
+        [Fact]
+        public void APiFormIsItsCoefficientAndTheConstant()
+        {
+            MathValue value = Exact(ExactValue.Multiply(ExactValue.Pi, ExactValue.FromRational(new Rational(2, 3)))!);
+            List<MathToken> tokens = ResultFormatter.ToTokens(value, AnswerForm.Improper, false);
+
+            Assert.IsType<FractionToken>(tokens[0]);
+            Assert.Equal("pi", Assert.IsType<ConstantToken>(tokens[1]).Value);
+        }
+
+
         // === scientific ===
 
         [Fact]

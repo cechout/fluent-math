@@ -82,7 +82,7 @@
                 </controls:SettingsCard>
 
                 <controls:SettingsCard
-                    Description="Whether a result opens as its fraction or as its decimal; S⇔D switches between them"
+                    Description="Whether a result opens in its exact form, a fraction, a root or π, or as its decimal; S⇔D switches between them"
                     Header="Result form"
                     HeaderIcon="{ui:FontIcon Glyph=&#xE8AB;}">
                     <ComboBox
@@ -95,7 +95,7 @@
                 </controls:SettingsCard>
 
                 <controls:SettingsCard
-                    Description="Which of the two fractions a result shows first"
+                    Description="Which of the two fractions a result shows first; SHIFT S⇔D swaps them"
                     Header="Fraction form"
                     HeaderIcon="{ui:FontIcon Glyph=&#xE94A;}">
                     <ComboBox
@@ -105,6 +105,13 @@
                         <ComboBoxItem Content="Improper" />
                         <ComboBoxItem Content="Mixed" />
                     </ComboBox>
+                </controls:SettingsCard>
+
+                <controls:SettingsCard
+                    Description="S⇔D shows a fraction as a decimal with a bar over its period on the way to the decimal, 2.3 with a bar for 7/3"
+                    Header="Recurring decimals"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE8EE;}">
+                    <ToggleSwitch x:Name="RecurringToggle" Toggled="CalculatorToggle_Toggled" />
                 </controls:SettingsCard>
 
                 <controls:SettingsCard

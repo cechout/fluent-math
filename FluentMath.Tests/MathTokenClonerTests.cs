@@ -144,6 +144,7 @@ namespace FluentMath.Tests
         public void ThePanelLeavesComeBackAsWhatTheyWere()
         {
             Assert.IsType<RandomToken>(MathTokenCloner.Clone(new RandomToken()));
+            Assert.Equal("142857", Assert.IsType<RecurringToken>(MathTokenCloner.Clone(new RecurringToken("142857"))).Value);
             Assert.Equal("k", ((PostfixToken)MathTokenCloner.Clone(new PostfixToken("kilo"))).Symbol);
         }
 

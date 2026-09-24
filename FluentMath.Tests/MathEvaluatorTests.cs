@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using FluentMath.Engines;
 using FluentMath.Models;
 using Xunit;
@@ -1118,6 +1119,164 @@ namespace FluentMath.Tests
 
             Assert.True(result.IsSuccess);
             Assert.Equal(0, result.Value);
+        }
+
+
+        // === exact values ===
+
+        private static ExactValue? Exact(AngleMode mode, params string[] keys)
+        {
+            EvaluationResult result = new MathEvaluator(mode).Evaluate(Keys.Press(keys).RootTokens);
+
+            Assert.True(result.IsSuccess, "expected a value but got " + result.Error);
+            return result.FirstValue.Exact;
+        }
+
+        private static ExactValue? Exact(params string[] keys)
+        {
+            return Exact(AngleMode.Degrees, keys);
+        }
+
+        private static ExactValue Whole(long value) => ExactValue.FromInteger(value);
+
+        private static ExactValue Fraction(long numerator, long denominator)
+        {
+            return ExactValue.FromRational(new Rational(numerator, denominator));
+        }
+
+        private static ExactValue Root(long radicand) => ExactValue.SquareRoot(Whole(radicand))!;
+
+        // the double is read off the exact value, so the two cannot disagree about a whole number
+        [Fact]
+        public void ReadsTheDoubleOffTheExactValue()
+        {
+            Assert.Equal(0.3, Value("0.1", "+", "0.2"));
+            Assert.Equal(2, Value("sqrt", "2", "right", "*", "sqrt", "2"));
+            Assert.Equal(1, Value("1", "/", "3", "*", "3"));
+        }
+
+        [Fact]
+        public void KeepsEveryOperationWithAnExactAnswerExact()
+        {
+            Assert.Equal(ExactValue.FromInteger(BigInteger.Parse("15511210043330985984000000")), Exact("25", "!"));
+            Assert.Equal(Whole(120), Exact("10", "ncr", "3"));
+            Assert.Equal(Whole(20), Exact("5", "npr", "2"));
+            Assert.Equal(Fraction(1, 100), Exact("1", "%"));
+            Assert.Equal(Fraction(1, 200000), Exact("5", "pre:micro"));
+            Assert.Equal(Fraction(1, 2), Exact("2", "inv"));
+            Assert.Equal(Fraction(-3, 2), Exact("mixed", "1", "right", "-", "1", "right", "2"));
+            Assert.Equal(Whole(-3), Exact("fn:intg", "-", "2.5"));
+            Assert.Equal(Whole(6), Exact("fn:gcd", "-", "12", "right", "18"));
+            Assert.Equal(Fraction(-17, 5), Exact("-", "17", "divr", "5"));
+            Assert.Equal(Fraction(107, 40), Exact("fn:rndfix", "2.675", "right", "3"));
+            Assert.Equal(Whole(8), Exact("2", "pow", "3"));
+            Assert.Equal(Whole(2), Exact("root", "3", "right", "8"));
+            Assert.Equal(Fraction(1, 4), Exact("fn:abs", "-", "0.25"));
+        }
+
+        // Rnd hands back the number the display writes, as the fraction it is
+        [Fact]
+        public void RoundsToAnExactDecimalWithRnd()
+        {
+            var evaluator = new MathEvaluator { NumberFormat = new NumberFormat(NumberNotation.Fix, 2) };
+            EvaluationResult result = evaluator.Evaluate(Keys.Press("fn:rnd", "1", "/", "3").RootTokens);
+
+            Assert.Equal(Fraction(33, 100), result.FirstValue.Exact);
+        }
+
+        [Fact]
+        public void DrawsRanAsAnExactFraction()
+        {
+            MathEvaluator evaluator = Seeded();
+            EvaluationResult result = evaluator.Evaluate(Keys.Press("rand").RootTokens);
+
+            Assert.True(result.FirstValue.Exact!.TryGetRational(out Rational value));
+            Assert.Equal(result.Value, value.ToDouble());
+            Assert.Equal(0, 1000 % (int)value.Denominator);
+        }
+
+        [Fact]
+        public void DropsTheExactValueWhereThereIsNone()
+        {
+            Assert.Null(Exact("fn:ln", "2"));
+            Assert.Null(Exact("e"));
+            Assert.Null(Exact("log", "100"));
+            Assert.Null(Exact("fn:sinh", "0"));
+            Assert.Null(Exact("4", "pow", "0.5"));
+            Assert.Null(Exact("root", "3", "right", "2"));
+            Assert.Null(Exact("fn:sin", "18"));
+        }
+
+        // the angle counts in steps of 15°, round the whole turn, in every unit
+        [Fact]
+        public void KnowsTheSineOfEveryMultipleOfFifteenDegrees()
+        {
+            Assert.Equal(Fraction(1, 2), Exact("fn:sin", "390"));
+            Assert.Equal(ExactValue.Multiply(Root(2), Fraction(1, 2)), Exact("fn:cos", "-", "45"));
+            Assert.Equal(ExactValue.Zero, Exact("fn:sin", "180"));
+            Assert.Equal(Whole(-1), Exact("fn:tan", "135"));
+            Assert.Equal(Whole(2), Exact("fn:sec", "60"));
+            Assert.Equal(Whole(2), Exact("fn:csc", "30"));
+            Assert.Equal(Whole(1), Exact("fn:cot", "45"));
+
+            Assert.Equal(Fraction(1, 2), Exact(AngleMode.Radians, "fn:cos", "pi", "/", "3"));
+            Assert.Equal(Whole(1), Exact(AngleMode.Gradians, "fn:sin", "100"));
+        }
+
+        // at an angle this large the double only sees noise; the exact value still knows where it stands
+        [Fact]
+        public void KnowsTheExactValueWhereTheDoubleCannotTell()
+        {
+            Assert.Equal(0.5, Value("fn:sin", "36000000000000000000030"));
+            Assert.Equal(1, Value("fn:tan", "36000000000000000000045"));
+            Assert.Equal(EvaluationError.Domain, Error("fn:tan", "36000000000000000000090"));
+        }
+
+        [Fact]
+        public void LooksTheArgumentOfAnInverseFunctionUp()
+        {
+            Assert.Equal(Whole(45), Exact("fn:arcsin", "sqrt", "2", "right", "/", "2"));
+            Assert.Equal(Whole(90), Exact("fn:arccos", "0"));
+            Assert.Equal(Whole(60), Exact("fn:arcsec", "2"));
+            Assert.Equal(Whole(30), Exact("fn:arccsc", "2"));
+            Assert.Equal(Whole(135), Exact("fn:arccot", "-", "1"));
+            Assert.Equal(Whole(15), Exact("fn:arctan", "2", "-", "sqrt", "3"));
+
+            Assert.Equal(ExactValue.Multiply(ExactValue.Pi, Fraction(1, 4)), Exact(AngleMode.Radians, "fn:arctan", "1"));
+            Assert.Equal(Fraction(100, 3), Exact(AngleMode.Gradians, "fn:arcsin", "0.5"));
+
+            Assert.Null(Exact("fn:arcsin", "0.3"));
+        }
+
+        [Fact]
+        public void KeepsBothValuesOfAPairExact()
+        {
+            EvaluationResult polar = new MathEvaluator().Evaluate(Keys.Press("fn:pol", "1", "right", "1").RootTokens);
+            Assert.Equal(Root(2), polar.FirstValue.Exact);
+            Assert.Equal(Whole(45), polar.SecondValue.Exact);
+
+            EvaluationResult left = new MathEvaluator().Evaluate(Keys.Press("fn:pol", "-", "1", "right", "0").RootTokens);
+            Assert.Equal(Whole(180), left.SecondValue.Exact);
+
+            EvaluationResult rectangular = new MathEvaluator().Evaluate(Keys.Press("fn:rec", "2", "right", "30").RootTokens);
+            Assert.Equal(Root(3), rectangular.FirstValue.Exact);
+            Assert.Equal(Whole(1), rectangular.SecondValue.Exact);
+        }
+
+        [Fact]
+        public void CarriesTheExactValueOfAnsAndOfASeed()
+        {
+            var evaluator = new MathEvaluator { LastAnswer = new MathValue(Math.Sqrt(2), Root(2)) };
+            EvaluationResult withAns = evaluator.Evaluate(Keys.Press("ans", "*", "sqrt", "2").RootTokens);
+            Assert.Equal(Whole(2), withAns.FirstValue.Exact);
+
+            var manager = new MathInputManager();
+            manager.SeedWithValue("1.41421356237", new MathValue(Math.Sqrt(2), Root(2)));
+            manager.AddOperator("*");
+            manager.StartRoot(customIndex: false);
+            manager.AddNumber("2");
+
+            Assert.Equal(Whole(2), new MathEvaluator().Evaluate(manager.RootTokens).FirstValue.Exact);
         }
     }
 }

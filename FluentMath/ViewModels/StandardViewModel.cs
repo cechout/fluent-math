@@ -32,6 +32,10 @@ namespace FluentMath.ViewModels
         // settings open a result in
         private AnswerForm _answerForm;
 
+        // whether a fraction is shown mixed rather than improper; every = starts over at the settings, and
+        // the shift of S to D swaps it
+        private bool _mixedFraction;
+
         // the result on screen, a pair included; LastAnswer on the evaluator only keeps its first value
         private EvaluationResult _result;
 
@@ -325,6 +329,12 @@ namespace FluentMath.ViewModels
             if (sign == "cmd_eng" || sign == "cmd_eng_back")
             {
                 ShowEngineering(towardsSmallerPowers: sign == "cmd_eng");
+                return;
+            }
+
+            if (sign == "cmd_frac_swap")
+            {
+                SwapFractionForm();
                 return;
             }
 
@@ -719,33 +729,47 @@ namespace FluentMath.ViewModels
         //
         // a pair carries on as its first value, the one Ans holds as well; a decimal carries on as the
         // digits the number format wrote, with the full value behind them
+        //
+        // an exact form carries on as real roots and a real π, so the next calculation is exact again, and
+        // a recurring decimal, which cannot be typed, as the fraction it stands for
         private void SeedWithShownResult()
         {
-            double value = _result.Value;
-            bool hasFraction = ResultFormatter.TryToFraction(value, out long numerator, out long denominator);
+            MathValue value = _result.FirstValue;
 
-            if (_answerForm == AnswerForm.PrimeFactors && ResultFormatter.TryPrimeFactors(value, out var factors))
+            if (_answerForm == AnswerForm.PrimeFactors && ResultFormatter.TryPrimeFactors(value.Value, out var factors))
             {
                 _inputManager.SeedWithTokens(ResultFormatter.PrimeFactorTokens(factors));
                 return;
             }
 
-            if (_answerForm == AnswerForm.Mixed && ResultFormatter.HasMixedForm(value))
-            {
-                _inputManager.SeedWithMixedFraction(numerator / denominator,
-                    Math.Abs(numerator % denominator), denominator);
-                return;
-            }
+            AnswerForm form = _answerForm == AnswerForm.Recurring ? ExactForm() : _answerForm;
 
-            if ((_answerForm == AnswerForm.Improper || _answerForm == AnswerForm.Mixed) && hasFraction && denominator > 1)
+            if (form == AnswerForm.Improper || form == AnswerForm.Mixed)
             {
-                _inputManager.SeedWithFraction(numerator, denominator);
-                return;
+                if (ResultFormatter.TryFraction(value, out long numerator, out long denominator))
+                {
+                    if (form == AnswerForm.Mixed && Math.Abs(numerator) > denominator)
+                    {
+                        _inputManager.SeedWithMixedFraction(numerator / denominator,
+                            Math.Abs(numerator % denominator), denominator);
+                        return;
+                    }
+
+                    _inputManager.SeedWithFraction(numerator, denominator);
+                    return;
+                }
+
+                List<MathToken>? exact = ResultFormatter.ExactFormTokens(value, asInput: true);
+                if (exact != null)
+                {
+                    _inputManager.SeedWithTokens(exact);
+                    return;
+                }
             }
 
             WrittenDecimal written = _answerForm == AnswerForm.Engineering
-                ? ResultFormatter.Engineering(value, _engineeringExponent, _settings.NumberFormat, _settings.UsePrefixes)
-                : ResultFormatter.Write(value, _settings.NumberFormat);
+                ? ResultFormatter.Engineering(value.Value, _engineeringExponent, _settings.NumberFormat, _settings.UsePrefixes)
+                : ResultFormatter.Write(value.Value, _settings.NumberFormat);
 
             if (written.Exponent is not int exponent)
             {
@@ -754,7 +778,9 @@ namespace FluentMath.ViewModels
             }
 
             // the digits stand for the value over the power, so that is what they carry
-            double mantissa = value / Math.Pow(10, exponent);
+            MathValue power = new MathValue(Math.Pow(10, exponent),
+                ExactValue.Power(ExactValue.FromInteger(10), ExactValue.FromInteger(exponent)));
+            MathValue mantissa = value / power;
 
             if (written.Prefix != null) _inputManager.SeedWithPrefix(written.Digits, mantissa, written.Prefix);
             else _inputManager.SeedWithScientific(written.Digits, mantissa, exponent);
@@ -839,8 +865,9 @@ namespace FluentMath.ViewModels
                 return false;
             }
 
-            _evaluator.LastAnswer = result.Value;
+            _evaluator.LastAnswer = result.FirstValue;
             _result = result;
+            _mixedFraction = _settings.MixedFirst;
             _answerForm = FirstAnswerForm();
             PublishResult();
             _isShowingResult = true;
@@ -901,7 +928,7 @@ namespace FluentMath.ViewModels
                 return;
             }
 
-            _result = EvaluationResult.Success(_result.Value);
+            _result = EvaluationResult.Success(_result.FirstValue);
             _answerForm = AnswerForm.PrimeFactors;
             PublishResult();
         }
@@ -924,7 +951,7 @@ namespace FluentMath.ViewModels
                 int first = towardsSmallerPowers ? standard : standard + 3;
 
                 _engineeringExponent = ResultFormatter.CanWriteEngineering(value, first) ? first : standard;
-                _result = EvaluationResult.Success(value);
+                _result = EvaluationResult.Success(_result.FirstValue);
                 _answerForm = AnswerForm.Engineering;
                 PublishResult();
                 return;
@@ -937,19 +964,22 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // cycles the shown result between a decimal and its two fractions, in the order the settings put
-        // the fractions in, skipping whichever this value does not have; a pair switches both values
-        // together, and has a form when either of them does
+        // cycles the shown result through its exact form, its recurring decimal and its decimal, the way
+        // S⇔D does on a Casio: 7/3, 2.3 with a bar, 2.333333333; skipping whichever this value does not
+        // have, so √2/2 only switches with its decimal; a pair switches both values together, and has a
+        // form when either of them does
         //
-        // the conversion is numeric, so a result that came out of a root or a pi has no fraction at all
-        // and the key does nothing there
+        // the exact form comes from the exact value, so a result that came out of a logarithm or e has only
+        // the fraction the numeric search finds for it, if any
         // pressed during input it evaluates first and then switches, which saves the = a Casio needs
         private void ToggleAnswerForm()
         {
             if (!_isShowingResult && !CalculateResult()) return;
 
-            AnswerForm[] cycle = AnswerFormCycle();
-            int at = Array.IndexOf(cycle, _answerForm);
+            AnswerForm[] cycle = { ExactForm(), AnswerForm.Recurring, AnswerForm.Decimal };
+            int at = _answerForm == AnswerForm.Improper || _answerForm == AnswerForm.Mixed
+                ? 0
+                : Array.IndexOf(cycle, _answerForm);
 
             // the prime factors and the ENG view are left for the decimal, from where the cycle starts over
             if (at < 0)
@@ -970,41 +1000,51 @@ namespace FluentMath.ViewModels
             }
         }
 
-        // the decimal, then the fraction the settings put first, then the other one
-        private AnswerForm[] AnswerFormCycle()
+        // the shift of S⇔D, which a Casio labels a b/c ⇔ d/c: the fraction swaps between improper and mixed,
+        // and is shown in the new form from whichever view the result was in
+        //
+        // a result without a fraction is left alone, and a proper fraction has no mixed form and stays as
+        // it is; pressed during input it evaluates first, like the key it is the shift of
+        private void SwapFractionForm()
         {
-            return _settings.MixedFirst
-                ? new[] { AnswerForm.Decimal, AnswerForm.Mixed, AnswerForm.Improper }
-                : new[] { AnswerForm.Decimal, AnswerForm.Improper, AnswerForm.Mixed };
+            if (!_isShowingResult && !CalculateResult()) return;
+            if (!HasForm(ResultFormatter.HasFractionForm)) return;
+
+            _mixedFraction = !_mixedFraction;
+            _answerForm = ExactForm();
+            PublishResult();
         }
 
-        // the form a new result opens in: with exact first, the first fraction of the cycle this value
-        // has, and the decimal when it has neither
+        // the exact form in the fraction form currently chosen; a value with no mixed form, a proper
+        // fraction or a root, is shown improper, which is the one form it has
+        private AnswerForm ExactForm()
+        {
+            return _mixedFraction && HasForm(AnswerForm.Mixed) ? AnswerForm.Mixed : AnswerForm.Improper;
+        }
+
+        // the form a new result opens in: with exact first, the exact form when the value has one, and the
+        // decimal when it has none
         private AnswerForm FirstAnswerForm()
         {
-            if (!_settings.ExactFirst) return AnswerForm.Decimal;
+            if (!_settings.ExactFirst || !HasForm(AnswerForm.Improper)) return AnswerForm.Decimal;
 
-            foreach (AnswerForm form in AnswerFormCycle())
-            {
-                if (form != AnswerForm.Decimal && HasForm(form)) return form;
-            }
-
-            return AnswerForm.Decimal;
+            return ExactForm();
         }
 
         private bool HasForm(AnswerForm form)
         {
-            if (form == AnswerForm.Improper) return HasForm(ResultFormatter.HasFractionForm);
+            if (form == AnswerForm.Improper) return HasForm(ResultFormatter.HasExactForm);
             if (form == AnswerForm.Mixed) return HasForm(ResultFormatter.HasMixedForm);
+            if (form == AnswerForm.Recurring) return _settings.RecurringDecimals && HasForm(ResultFormatter.HasRecurringForm);
 
             return form == AnswerForm.Decimal;
         }
 
-        private bool HasForm(Func<double, bool> hasForm)
+        private bool HasForm(Func<MathValue, bool> hasForm)
         {
-            if (hasForm(_result.Value)) return true;
+            if (hasForm(_result.FirstValue)) return true;
 
-            return _result.Kind != ResultKind.Single && hasForm(_result.Second);
+            return _result.Kind != ResultKind.Single && hasForm(_result.SecondValue);
         }
 
         private void ClearAll()

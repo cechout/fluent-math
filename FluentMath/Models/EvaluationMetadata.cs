@@ -1,3 +1,6 @@
+using System;
+using System.Numerics;
+
 namespace FluentMath.Models
 {
     // what went wrong, in the categories a calculator display can actually name
@@ -26,15 +29,19 @@ namespace FluentMath.Models
     }
 
 
-    // which shape a finished result is shown in; the S to D key cycles through the first three
-    // a value only has the fractions when a fraction was found for it at all, and the prime factors only
-    // when it is a whole number above zero, which the FACT key asks for; the ENG keys ask for the
-    // engineering form, a mantissa over a power of ten that is a multiple of three
+    // which shape a finished result is shown in; the S to D key cycles the exact form, the recurring
+    // decimal and the decimal, and its shift swaps the exact form between improper and mixed
+    // the exact form is a fraction for a rational and a form with roots or π otherwise, drawn the same
+    // under both names, since only a fraction has a whole part to split off
+    // a value only has a form when one was found for it at all, and the prime factors only when it is a
+    // whole number above zero, which the FACT key asks for; the ENG keys ask for the engineering form, a
+    // mantissa over a power of ten that is a multiple of three
     public enum AnswerForm
     {
         Decimal,
         Improper,
         Mixed,
+        Recurring,
         PrimeFactors,
         Engineering
     }
@@ -53,6 +60,63 @@ namespace FluentMath.Models
     }
 
 
+    // a number as the evaluator carries it: the double every calculation has, and beside it the exact
+    // value, for as long as every step that led to it was exact
+    //
+    // when the exact value is known the double is read off it, so the two never disagree about a zero or
+    // a whole number: √2×√2 is 2 in both, and 1÷(√2×√2−2) is the Math ERROR it is on a Casio
+    // a double on its own converts into one without an exact value, so a constant written into the
+    // arithmetic below as a plain number has to be made exact on purpose, see Whole
+    public readonly struct MathValue
+    {
+        public double Value { get; }
+        public ExactValue? Exact { get; }
+
+        public MathValue(double value, ExactValue? exact = null)
+        {
+            Value = exact != null ? exact.ToDouble() : value;
+            Exact = exact;
+        }
+
+        // a whole number with its exact value, for the functions whose answer is always whole; past the
+        // range a double holds every whole number in, the digits are no longer the value
+        public static MathValue Whole(double value)
+        {
+            if (Math.Abs(value) >= 9007199254740992) return new MathValue(value);
+
+            return new MathValue(value, ExactValue.FromInteger(new BigInteger(value)));
+        }
+
+        public static implicit operator MathValue(double value) => new MathValue(value);
+
+        public static MathValue operator +(MathValue left, MathValue right)
+        {
+            return new MathValue(left.Value + right.Value, ExactValue.Add(left.Exact, right.Exact));
+        }
+
+        public static MathValue operator -(MathValue left, MathValue right)
+        {
+            return new MathValue(left.Value - right.Value, ExactValue.Subtract(left.Exact, right.Exact));
+        }
+
+        public static MathValue operator -(MathValue value)
+        {
+            return new MathValue(-value.Value, ExactValue.Negate(value.Exact));
+        }
+
+        public static MathValue operator *(MathValue left, MathValue right)
+        {
+            return new MathValue(left.Value * right.Value, ExactValue.Multiply(left.Exact, right.Exact));
+        }
+
+        // the caller has ruled out a zero divisor
+        public static MathValue operator /(MathValue left, MathValue right)
+        {
+            return new MathValue(left.Value / right.Value, ExactValue.Divide(left.Exact, right.Exact));
+        }
+    }
+
+
     // the outcome of one evaluation; a failure carries no value, so IsSuccess has to be checked first
     //
     // deliberately not an exception: half-typed input is the normal state here rather than an
@@ -60,27 +124,30 @@ namespace FluentMath.Models
     public readonly struct EvaluationResult
     {
         public bool IsSuccess { get; }
-        public double Value { get; } // the first value of a pair, which is also what Ans takes
         public EvaluationError Error { get; }
-
         public ResultKind Kind { get; }
-        public double Second { get; } // the remainder, the angle or y; 0 for a single value
 
-        private EvaluationResult(bool isSuccess, double value, EvaluationError error, ResultKind kind, double second)
+        public MathValue FirstValue { get; } // the first value of a pair, which is also what Ans takes
+        public MathValue SecondValue { get; } // the remainder, the angle or y; 0 for a single value
+
+        public double Value => FirstValue.Value;
+        public double Second => SecondValue.Value;
+
+        private EvaluationResult(bool isSuccess, MathValue value, EvaluationError error, ResultKind kind, MathValue second)
         {
             IsSuccess = isSuccess;
-            Value = value;
+            FirstValue = value;
             Error = error;
             Kind = kind;
-            Second = second;
+            SecondValue = second;
         }
 
-        public static EvaluationResult Success(double value)
+        public static EvaluationResult Success(MathValue value)
         {
             return new EvaluationResult(true, value, EvaluationError.None, ResultKind.Single, 0);
         }
 
-        public static EvaluationResult Pair(ResultKind kind, double first, double second)
+        public static EvaluationResult Pair(ResultKind kind, MathValue first, MathValue second)
         {
             return new EvaluationResult(true, first, EvaluationError.None, kind, second);
         }

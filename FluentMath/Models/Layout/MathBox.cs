@@ -261,6 +261,40 @@ namespace FluentMath.Models.Layout
     }
 
 
+    // a bar drawn over what it stands on, which is the period of a recurring decimal
+    //
+    // the bar is drawn rather than set as an accent, the way the rule over a radicand is, so it spans
+    // exactly the digits under it; it hangs off the top of their line box by the same kind of gap
+    public sealed class OverlineBox : MathBox
+    {
+        public MathBox Content { get; }
+        public double BarThickness { get; }
+
+        private readonly double _gap;
+
+        public OverlineBox(MathBox content, double barThickness, double gap)
+        {
+            Content = content;
+            BarThickness = barThickness;
+            _gap = gap;
+
+            Width = content.Width;
+            Descent = content.Descent;
+            Ascent = Math.Max(content.Ascent, content.Ascent + gap + barThickness);
+        }
+
+        // where the bar is drawn, once the box has been placed
+        public double BarTop => Baseline - Content.Ascent - _gap - BarThickness;
+
+        public override void Place(double x, double baseline)
+        {
+            base.Place(x, baseline);
+
+            Content.Place(X, Baseline);
+        }
+    }
+
+
     // a bracket or a bar that takes its height from what it stands beside
     public enum DelimiterKind
     {

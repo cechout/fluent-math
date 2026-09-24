@@ -18,7 +18,8 @@ namespace FluentMath.Models
         Postfix,
         Answer,
         Random,
-        MixedFraction
+        MixedFraction,
+        Recurring
     }
 
 
@@ -114,13 +115,14 @@ namespace FluentMath.Models
     // these, and the evaluator reads the full value for as long as the run is exactly those digits
     // an edit inside the run adds a digit without one or takes one away, and the run reads as typed
     //
-    // the magnitude only, since a minus in front is a sign token of its own
+    // the magnitude only, since a minus in front is a sign token of its own; its exact value rides along,
+    // so √2 carried on as its decimal digits is still √2 in the next calculation, the way Ans is on a Casio
     public sealed class SeededValue
     {
-        public double Magnitude { get; }
+        public MathValue Magnitude { get; }
         public int DigitCount { get; }
 
-        public SeededValue(double magnitude, int digitCount)
+        public SeededValue(MathValue magnitude, int digitCount)
         {
             Magnitude = magnitude;
             DigitCount = digitCount;
@@ -134,6 +136,9 @@ namespace FluentMath.Models
     {
         public double NumericValue { get; }
 
+        // π has an exact value and e does not, which is what keeps e out of every exact form
+        public ExactValue? Exact { get; }
+
         private readonly string _latex;
 
         public ConstantToken(string name) : base(TokenType.Constant, name)
@@ -142,6 +147,7 @@ namespace FluentMath.Models
             {
                 case "pi":
                     NumericValue = Math.PI;
+                    Exact = ExactValue.Pi;
                     _latex = "\\pi";
                     break;
 
@@ -176,6 +182,15 @@ namespace FluentMath.Models
         public RandomToken() : base(TokenType.Random, "Ran#") { }
 
         public override string ToLatex(LatexRenderContext context) { return "\\text{Ran\\#}"; }
+    }
+
+    // the period of a recurring decimal, drawn under a bar the way a Casio draws 1÷3 as 0.3 with a bar
+    // over the 3; it only ever stands in a result and is never typed or evaluated
+    public class RecurringToken : MathToken
+    {
+        public RecurringToken(string digits) : base(TokenType.Recurring, digits) { }
+
+        public override string ToLatex(LatexRenderContext context) { return $"\\overline{{{Value}}}"; }
     }
 
     // x!, the reciprocal, percent and the decimal prefixes; all of them stand behind their operand
@@ -709,6 +724,7 @@ namespace FluentMath.Models
                 case PostfixToken postfix: return new PostfixToken(postfix.Value);
                 case AnsToken: return new AnsToken();
                 case RandomToken: return new RandomToken();
+                case RecurringToken recurring: return new RecurringToken(recurring.Value);
             }
 
             if (token.GetType() != typeof(MathToken))
