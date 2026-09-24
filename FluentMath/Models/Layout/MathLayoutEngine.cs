@@ -448,13 +448,21 @@ namespace FluentMath.Models.Layout
             // as the sign touching what it encloses
             double padSize = GapAt(size, _style.FontSizePx * _style.RootScale, _style.RadicalPadScaling);
 
+            MathBox radicand = BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1));
+
+            // the tip of the sign is measured from the baseline and not from the bottom of the radicand,
+            // whose box reaches well below the digits; only a radicand deeper than a digit takes it lower
+            double signDescent = size * _style.RadicalBottomDrop
+                + Math.Max(0, radicand.Descent - _measurer.Measure(StrutText, size).Descent);
+
             return new RootBox(
                 index,
-                BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1)),
+                radicand,
                 size * _style.RadicalHookWidth,
                 size * _style.RadicalRuleThickness,
                 size * _style.RadicalHookThickness,
                 size * _style.RadicalVerticalGap,
+                signDescent,
                 _style.RadicalIndexRaise,
                 padSize * _style.RadicalLeadingPad,
                 padSize * _style.RadicalTrailingPad);

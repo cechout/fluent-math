@@ -351,6 +351,43 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void TheTipOfARootStandsItsDropBelowTheBaselineOfTheDigits()
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalBottomDrop = 0.1;
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(Digit("2"));
+
+            RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
+
+            // the digit box reaches 0.25 below the baseline, so the tip sits inside it and the box keeps
+            // the depth of the digit
+            Assert.Equal(FontSize * 0.1, box.SignDescent, 9);
+            Assert.Equal(FontSize * 0.25, box.Descent, 9);
+        }
+
+        [Fact]
+        public void ARadicandDeeperThanADigitTakesTheTipDownByTheExtraDepth()
+        {
+            MathLayoutStyle style = Style();
+            style.RadicalBottomDrop = 0.1;
+
+            FractionToken fraction = new FractionToken();
+            fraction.NumeratorTokens.Add(Digit("1"));
+            fraction.DenominatorTokens.Add(Digit("2"));
+
+            RootToken root = new RootToken();
+            root.RadicandTokens.Add(fraction);
+
+            RootBox box = (RootBox)Engine(style).BuildRow(new List<MathToken> { root }).Children.Single();
+
+            double extra = box.Radicand.Descent - FontSize * 0.25;
+            Assert.True(extra > 0);
+            Assert.Equal(FontSize * 0.1 + extra, box.SignDescent, 9);
+        }
+
+        [Fact]
         public void TheRadicandSitsAfterTheIndexAndTheHookAndTheAirBehindIt()
         {
             MathLayoutStyle style = Style();

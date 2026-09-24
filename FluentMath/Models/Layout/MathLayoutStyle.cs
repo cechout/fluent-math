@@ -192,6 +192,11 @@ namespace FluentMath.Models.Layout
         // moves the bar up
         public double RadicalVerticalGap { get; set; } = -0.18;
 
+        // how far below the baseline the tip of the √ sign reaches, the line the digits stand on; bigger
+        // moves it down, and a radicand that reaches lower than a digit, a fraction for example, takes the
+        // tip down with it by the extra depth
+        public double RadicalBottomDrop { get; set; } = 0.15;
+
         // space between the √ sign and the radicand, so the two do not touch
         public double RadicalLeadingPad { get; set; } = 0.08;
 

@@ -217,14 +217,18 @@ namespace FluentMath.Models.Layout
         // how tall the sign itself is, which is less than Ascent whenever an index reaches higher
         public double SignAscent { get; }
 
+        // how far below the baseline the tip of the sign reaches, which is less than Descent whenever the
+        // radicand reaches lower
+        public double SignDescent { get; }
+
         public double IndexWidth => Index?.Width ?? 0;
 
         private readonly double _indexRaise;
         private readonly double _leadingPad;
 
         public RootBox(MathBox index, MathBox radicand, double hookWidth, double ruleThickness,
-            double hookThickness, double verticalGap, double indexRaise, double leadingPad,
-            double trailingPad)
+            double hookThickness, double verticalGap, double signDescent, double indexRaise,
+            double leadingPad, double trailingPad)
         {
             Index = index;
             Radicand = radicand;
@@ -234,12 +238,13 @@ namespace FluentMath.Models.Layout
 
             // the bar is what stands on top, so it is the bar that sets how high the sign reaches
             SignAscent = radicand.Ascent + verticalGap + ruleThickness;
+            SignDescent = signDescent;
 
             // the bar runs the full width of the box, so it covers both pads: the one that keeps the
             // radicand off the sign and the one that carries the bar past its last glyph
             _leadingPad = leadingPad;
             Width = IndexWidth + hookWidth + leadingPad + radicand.Width + trailingPad;
-            Descent = radicand.Descent;
+            Descent = Math.Max(radicand.Descent, signDescent);
 
             // the index may stand higher than the sign it sits on, and then it is what sets the height
             double indexTop = index == null ? 0 : SignAscent * indexRaise + index.Height;
