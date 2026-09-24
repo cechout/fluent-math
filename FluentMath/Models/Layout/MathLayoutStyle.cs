@@ -181,21 +181,21 @@ namespace FluentMath.Models.Layout
         // === roots ===
 
         public double RadicalHookWidth { get; set; } = 0.55;     // width of the √ sign in front of the radicand
-        public double RadicalRuleThickness { get; set; } = 0.08; // thickness of the bar over the radicand
+        public double RadicalRuleThickness { get; set; } = 0.07; // thickness of the bar over the radicand
 
         // thickness of the √ sign itself; a number of its own, so the sign and the bar can differ, and the
         // round joins where the two meet hide the step between them
-        public double RadicalHookThickness { get; set; } = 0.06;
+        public double RadicalHookThickness { get; set; } = 0.05;
 
         // space between the bar and the radicand below it; negative, because the box of the digits reaches
         // well above the digits themselves and the bar is pulled down into that empty room, and closer to 0
         // moves the bar up
-        public double RadicalVerticalGap { get; set; } = -0.18;
+        public double RadicalVerticalGap { get; set; } = -0.20;
 
         // how far below the baseline the tip of the √ sign reaches, the line the digits stand on; bigger
         // moves it down, and a radicand that reaches lower than a digit, a fraction for example, takes the
         // tip down with it by the extra depth
-        public double RadicalBottomDrop { get; set; } = 0.15;
+        public double RadicalBottomDrop { get; set; } = 0.10;
 
         // space between the √ sign and the radicand, so the two do not touch
         public double RadicalLeadingPad { get; set; } = 0.08;
