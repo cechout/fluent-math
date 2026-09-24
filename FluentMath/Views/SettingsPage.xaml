@@ -76,7 +76,7 @@
                 <controls:SettingsCard
                     Description="The unit sin, cos and tan read an angle in"
                     Header="Angle Unit"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE7AD;}">
+                    HeaderIcon="{ui:FontIcon Glyph=&#xF0B4;}">
                     <ComboBox
                         x:Name="AngleUnitComboBox"
                         Width="150"
@@ -129,10 +129,11 @@
 
                 <!--  number format  -->
                 <!--  (the notation sits in the header slot, the two inside refine it)  -->
+                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
                 <controls:SettingsExpander
+                    x:Name="NumberFormatExpander"
                     Description="Norm 1 and Norm 2 write a power of ten below 0.01 and 1e-9, Fix and Sci a set number of digits"
                     Header="Number Format"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8EF;}"
                     IsExpanded="False">
 
                     <ComboBox
@@ -180,10 +181,11 @@
 
                 <!--  separators  -->
                 <!--  (no control on the expander header itself, the two inside are independent of each other)  -->
+                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
                 <controls:SettingsExpander
+                    x:Name="SeparatorsExpander"
                     Description="The marks inside a number, in the formula and in the result"
                     Header="Separators"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE774;}"
                     IsExpanded="False">
 
                     <controls:SettingsExpander.Items>

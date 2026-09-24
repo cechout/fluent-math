@@ -1,6 +1,8 @@
 using FluentMath.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI.Text;
 
 namespace FluentMath.Views
 {
@@ -11,9 +13,22 @@ namespace FluentMath.Views
         // theme as a side effect of building the control
         private bool _isLoading = true;
 
+        // --- text icons ---
+        // two headers carry a few characters of text instead of a glyph, see TextIcon
+        // sizes are font sizes in pixels, weights run from 300 (light) over 400 (the pad keys) to 700
+        // (bold) in any step, the range Segoe UI Variable has; outside it the font stays at its end
+        private const double NumberFormatIconSize = 10; // size of ×10ⁿ (bigger = larger, until it is wider than the box and gets shrunk to fit)
+        private const ushort NumberFormatIconWeight = 400; // weight of ×10ⁿ (higher = bolder)
+        private const double SeparatorsIconSize = 12; // size of 0,1 (bigger = larger, until it is wider than the box and gets shrunk to fit)
+        private const ushort SeparatorsIconWeight = 400; // weight of 0,1 (higher = bolder)
+        private const double IconBoxSize = 20; // the box a card gives its icon, SettingsCardHeaderIconMaxSize in the toolkit
+
         public SettingsPage()
         {
             InitializeComponent();
+
+            NumberFormatExpander.HeaderIcon = TextIcon("×10ⁿ", NumberFormatIconSize, NumberFormatIconWeight);
+            SeparatorsExpander.HeaderIcon = TextIcon("0,1", SeparatorsIconSize, SeparatorsIconWeight);
 
             RestoreThemeSelection();
             RestoreCalculatorSettings();
@@ -112,6 +127,29 @@ namespace FluentMath.Views
         private void UpdateDigitsAvailability()
         {
             DigitsCard.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
+        }
+
+
+        // === header icons ===
+
+        // a header icon made of text, in the font the pad keys write in; a FontIcon draws any string it
+        // is given as its glyph, so ×10ⁿ is the same characters as on the key
+        //
+        // the card hosts its icon in a Viewbox of at most 20 by 20 that scales whatever it gets to fill
+        // it; at exactly the height of the box and at least its width the scale is 1, so the font size
+        // is the size on screen, and a text wider than the box is shrunk back into it rather than cut
+        // off, while the header beside it stays where it is on every other card
+        private static FontIcon TextIcon(string text, double fontSize, ushort weight)
+        {
+            return new FontIcon
+            {
+                Glyph = text,
+                FontFamily = new FontFamily("XamlAutoFontFamily"), // what BodyLargeTextBlockStyle sets on the pad keys
+                FontSize = fontSize,
+                FontWeight = new FontWeight { Weight = weight },
+                Height = IconBoxSize,
+                MinWidth = IconBoxSize
+            };
         }
     }
 }
