@@ -250,9 +250,8 @@
                     HorizontalSpacing="4"
                     VerticalSpacing="0">
                     <HyperlinkButton Content="Documentation" NavigateUri="https://github.com/cechout/fluent-math" />
-                    <HyperlinkButton Content="Bug Report" NavigateUri="https://github.com/cechout/fluent-math/issues/new" />
+                    <HyperlinkButton Content="Bug Report" NavigateUri="https://github.com/cechout/fluent-math/issues/new/choose" />
                     <HyperlinkButton Content="Developer Profile" NavigateUri="https://github.com/cechout" />
-                    <HyperlinkButton Content="GitHub Sponsoring" NavigateUri="https://github.com/sponsors/cechout" />
                 </controls:WrapPanel>
 
             </StackPanel>
