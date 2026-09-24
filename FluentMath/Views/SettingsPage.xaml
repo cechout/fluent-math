@@ -112,7 +112,7 @@
                     </ComboBox>
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Which of the two a result shows first; SHIFT S⇔D swaps them" Header="Fraction Form">
+                        <controls:SettingsCard Header="Fraction Form">
                             <ComboBox
                                 x:Name="FractionFormComboBox"
                                 Width="150"
@@ -122,7 +122,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="A bar over the period on the way to the decimal, 2.3 with a bar for 7/3" Header="Recurring Decimals">
+                        <controls:SettingsCard Header="Recurring Decimals">
                             <ToggleSwitch
                                 x:Name="RecurringToggle"
                                 OffContent="Off"
@@ -153,10 +153,7 @@
 
                     <controls:SettingsExpander.Items>
                         <!--  (stays disabled under Norm, see UpdateDigitsAvailability)  -->
-                        <controls:SettingsCard
-                            x:Name="DigitsCard"
-                            Description="Decimals for Fix, significant digits for Sci"
-                            Header="Digits">
+                        <controls:SettingsCard x:Name="DigitsCard" Header="Digits">
                             <ComboBox
                                 x:Name="DigitsComboBox"
                                 Width="70"
@@ -174,7 +171,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="The ENG keys write a result as 1.234k instead of 1.234×10³" Header="Decimal Prefixes">
+                        <controls:SettingsCard Header="Decimal Prefixes">
                             <ToggleSwitch
                                 x:Name="PrefixesToggle"
                                 OffContent="Off"
@@ -194,7 +191,7 @@
                     IsExpanded="False">
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="With a comma, two arguments are separated by a semicolon" Header="Decimal Mark">
+                        <controls:SettingsCard Header="Decimal Mark">
                             <ComboBox
                                 x:Name="DecimalMarkComboBox"
                                 Width="150"
@@ -205,7 +202,7 @@
                             </ComboBox>
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="A thin gap every three digits" Header="Digit Grouping">
+                        <controls:SettingsCard Header="Digit Grouping">
                             <ToggleSwitch
                                 x:Name="GroupDigitsToggle"
                                 OffContent="Off"
@@ -236,11 +233,11 @@
                         IsTextSelectionEnabled="True" />
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Readme, usage and the full source" Header="Documentation">
+                        <controls:SettingsCard Header="Documentation">
                             <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout/fluent-math" />
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="Other projects by Daniel Čech" Header="Developer Profile">
+                        <controls:SettingsCard Header="Developer Profile">
                             <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout" />
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
