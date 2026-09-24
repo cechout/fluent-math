@@ -12,8 +12,8 @@ namespace FluentMath.Models.Layout
         // === the two display lines ===
 
         // the two lines only differ in their font size
-        public const double InputLineFontSize = 32;
-        public const double HistoryLineFontSize = 18;
+        public const double InputLineFontSize = 30;
+        public const double HistoryLineFontSize = 16;
 
         public static MathLayoutStyle ForInputLine()
         {
