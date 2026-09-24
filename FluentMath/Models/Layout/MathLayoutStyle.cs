@@ -32,7 +32,7 @@ namespace FluentMath.Models.Layout
 
         // true keeps both halves of a fraction at full size instead of the smaller script size, which makes
         // a fraction much taller; the evaluator reads it too
-        public bool UseDisplayFractions { get; set; } = false;
+        public bool UseDisplayFractions { get; set; } = true;
 
         // the smallest a formula that is too tall for its line is shrunk to, 0.45 being 45 percent; below
         // that it is cut off instead
@@ -59,12 +59,15 @@ namespace FluentMath.Models.Layout
 
         // === script sizes ===
 
-        // numerators, denominators, exponents and bounds are drawn smaller: one level in at ScriptScale,
-        // two or more levels in at ScriptScriptScale, and never smaller than that
+        // exponents, the base of a logarithm, the raised −1 and the bounds of Σ, Π and ∫ are drawn smaller:
+        // one level in at ScriptScale, two or more levels in at ScriptScriptScale, and never smaller than that
+        //
+        // numerators and denominators only join them while UseDisplayFractions is off; with it on, a
+        // fraction keeps its content at the size of the text around it
         //
         // both are compared to the full text size, not to the level above, so deep nesting stops shrinking
-        public double ScriptScale { get; set; } = 0.7;
-        public double ScriptScriptScale { get; set; } = 0.4;
+        public double ScriptScale { get; set; } = 0.5;       // an exponent, 0.5 being half the text; smaller shrinks it
+        public double ScriptScriptScale { get; set; } = 0.4; // an exponent inside an exponent, and the index of a root
 
 
         // === structures ===

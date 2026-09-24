@@ -283,11 +283,12 @@ namespace FluentMath.Tests
         [Fact]
         public void ACaretInADeeperSlotIsDrawnAtTheSizeOfThatSlot()
         {
-            FractionToken fraction = new FractionToken();
-            fraction.NumeratorTokens.Add(Digit("1"));
+            PowerToken power = new PowerToken();
+            power.BaseTokens.Add(Digit("2"));
+            power.ExponentTokens.Add(Digit("3"));
 
-            List<MathToken> tokens = new List<MathToken> { fraction };
-            CaretPlacement? caret = Lay(tokens, new CaretTarget(fraction.NumeratorTokens, 0)).Caret;
+            List<MathToken> tokens = new List<MathToken> { power };
+            CaretPlacement? caret = Lay(tokens, new CaretTarget(power.ExponentTokens, 0)).Caret;
 
             Assert.Equal(FontSize * Style().ScriptScale, caret.Value.FontSize);
         }

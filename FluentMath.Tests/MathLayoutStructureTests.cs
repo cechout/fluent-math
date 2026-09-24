@@ -29,6 +29,7 @@ namespace FluentMath.Tests
             return new MathLayoutStyle
             {
                 FontSizePx = FontSize,
+                UseDisplayFractions = false, // most tests reach a deeper level through a fraction, so its halves shrink here
                 ScriptScale = 0.5,
                 ScriptScriptScale = 0.25,
                 MathAxisHeight = 0.2,
