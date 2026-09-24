@@ -26,10 +26,19 @@ namespace FluentMath.Views
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
+
+            this.Loaded += ScientificPage_Loaded;
         }
 
 
         // === navigation ===
+
+        // Loaded rather than OnNavigatedTo, since a cached page is only back in the tree by then; it fires
+        // on every way in, the first one included
+        private void ScientificPage_Loaded(object sender, RoutedEventArgs e)
+        {
+            PadEntrance.Play(Pad);
+        }
 
         // the page is cached and comes back with whatever it was left with, so the two labels the settings
         // page can change are read again here; the display lines do the same when they are loaded

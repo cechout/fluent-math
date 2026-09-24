@@ -70,9 +70,13 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 
+                <!--
+                    the flask the Windows Calculator gives its scientific mode; the glyph is in Segoe
+                    Fluent Icons only, so Windows 10 draws nothing here
+                -->
                 <NavigationViewItem Content="Scientific" Tag="Scientific">
                     <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE94B;" />
+                        <FontIcon Glyph="&#xF196;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 

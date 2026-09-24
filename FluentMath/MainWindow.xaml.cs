@@ -3,6 +3,7 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Linq;
 using WinUIEx;
@@ -33,7 +34,7 @@ namespace FluentMath
 
             // the app opens on the standard calculator; its item is looked up by the tag, since the list
             // opens with a group header
-            MainFrame.Navigate(typeof(StandardPage));
+            ShowPage(typeof(StandardPage));
             NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == "Standard");
 
             // draw our own title bar into the client area; the caption buttons keep transparent
@@ -77,7 +78,14 @@ namespace FluentMath
             // a second click on the item already shown would navigate the page onto itself
             if (page == null || MainFrame.CurrentSourcePageType == page) return;
 
-            MainFrame.Navigate(page);
+            ShowPage(page);
+        }
+
+        // every page switches in without the frames slide; the calculator pages bring their own entrance,
+        // which grows the pad in rather than moving the whole page
+        private void ShowPage(Type page)
+        {
+            MainFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
         }
 
 

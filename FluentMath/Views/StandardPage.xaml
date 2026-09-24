@@ -10,13 +10,12 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <!--  the scientific page without its panel bar, shift layer and splitter: header, display, divider, keypad  -->
+    <!--  the scientific page without its panel bar, shift layer and splitter: header, display, keypad  -->
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="4*" MinHeight="96" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="5*" MinHeight="216" />
+            <RowDefinition Height="5*" MinHeight="220" />
         </Grid.RowDefinitions>
 
 
@@ -116,25 +115,15 @@
         </Grid>
 
 
-        <!--  divider  -->
-        <!--  (the negative sides cancel the pages own 4px inset, so the line runs to the window edge)  -->
-        <Rectangle
-            Grid.Row="2"
-            Height="1"
-            Margin="-4,4,-4,4"
-            HorizontalAlignment="Stretch"
-            Fill="{ThemeResource DividerStrokeColorDefaultBrush}"
-            RadiusX="0.5"
-            RadiusY="0.5" />
-
-
         <!--  keypad  -->
         <!--
-            the keys of a pocket calculator, bound to the same commands as the scientific pad; the
-            order is a first cut
+            the keys of a pocket calculator, bound to the same commands as the scientific pad
+            the whole pad grows in when the page is shown, see PadEntrance
         -->
         <Grid
-            Grid.Row="3"
+            x:Name="Pad"
+            Grid.Row="2"
+            Margin="0,4,0,0"
             ColumnSpacing="{StaticResource KeySpacing}"
             RowSpacing="{StaticResource KeySpacing}">
             <Grid.RowDefinitions>
@@ -159,9 +148,10 @@
                 Grid.Column="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.ToggleAnswerFormCommand}"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_paren_open"
                 Style="{StaticResource OperatorButtonStyle}">
-                <FontIcon FontSize="14" Glyph="&#xE8AB;" />
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="(" />
             </Button>
             <Button
                 Grid.Row="0"
@@ -169,23 +159,33 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_sqrt"
+                CommandParameter="cmd_paren_close"
                 Style="{StaticResource OperatorButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="²√" />
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text=")" />
             </Button>
             <Button
                 Grid.Row="0"
                 Grid.Column="2"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.InputCommand}"
-                CommandParameter="cmd_pow_2"
+                Command="{x:Bind ViewModel.BackspaceCommand}"
                 Style="{StaticResource OperatorButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x²" />
+                <FontIcon FontSize="16" Glyph="&#xE750;" />
             </Button>
             <Button
                 Grid.Row="0"
                 Grid.Column="3"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Command="{x:Bind ViewModel.ClearCommand}"
+                Style="{StaticResource OperatorButtonStyle}">
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="AC" />
+            </Button>
+
+            <!--  row 1  -->
+            <Button
+                Grid.Row="1"
+                Grid.Column="0"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Command="{x:Bind ViewModel.InputCommand}"
@@ -219,54 +219,25 @@
                         TextLineBounds="Tight" />
                 </Grid>
             </Button>
-
-            <!--  row 1  -->
-            <!--  (the two brackets share one cell, half a key each, which is what fits them into 4 by 6)  -->
-            <Grid
-                Grid.Row="1"
-                Grid.Column="0"
-                ColumnSpacing="{StaticResource KeySpacing}">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="*" />
-                </Grid.ColumnDefinitions>
-
-                <Button
-                    Grid.Column="0"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_paren_open"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="(" />
-                </Button>
-                <Button
-                    Grid.Column="1"
-                    HorizontalAlignment="Stretch"
-                    VerticalAlignment="Stretch"
-                    Command="{x:Bind ViewModel.InputCommand}"
-                    CommandParameter="cmd_paren_close"
-                    Style="{StaticResource OperatorButtonStyle}">
-                    <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text=")" />
-                </Button>
-            </Grid>
             <Button
                 Grid.Row="1"
                 Grid.Column="1"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.BackspaceCommand}"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_sqrt"
                 Style="{StaticResource OperatorButtonStyle}">
-                <FontIcon FontSize="16" Glyph="&#xE750;" />
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="²√" />
             </Button>
             <Button
                 Grid.Row="1"
                 Grid.Column="2"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
-                Command="{x:Bind ViewModel.ClearCommand}"
+                Command="{x:Bind ViewModel.InputCommand}"
+                CommandParameter="cmd_pow_2"
                 Style="{StaticResource OperatorButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="AC" />
+                <TextBlock Style="{ThemeResource BodyTextBlockStyle}" Text="x²" />
             </Button>
             <Button
                 Grid.Row="1"
