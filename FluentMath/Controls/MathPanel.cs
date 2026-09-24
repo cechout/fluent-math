@@ -351,12 +351,9 @@ namespace FluentMath.Controls
 
                 case PlaceholderBox placeholder:
                     // the box is as tall as the text that would fill the slot, the square is not, so it
-                    // sits in the middle of it
-                    double middle = (placeholder.Top + placeholder.Bottom) / 2;
-
+                    // stands where a digit would, see PlaceholderBox.SquareTop
                     Add(new Rectangle { Stroke = Ink, StrokeThickness = placeholder.Thickness },
-                        new Rect(placeholder.X, middle - placeholder.Side / 2,
-                            placeholder.Side, placeholder.Side));
+                        new Rect(placeholder.X, placeholder.SquareTop, placeholder.Side, placeholder.Side));
                     break;
             }
         }
