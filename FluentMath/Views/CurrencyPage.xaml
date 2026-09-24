@@ -73,8 +73,8 @@
 
         <!--  currency 1 selection  -->
         <!--
-            a subtle button with a chevron of its own, which opens the hidden combo box under it in one
-            click; the combo box places its list over the selected currency itself, which replaces a
+            a text only button with a chevron of its own, which opens the hidden combo box under it in
+            one click; the combo box places its list over the selected currency itself, which replaces a
             flyout that was pushed into place by a fixed offset and did not always land there
             the grid holds the row at the height of the button, a combo box is taller
         -->
@@ -89,8 +89,7 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
                 Click="CurrencyButton1_Click"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Style="{StaticResource SubtleButtonStyle}">
+                Style="{StaticResource TextButtonStyle}">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.SelectedCurrency1.DisplayName, Mode=OneWay}" />
                     <FontIcon FontSize="10" Glyph="&#xE70D;" />
@@ -143,8 +142,7 @@
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
                 Click="CurrencyButton2_Click"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Style="{StaticResource SubtleButtonStyle}">
+                Style="{StaticResource TextButtonStyle}">
                 <StackPanel Orientation="Horizontal" Spacing="4">
                     <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.SelectedCurrency2.DisplayName, Mode=OneWay}" />
                     <FontIcon FontSize="10" Glyph="&#xE70D;" />
