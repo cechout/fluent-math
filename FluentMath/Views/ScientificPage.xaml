@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <Page
-    x:Class="FluentMath.Views.StandardPage"
+    x:Class="FluentMath.Views.ScientificPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:controls="using:FluentMath.Controls"
@@ -44,7 +44,7 @@
                     HorizontalAlignment="Left"
                     VerticalAlignment="Center"
                     Style="{ThemeResource SubtitleTextBlockStyle}"
-                    Text="Standard" />
+                    Text="Scientific" />
 
                 <!--  planned: compact mode toggle  -->
                 <!--<Button

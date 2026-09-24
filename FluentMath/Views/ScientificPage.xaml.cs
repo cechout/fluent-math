@@ -19,9 +19,9 @@ namespace FluentMath.Views
     // both display lines are a MathPanel, which draws the formula out of ordinary XAML elements; neither
     // can be bound to, so this page pushes the tokens into them from the property change and otherwise
     // stays out of the way
-    public sealed partial class StandardPage : Page
+    public sealed partial class ScientificPage : Page
     {
-        public StandardViewModel ViewModel { get; }
+        public CalculatorViewModel ViewModel { get; }
 
         // rebuilt on every theme change, so they are fields rather than locals in the load handler
         private MathLayoutStyle _historyStyle;
@@ -30,9 +30,9 @@ namespace FluentMath.Views
 
         // === constructor ===
 
-        public StandardPage()
+        public ScientificPage()
         {
-            ViewModel = new StandardViewModel(App.Settings);
+            ViewModel = new CalculatorViewModel(App.Settings);
             this.InitializeComponent();
 
             RebuildStyles();
@@ -40,15 +40,15 @@ namespace FluentMath.Views
             AccentPanelButtonsWhileOpen();
             HookCaretPreview();
 
-            this.Loaded += StandardPage_Loaded;
-            this.ActualThemeChanged += StandardPage_ActualThemeChanged;
+            this.Loaded += ScientificPage_Loaded;
+            this.ActualThemeChanged += ScientificPage_ActualThemeChanged;
             ViewModel.PropertyChanged += ViewModel_PropertyChanged;
         }
 
 
         // === lifecycle ===
 
-        private void StandardPage_Loaded(object sender, RoutedEventArgs e)
+        private void ScientificPage_Loaded(object sender, RoutedEventArgs e)
         {
             // the page sits in the tree by now, so ActualTheme finally answers with the theme in force
             RebuildStyles();
@@ -339,7 +339,7 @@ namespace FluentMath.Views
 
         // === theming ===
 
-        private void StandardPage_ActualThemeChanged(FrameworkElement sender, object args)
+        private void ScientificPage_ActualThemeChanged(FrameworkElement sender, object args)
         {
             PushStyles();
         }

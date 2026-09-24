@@ -72,8 +72,8 @@ FluentMath/
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings
-├── ViewModels/   StandardViewModel, CurrencyViewModel, RelayCommand
-└── Views/        StandardPage, CurrencyPage, SettingsPage
+├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
+└── Views/        ScientificPage, CurrencyPage, SettingsPage
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
@@ -113,7 +113,7 @@ silently never run.
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
-routing in `StandardViewModel`. It targets plain `net8.0` and links the sources it tests rather than
+routing in `CalculatorViewModel`. It targets plain `net8.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 

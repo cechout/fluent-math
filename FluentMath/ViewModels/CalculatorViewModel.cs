@@ -10,10 +10,10 @@ namespace FluentMath.ViewModels
 {
     // the only translator between the keypad and the input engine
     //
-    // every button in StandardPage is bound to the same InputCommand and identifies itself through its
+    // every button in ScientificPage is bound to the same InputCommand and identifies itself through its
     // CommandParameter, so adding a key is a XAML change plus one arm in the switch below; the page
     // itself stays free of input logic
-    public class StandardViewModel : INotifyPropertyChanged
+    public class CalculatorViewModel : INotifyPropertyChanged
     {
         // === fields ===
 
@@ -45,7 +45,7 @@ namespace FluentMath.ViewModels
 
         // === display properties ===
 
-        // both hold LaTeX, not plain text; StandardPage feeds them straight to KaTeX
+        // both hold LaTeX, not plain text; ScientificPage feeds them straight to KaTeX
         private string _inputAndResultText = "0";
         public string InputAndResultText
         {
@@ -259,9 +259,9 @@ namespace FluentMath.ViewModels
         // === constructor ===
 
         // a setup of its own with every setting at its default, for a caller that has no shared one
-        public StandardViewModel() : this(new CalculatorSettings()) { }
+        public CalculatorViewModel() : this(new CalculatorSettings()) { }
 
-        public StandardViewModel(CalculatorSettings settings)
+        public CalculatorViewModel(CalculatorSettings settings)
         {
             _settings = settings;
 

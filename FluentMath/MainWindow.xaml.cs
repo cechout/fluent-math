@@ -29,7 +29,7 @@ namespace FluentMath
             Instance = this;
             this.AppWindow.SetIcon("Assets\\Icon\\Icon.ico");
 
-            MainFrame.Navigate(typeof(StandardPage));
+            MainFrame.Navigate(typeof(ScientificPage));
             NavView.SelectedItem = NavView.MenuItems[0];
 
             // draw our own title bar into the client area; the caption buttons keep transparent
@@ -46,7 +46,7 @@ namespace FluentMath
 
             // start size, plus a floor that keeps the keypad from being squeezed out of the window
             //
-            // the floor carries the two fixed bars on the standard page above the keypad, the caret bar
+            // the floor carries the two fixed bars on the scientific page above the keypad, the caret bar
             // and the panel bar, which together are about 80px that cannot shrink
             this.SetWindowSize(330, 500);
             var manager = WindowManager.Get(this);
@@ -64,7 +64,7 @@ namespace FluentMath
             switch (itemTag)
             {
                 case "Standard":
-                    MainFrame.Navigate(typeof(StandardPage));
+                    MainFrame.Navigate(typeof(ScientificPage));
                     break;
                 case "Currency":
                     MainFrame.Navigate(typeof(CurrencyPage));
