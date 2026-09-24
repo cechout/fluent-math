@@ -30,7 +30,7 @@ namespace FluentMath.Tests
             "fn:floor", "fn:ceil", "fn:int", "fn:intg",
             "fn:gcd", "fn:lcm", "fn:ranint", "fn:rndfix", "fn:rnd",
             "npr", "ncr", "rand", "pre:kilo", "pre:micro",
-            "mixed", "divr", "fn:pol", "fn:rec"
+            "mixed", "divr", "fn:pol", "fn:rec", "dms"
         };
 
         public static MathInputManager Press(params string[] keys)
@@ -92,6 +92,11 @@ namespace FluentMath.Tests
 
                 case "divr":
                     manager.AddOperator("÷R");
+                    return;
+
+                // the °′″ key, which picks the marker itself
+                case "dms":
+                    manager.AddSexagesimalMarker();
                     return;
 
                 case "frac":

@@ -436,6 +436,27 @@ namespace FluentMath.Engines
             ctx.CursorIndex++;
         }
 
+        // the °′″ key, one key for all three markers the way a Casio types 2°30′15″: a number standing
+        // behind degrees gets minutes, one behind minutes gets seconds, anything else degrees
+        //
+        // the first marker is therefore always degrees, so minutes alone are typed as 0°39′
+        public void AddSexagesimalMarker()
+        {
+            var ctx = CurrentContext;
+
+            int start = ctx.CursorIndex;
+            while (start > 0 && ctx.Tokens[start - 1].Type == TokenType.Number) start--;
+
+            string kind = "degrees";
+            if (start < ctx.CursorIndex && start > 0 && ctx.Tokens[start - 1] is PostfixToken marker)
+            {
+                if (marker.Value == "degrees") kind = "minutes";
+                else if (marker.Value == "minutes") kind = "seconds";
+            }
+
+            AddPostfix(kind);
+        }
+
         // brackets stay flat tokens in the list rather than a scope of their own, the way they do on a
         // pocket calculator; the evaluator is what pairs them up again
         public void AddBracket(bool open)
@@ -862,8 +883,13 @@ namespace FluentMath.Engines
             FillWithDigits(_rootTokens, numberText);
             _rootContext.CursorIndex = _rootTokens.Count;
 
-            if (fullValue is not MathValue value) return;
+            if (fullValue is MathValue value) CarryFullValue(value);
+        }
 
+        // every digit of the seed shares the one full value behind it, the magnitude only, since a minus in
+        // front is a sign token of its own
+        private void CarryFullValue(MathValue value)
+        {
             List<MathToken> digits = _rootTokens.FindAll(token => token.Type == TokenType.Number);
             SeededValue seed = new SeededValue(new MathValue(Math.Abs(value.Value), ExactValue.Abs(value.Exact)), digits.Count);
             foreach (MathToken digit in digits) digit.Seed = seed;
@@ -904,12 +930,17 @@ namespace FluentMath.Engines
         // and as the tokens a result is drawn as, when those are real tokens already: the prime factors,
         // whose powers and times signs carry on as the product they are, and an exact form with roots or π,
         // whose roots are real roots
-        public void SeedWithTokens(IEnumerable<MathToken> tokens)
+        //
+        // an angle in degrees, minutes and seconds is real markers, and its digits carry the full value
+        // together, since the seconds are rounded to what the display shows
+        public void SeedWithTokens(IEnumerable<MathToken> tokens, MathValue? fullValue = null)
         {
             Clear();
 
             _rootTokens.AddRange(tokens);
             _rootContext.CursorIndex = _rootTokens.Count;
+
+            if (fullValue is MathValue value) CarryFullValue(value);
         }
 
         // and as a number with a power of ten behind it, typed the way the EXP key types one; the digits
@@ -940,7 +971,8 @@ namespace FluentMath.Engines
         // take: a negative number, a power of ten, the prime factors, a sum of roots
         //
         // squaring −5 is then 25, the way a Casio squares Ans, rather than the −25 that −5² typed by hand
-        // is; a single operand, a number, a fraction or a number with a prefix, is left bare
+        // is; a single operand, a number, a fraction, a number with a prefix or an angle in degrees,
+        // minutes and seconds, is left bare
         public void EncloseIfCompound()
         {
             if (FindOperandStart(_rootTokens, _rootTokens.Count) == 0) return;

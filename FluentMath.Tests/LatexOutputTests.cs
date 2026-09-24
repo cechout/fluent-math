@@ -34,6 +34,16 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void WritesTheSexagesimalMarkersAsDegreeAndPrimeSigns()
+        {
+            string latex = Latex("2", "dms", "30", "dms", "15", "dms");
+
+            Assert.Contains("\\mathord{{}^{\\circ}}", latex);
+            Assert.Contains("\\mathord{{}'}", latex);
+            Assert.Contains("\\mathord{{}''}", latex);
+        }
+
+        [Fact]
         public void WritesAnAbsoluteValueAsAPairOfBars()
         {
             string latex = Latex("fn:abs", "7");

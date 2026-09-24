@@ -806,6 +806,16 @@ namespace FluentMath.Tests
         }
 
         [Fact]
+        public void TheSexagesimalMarkersAreTheirSigns()
+        {
+            RowBox row = Row(Digit("2"), new PostfixToken("degrees"), Digit("3"), Digit("0"), new PostfixToken("minutes"),
+                Digit("0"), new PostfixToken("seconds"));
+
+            Assert.Equal(new[] { "2", "°", "30", "′", "0", "″" }, row.Children.Select(child => Assert.IsType<TextRunBox>(child).Text));
+            Assert.All(row.Children, child => Assert.Equal(0, child.Raise));
+        }
+
+        [Fact]
         public void TheReciprocalIsARaisedMinusOne()
         {
             RowBox row = Row(new PostfixToken("inv"));
