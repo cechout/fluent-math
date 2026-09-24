@@ -2,6 +2,7 @@ using FluentMath.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using System;
 using Windows.UI.Text;
 
 namespace FluentMath.Views
@@ -33,6 +34,7 @@ namespace FluentMath.Views
 
             RestoreThemeSelection();
             RestoreCalculatorSettings();
+            VersionTextBlock.Text = VersionLabel();
             _isLoading = false;
         }
 
@@ -128,6 +130,17 @@ namespace FluentMath.Views
         private void UpdateDigitsAvailability()
         {
             DigitsCard.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
+        }
+
+
+        // === about ===
+
+        // the running version with a leading v, e.g. v2.2.0; the assembly takes it from <Version> in the
+        // csproj, so this never needs touching on a release
+        private static string VersionLabel()
+        {
+            Version? version = typeof(App).Assembly.GetName().Version;
+            return version == null ? "" : $"v{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
         }
 
 

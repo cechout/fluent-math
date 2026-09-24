@@ -222,6 +222,30 @@
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="About &amp; Open Source" />
 
+                <!--  app info  -->
+                <!--  (the version in the header slot is read off the assembly, see VersionLabel)  -->
+                <controls:SettingsExpander
+                    Description="© 2026 Daniel Čech · MIT License"
+                    Header="Fluent Math"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE946;}"
+                    IsExpanded="False">
+
+                    <TextBlock
+                        x:Name="VersionTextBlock"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        IsTextSelectionEnabled="True" />
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Description="Readme, usage and the full source" Header="Documentation">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout/fluent-math" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Description="Other projects by Daniel Čech" Header="Developer Profile">
+                            <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
                 <!--  third-party libraries  -->
                 <controls:SettingsExpander
                     Description="Open source projects used in this app"
@@ -244,15 +268,12 @@
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
 
-                <!--  quick links  -->
-                <controls:WrapPanel
+                <!--  feedback  -->
+                <!--  (opens the issue template picker, so a bug report and a blank issue are both one click away)  -->
+                <HyperlinkButton
                     Margin="0,4,0,8"
-                    HorizontalSpacing="4"
-                    VerticalSpacing="0">
-                    <HyperlinkButton Content="Documentation" NavigateUri="https://github.com/cechout/fluent-math" />
-                    <HyperlinkButton Content="Bug Report" NavigateUri="https://github.com/cechout/fluent-math/issues/new/choose" />
-                    <HyperlinkButton Content="Developer Profile" NavigateUri="https://github.com/cechout" />
-                </controls:WrapPanel>
+                    Content="Send Feedback"
+                    NavigateUri="https://github.com/cechout/fluent-math/issues/new/choose" />
 
             </StackPanel>
         </ScrollViewer>
