@@ -17,9 +17,9 @@ namespace FluentMath.Views
         // two headers carry a few characters of text instead of a glyph, see TextIcon
         // sizes are font sizes in pixels on screen, weights run from 300 (light) over 400 (the pad keys)
         // to 700 (bold) in any step, the range Segoe UI Variable has; outside it the font stays at its end
-        private const double NumberFormatIconSize = 14; // size of ×10ⁿ (bigger = larger; about twice as wide as the size, so 14 is 28 wide)
+        private const double NumberFormatIconSize = 17; // size of ×10ⁿ (bigger = larger; about twice as wide as the size, so 17 is 34 wide)
         private const ushort NumberFormatIconWeight = 400; // weight of ×10ⁿ (higher = bolder)
-        private const double SeparatorsIconSize = 17.6; // size of 0,1 (bigger = larger; 17.6 is what 24 in a 24 box came out as)
+        private const double SeparatorsIconSize = 18; // size of 0,1 (bigger = larger; about as wide as the size)
         private const ushort SeparatorsIconWeight = 400; // weight of 0,1 (higher = bolder)
         private const double IconOverhang = 30; // how far a text icon may draw past its box on either side (bigger = room for a wider text, past it the text is cut off)
         private const double IconBoxSize = 20; // the box a card gives its icon, SettingsCardHeaderIconMaxSize in the toolkit; not a knob, anything else scales every text icon by 20 over it
