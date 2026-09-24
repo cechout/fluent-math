@@ -9,8 +9,8 @@ namespace FluentMath
     {
         private Window? _window;
 
-        // the calculator setup for the whole session; the standard page and the settings page both hold on
-        // to this one object, since either page is built anew on every navigation
+        // the calculator setup for the whole session; the calculator pages and the settings page all hold on
+        // to this one object, so a change on one page is what every other page reads
         public static CalculatorSettings Settings { get; } = new CalculatorSettings();
 
         public App()

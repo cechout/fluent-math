@@ -87,8 +87,8 @@ namespace FluentMath.Tests
             {
                 string[] keys = NextSequence(random, vocabulary.ToArray());
 
-                var viewModel = new StandardViewModel();
-                StandardViewModelTests.Press(viewModel, keys);
+                var viewModel = new CalculatorViewModel();
+                CalculatorViewModelTests.Press(viewModel, keys);
 
                 string trail = string.Join(" ", keys);
                 Assert.False(string.IsNullOrEmpty(viewModel.InputAndResultText), trail);

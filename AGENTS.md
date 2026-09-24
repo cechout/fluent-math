@@ -64,7 +64,7 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ```text
 FluentMath/
 ├── Assets/       the app icon and the package logos
-├── Controls/     the formula display: MathPanel, XamlTextMeasurer
+├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
@@ -72,16 +72,20 @@ FluentMath/
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings
-├── ViewModels/   StandardViewModel, CurrencyViewModel, RelayCommand
-└── Views/        StandardPage, CurrencyPage, SettingsPage
+├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
+└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
-bar, and sizes the window through `WinUIEx.WindowManager`. `Setup/` holds the Inno Setup installer
-scripts, `Calculator/` the retired WPF version 1, and `.github/` the workflows, the issue and pull
-request templates and the public README.
+bar, and sizes the window through `WinUIEx.WindowManager`. The navigation groups the pages under two
+headers, the calculators (Standard, Scientific) and the converters (Currency). Both calculators share
+`CalculatorViewModel` and `CalculatorDisplay`, and every page but the settings is cached, so it keeps
+its content across a navigation.
+
+`Setup/` holds the Inno Setup installer scripts, `Calculator/` the retired WPF version 1, and `.github/`
+the workflows, the issue and pull request templates and the public README.
 
 ## Build
 
@@ -113,7 +117,7 @@ silently never run.
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
-routing in `StandardViewModel`. It targets plain `net8.0` and links the sources it tests rather than
+routing in `CalculatorViewModel`. It targets plain `net8.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 

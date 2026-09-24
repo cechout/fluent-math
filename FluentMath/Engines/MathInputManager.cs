@@ -14,7 +14,7 @@ namespace FluentMath.Engines
     // own cursor index, and those contexts live on a stack whose top is whatever the user is typing into
     // right now; that is what makes nesting work without any position arithmetic
     //
-    // the class knows nothing about buttons or LaTeX beyond GetLatexString; StandardViewModel does the
+    // the class knows nothing about buttons or LaTeX beyond GetLatexString; CalculatorViewModel does the
     // translating in both directions
     //
     // the input is a sandbox: nothing typed is ever refused, corrected or rearranged, however broken the

@@ -3,6 +3,9 @@ using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Animation;
+using System;
+using System.Linq;
 using WinUIEx;
 
 namespace FluentMath
@@ -29,8 +32,10 @@ namespace FluentMath
             Instance = this;
             this.AppWindow.SetIcon("Assets\\Icon\\Icon.ico");
 
-            MainFrame.Navigate(typeof(StandardPage));
-            NavView.SelectedItem = NavView.MenuItems[0];
+            // the app opens on the standard calculator; its item is looked up by the tag, since the list
+            // opens with a group header
+            ShowPage(typeof(StandardPage));
+            NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == "Standard");
 
             // draw our own title bar into the client area; the caption buttons keep transparent
             // backgrounds so the Mica backdrop stays visible behind them
@@ -46,7 +51,7 @@ namespace FluentMath
 
             // start size, plus a floor that keeps the keypad from being squeezed out of the window
             //
-            // the floor carries the two fixed bars on the standard page above the keypad, the caret bar
+            // the floor carries the two fixed bars on the scientific page above the keypad, the caret bar
             // and the panel bar, which together are about 80px that cannot shrink
             this.SetWindowSize(330, 500);
             var manager = WindowManager.Get(this);
@@ -61,18 +66,26 @@ namespace FluentMath
         {
             string itemTag = args.InvokedItemContainer.Tag.ToString();
 
-            switch (itemTag)
+            Type? page = itemTag switch
             {
-                case "Standard":
-                    MainFrame.Navigate(typeof(StandardPage));
-                    break;
-                case "Currency":
-                    MainFrame.Navigate(typeof(CurrencyPage));
-                    break;
-                case "Settings":
-                    MainFrame.Navigate(typeof(SettingsPage));
-                    break;
-            }
+                "Standard" => typeof(StandardPage),
+                "Scientific" => typeof(ScientificPage),
+                "Currency" => typeof(CurrencyPage),
+                "Settings" => typeof(SettingsPage),
+                _ => null
+            };
+
+            // a second click on the item already shown would navigate the page onto itself
+            if (page == null || MainFrame.CurrentSourcePageType == page) return;
+
+            ShowPage(page);
+        }
+
+        // every page switches in without the frames slide; the pages with a pad bring their own entrance,
+        // which grows the pad in rather than moving the whole page
+        private void ShowPage(Type page)
+        {
+            MainFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
         }
 
 

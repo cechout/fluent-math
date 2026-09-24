@@ -24,9 +24,9 @@ namespace FluentMath.Tests
 
         private static string Shown(CalculatorSettings settings, params string[] keys)
         {
-            var viewModel = new StandardViewModel(settings);
-            StandardViewModelTests.Press(viewModel, keys);
-            StandardViewModelTests.Press(viewModel, "=");
+            var viewModel = new CalculatorViewModel(settings);
+            CalculatorViewModelTests.Press(viewModel, keys);
+            CalculatorViewModelTests.Press(viewModel, "=");
 
             return viewModel.InputAndResultText;
         }
@@ -182,8 +182,8 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesTheExactValueThroughAns()
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "cmd_sqrt", "2", "=", "cmd_ans", "+", "cmd_sqrt", "2", "=");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "cmd_sqrt", "2", "=", "cmd_ans", "+", "cmd_sqrt", "2", "=");
             Assert.Equal("2\\sqrt{2}", viewModel.InputAndResultText);
 
             Assert.Equal("2.82842712475", Shown("1.41421356237309", "+", "cmd_sqrt", "2"));
@@ -192,21 +192,21 @@ namespace FluentMath.Tests
         [Fact]
         public void ContinuesFromAnExactFormAsTheRootsItShows()
         {
-            var squared = new StandardViewModel();
-            StandardViewModelTests.Press(squared, "cmd_sin", "45", "=", "cmd_pow_2", "=");
+            var squared = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(squared, "cmd_sin", "45", "=", "cmd_pow_2", "=");
             Assert.Equal("\\frac{1}{2}", squared.InputAndResultText);
 
-            var root = new StandardViewModel();
-            StandardViewModelTests.Press(root, "cmd_sqrt", "2", "=", "*");
+            var root = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(root, "cmd_sqrt", "2", "=", "*");
             Assert.IsType<RootToken>(root.InputTokens[0]);
 
             // a sum of two terms is squared as a whole
-            var sum = new StandardViewModel();
-            StandardViewModelTests.Press(sum, "cmd_sqrt", "3", "cmd_nav_right", "-", "2", "=", "cmd_pow_2", "=");
+            var sum = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(sum, "cmd_sqrt", "3", "cmd_nav_right", "-", "2", "=", "cmd_pow_2", "=");
             Assert.Equal("7-4\\sqrt{3}", sum.InputAndResultText);
 
-            var pi = new StandardViewModel();
-            StandardViewModelTests.Press(pi, "cmd_pi", "/", "3", "=", "*", "3", "=");
+            var pi = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(pi, "cmd_pi", "/", "3", "=", "*", "3", "=");
             Assert.Equal("\\pi", pi.InputAndResultText);
         }
 
@@ -214,12 +214,12 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesTheExactValueBehindTheShownDecimal()
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "1", "/", "3", "=", "sd", "sd", "*", "3", "=");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "1", "/", "3", "=", "sd", "sd", "*", "3", "=");
             Assert.Equal("1", viewModel.InputAndResultText);
 
-            var root = new StandardViewModel();
-            StandardViewModelTests.Press(root, "cmd_sqrt", "2", "=", "sd", "*", "cmd_sqrt", "2", "=");
+            var root = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(root, "cmd_sqrt", "2", "=", "sd", "*", "cmd_sqrt", "2", "=");
             Assert.Equal("2", root.InputAndResultText);
         }
 
@@ -227,8 +227,8 @@ namespace FluentMath.Tests
         [Fact]
         public void ContinuesFromARecurringDecimalAsItsFraction()
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "1", "/", "3", "=", "sd", "+");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "1", "/", "3", "=", "sd", "+");
 
             Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
         }
@@ -237,8 +237,8 @@ namespace FluentMath.Tests
         [Fact]
         public void TreatsAnExactZeroAsZero()
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "1", "/", "cmd_paren_open", "cmd_sqrt", "2", "cmd_nav_right", "*",
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "1", "/", "cmd_paren_open", "cmd_sqrt", "2", "cmd_nav_right", "*",
                 "cmd_sqrt", "2", "cmd_nav_right", "-", "2", "cmd_paren_close", "=");
 
             Assert.Contains("Math ERROR", viewModel.InputAndResultText);
@@ -265,9 +265,9 @@ namespace FluentMath.Tests
 
         private static string RecurringOf(params string[] keys)
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, keys);
-            StandardViewModelTests.Press(viewModel, "=", "sd");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, keys);
+            CalculatorViewModelTests.Press(viewModel, "=", "sd");
 
             return viewModel.InputAndResultText;
         }

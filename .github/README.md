@@ -12,7 +12,7 @@ The first version of this project [`v1.0.0`](https://github.com/cechout/fluent-m
 
 
 ## ⚙️ Core Mechanics
-### Expression Input in Standard Mode
+### Expression Input in the Standard and Scientific Calculators
 The default Windows Calculator calculates a result after every operator. This app works like a real physical calculator (like a Casio). You type the whole equation exactly as you write it on paper (e.g., `(5 + 3) * 8 / 2`). It calculates everything at once when you press `=`. This guarantees the correct mathematical order of operations.
 
 ### Currency Converter

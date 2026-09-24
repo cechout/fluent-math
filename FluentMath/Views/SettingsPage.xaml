@@ -9,7 +9,12 @@
     xmlns:ui="using:CommunityToolkit.WinUI"
     mc:Ignorable="d">
 
-    <Grid Margin="4,4,4,4">
+    <!--
+        no margin on the page itself, unlike the other pages: the scroll viewer runs to the edges of
+        the window, so the cards scroll out at the edge and the scroll bar sits on it; the header and
+        the cards carry the 4 the other pages put around everything in their own margins
+    -->
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -20,7 +25,7 @@
         <Grid
             Grid.Row="0"
             Height="38"
-            Margin="45,0,0,0"
+            Margin="49,4,4,0"
             Background="Transparent">
 
             <TextBlock
@@ -33,18 +38,20 @@
         <ScrollViewer Grid.Row="1">
             <StackPanel
                 MaxWidth="1000"
-                Margin="12,12,12,16"
+                Margin="16,12,16,20"
                 HorizontalAlignment="Stretch"
                 Spacing="4">
 
+                <!--  appearance  -->
                 <TextBlock
-                    Margin="1,8,0,6"
+                    Margin="4,8,0,6"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Appearance" />
 
+                <!--  app theme  -->
                 <!--  (the selection is applied through MainWindow and is not persisted across restarts)  -->
                 <controls:SettingsCard
-                    Description="Select your preferred color mode for the calculator"
+                    Description="Light, dark, or match Windows"
                     Header="App Theme"
                     HeaderIcon="{ui:FontIcon Glyph=&#xE790;}">
                     <ComboBox
@@ -57,20 +64,24 @@
                     </ComboBox>
                 </controls:SettingsCard>
 
+
+                <!--  calculator  -->
                 <TextBlock
-                    Margin="1,24,0,6"
+                    Margin="4,20,0,6"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Calculator" />
 
                 <!--
-                    the calculator setup, held by App.Settings for the session and read by the standard
-                    page whenever it is built; every combo box lists its options in the order of the
-                    values they stand for, which the code-behind relies on
+                    the calculator setup, held by App.Settings for the session and read by the calculator
+                    pages whenever they come back into view; every combo box lists its options in the
+                    order of the values they stand for, which the code-behind relies on
                 -->
+
+                <!--  angle unit  -->
                 <controls:SettingsCard
                     Description="The unit sin, cos and tan read an angle in"
-                    Header="Angle unit"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE7AD;}">
+                    Header="Angle Unit"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xF0B4;}">
                     <ComboBox
                         x:Name="AngleUnitComboBox"
                         Width="150"
@@ -81,10 +92,17 @@
                     </ComboBox>
                 </controls:SettingsCard>
 
-                <controls:SettingsCard
-                    Description="Whether a result opens in its exact form, a fraction, a root or π, or as its decimal; S⇔D switches between them"
-                    Header="Result form"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8AB;}">
+                <!--  result form  -->
+                <!--
+                    the form a result opens in sits in the header slot; the two inside decide which forms
+                    S⇔D and SHIFT S⇔D go through on the way from there
+                -->
+                <controls:SettingsExpander
+                    Description="The form a result opens in, and the forms S⇔D switches through"
+                    Header="Result Form"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE8AB;}"
+                    IsExpanded="False">
+
                     <ComboBox
                         x:Name="ResultFormComboBox"
                         Width="150"
@@ -92,87 +110,110 @@
                         <ComboBoxItem Content="Exact first" />
                         <ComboBoxItem Content="Decimal first" />
                     </ComboBox>
-                </controls:SettingsCard>
 
-                <controls:SettingsCard
-                    Description="Which of the two fractions a result shows first; SHIFT S⇔D swaps them"
-                    Header="Fraction form"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE94A;}">
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Description="Which of the two a result shows first; SHIFT S⇔D swaps them" Header="Fraction Form">
+                            <ComboBox
+                                x:Name="FractionFormComboBox"
+                                Width="150"
+                                SelectionChanged="CalculatorComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Improper" />
+                                <ComboBoxItem Content="Mixed" />
+                            </ComboBox>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Description="A bar over the period on the way to the decimal, 2.3 with a bar for 7/3" Header="Recurring Decimals">
+                            <ToggleSwitch
+                                x:Name="RecurringToggle"
+                                OffContent="Off"
+                                OnContent="On"
+                                Toggled="CalculatorToggle_Toggled" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+                <!--  number format  -->
+                <!--  (the notation sits in the header slot, the two inside refine it)  -->
+                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
+                <controls:SettingsExpander
+                    x:Name="NumberFormatExpander"
+                    Description="Norm 1 and Norm 2 write a power of ten below 0.01 and 1e-9, Fix and Sci a set number of digits"
+                    Header="Number Format"
+                    IsExpanded="False">
+
                     <ComboBox
-                        x:Name="FractionFormComboBox"
+                        x:Name="NotationComboBox"
                         Width="150"
                         SelectionChanged="CalculatorComboBox_SelectionChanged">
-                        <ComboBoxItem Content="Improper" />
-                        <ComboBoxItem Content="Mixed" />
+                        <ComboBoxItem Content="Norm 1" />
+                        <ComboBoxItem Content="Norm 2" />
+                        <ComboBoxItem Content="Fix" />
+                        <ComboBoxItem Content="Sci" />
                     </ComboBox>
-                </controls:SettingsCard>
 
-                <controls:SettingsCard
-                    Description="S⇔D shows a fraction as a decimal with a bar over its period on the way to the decimal, 2.3 with a bar for 7/3"
-                    Header="Recurring decimals"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8EE;}">
-                    <ToggleSwitch x:Name="RecurringToggle" Toggled="CalculatorToggle_Toggled" />
-                </controls:SettingsCard>
+                    <controls:SettingsExpander.Items>
+                        <!--  (stays disabled under Norm, see UpdateDigitsAvailability)  -->
+                        <controls:SettingsCard
+                            x:Name="DigitsCard"
+                            Description="Decimals for Fix, significant digits for Sci"
+                            Header="Digits">
+                            <ComboBox
+                                x:Name="DigitsComboBox"
+                                Width="70"
+                                SelectionChanged="CalculatorComboBox_SelectionChanged">
+                                <ComboBoxItem Content="0" />
+                                <ComboBoxItem Content="1" />
+                                <ComboBoxItem Content="2" />
+                                <ComboBoxItem Content="3" />
+                                <ComboBoxItem Content="4" />
+                                <ComboBoxItem Content="5" />
+                                <ComboBoxItem Content="6" />
+                                <ComboBoxItem Content="7" />
+                                <ComboBoxItem Content="8" />
+                                <ComboBoxItem Content="9" />
+                            </ComboBox>
+                        </controls:SettingsCard>
 
-                <controls:SettingsCard
-                    Description="Norm 1 and Norm 2 write a power of ten below 0.01 and 1e-9, Fix a set number of decimals, Sci a set number of significant digits"
-                    Header="Number format"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8EF;}">
-                    <StackPanel Orientation="Horizontal" Spacing="8">
-                        <ComboBox
-                            x:Name="NotationComboBox"
-                            Width="110"
-                            SelectionChanged="CalculatorComboBox_SelectionChanged">
-                            <ComboBoxItem Content="Norm 1" />
-                            <ComboBoxItem Content="Norm 2" />
-                            <ComboBoxItem Content="Fix" />
-                            <ComboBoxItem Content="Sci" />
-                        </ComboBox>
-                        <ComboBox
-                            x:Name="DigitsComboBox"
-                            Width="80"
-                            SelectionChanged="CalculatorComboBox_SelectionChanged">
-                            <ComboBoxItem Content="0" />
-                            <ComboBoxItem Content="1" />
-                            <ComboBoxItem Content="2" />
-                            <ComboBoxItem Content="3" />
-                            <ComboBoxItem Content="4" />
-                            <ComboBoxItem Content="5" />
-                            <ComboBoxItem Content="6" />
-                            <ComboBoxItem Content="7" />
-                            <ComboBoxItem Content="8" />
-                            <ComboBoxItem Content="9" />
-                        </ComboBox>
-                    </StackPanel>
-                </controls:SettingsCard>
+                        <controls:SettingsCard Description="The ENG keys write a result as 1.234k instead of 1.234×10³" Header="Decimal Prefixes">
+                            <ToggleSwitch
+                                x:Name="PrefixesToggle"
+                                OffContent="Off"
+                                OnContent="On"
+                                Toggled="CalculatorToggle_Toggled" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
 
-                <controls:SettingsCard
-                    Description="The ENG keys write a result as 1.234k instead of 1.234×10³"
-                    Header="Decimal prefixes"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8C1;}">
-                    <ToggleSwitch x:Name="PrefixesToggle" Toggled="CalculatorToggle_Toggled" />
-                </controls:SettingsCard>
+                <!--  separators  -->
+                <!--  (no control on the expander header itself, the two inside are independent of each other)  -->
+                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
+                <controls:SettingsExpander
+                    x:Name="SeparatorsExpander"
+                    Description="The marks inside a number, in the formula and in the result"
+                    Header="Separators"
+                    IsExpanded="False">
 
-                <controls:SettingsCard
-                    Description="The mark between the whole part and the decimals; with a comma, two arguments are separated by a semicolon"
-                    Header="Decimal mark"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE774;}">
-                    <ComboBox
-                        x:Name="DecimalMarkComboBox"
-                        Width="150"
-                        SelectionChanged="CalculatorComboBox_SelectionChanged">
-                        <ComboBoxItem Content="Windows region" />
-                        <ComboBoxItem Content="Dot" />
-                        <ComboBoxItem Content="Comma" />
-                    </ComboBox>
-                </controls:SettingsCard>
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Description="With a comma, two arguments are separated by a semicolon" Header="Decimal Mark">
+                            <ComboBox
+                                x:Name="DecimalMarkComboBox"
+                                Width="150"
+                                SelectionChanged="CalculatorComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Windows region" />
+                                <ComboBoxItem Content="Dot" />
+                                <ComboBoxItem Content="Comma" />
+                            </ComboBox>
+                        </controls:SettingsCard>
 
-                <controls:SettingsCard
-                    Description="A thin gap every three digits, in the formula and in the result"
-                    Header="Digit grouping"
-                    HeaderIcon="{ui:FontIcon Glyph=&#xE8FD;}">
-                    <ToggleSwitch x:Name="GroupDigitsToggle" Toggled="CalculatorToggle_Toggled" />
-                </controls:SettingsCard>
+                        <controls:SettingsCard Description="A thin gap every three digits" Header="Digit Grouping">
+                            <ToggleSwitch
+                                x:Name="GroupDigitsToggle"
+                                OffContent="Off"
+                                OnContent="On"
+                                Toggled="CalculatorToggle_Toggled" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
 
             </StackPanel>
         </ScrollViewer>

@@ -22,10 +22,10 @@ namespace FluentMath.Tests
 
         public static IEnumerable<object[]> EveryKey() => Vocabulary.EveryKey();
 
-        private static StandardViewModel WithAShownResult()
+        private static CalculatorViewModel WithAShownResult()
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "1", "+", "1", "=");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "1", "+", "1", "=");
 
             Assert.Equal("2", viewModel.InputAndResultText);
             return viewModel;
@@ -34,10 +34,14 @@ namespace FluentMath.Tests
 
         // === the markup and the ViewModel agree ===
 
-        [Fact]
-        public void EveryKeyInTheMarkupIsInTheVocabulary()
+        // a typo on either calculator page is a dead key, so both are read; only the scientific pad has to
+        // carry every command, the standard one holds a subset of them by design
+        [Theory]
+        [InlineData("ScientificPage")]
+        [InlineData("StandardPage")]
+        public void EveryKeyInTheMarkupIsInTheVocabulary(string page)
         {
-            foreach (string command in CommandsInMarkup())
+            foreach (string command in CommandsInMarkup(page))
             {
                 Assert.Contains(command, Vocabulary.Commands);
             }
@@ -46,19 +50,19 @@ namespace FluentMath.Tests
         [Fact]
         public void EveryCommandInTheVocabularyHasAButton()
         {
-            List<string> inMarkup = CommandsInMarkup();
+            List<string> inMarkup = CommandsInMarkup("ScientificPage");
 
             foreach (string command in Vocabulary.Commands)
             {
                 if (Vocabulary.Parked.Contains(command)) continue;
 
-                Assert.True(inMarkup.Contains(command), command + " has no button in StandardPage.xaml");
+                Assert.True(inMarkup.Contains(command), command + " has no button in ScientificPage.xaml");
             }
         }
 
-        private static List<string> CommandsInMarkup()
+        private static List<string> CommandsInMarkup(string page)
         {
-            string markup = File.ReadAllText(Vocabulary.PageMarkupPath());
+            string markup = File.ReadAllText(Vocabulary.PageMarkupPath(page));
             var found = new List<string>();
 
             foreach (Match match in Regex.Matches(markup, "CommandParameter=\"(cmd_[a-z_0-9]+)\""))
@@ -81,11 +85,11 @@ namespace FluentMath.Tests
             if (Vocabulary.Navigation.Contains(key)) return;
             if (Vocabulary.NotImplemented.Contains(key)) return;
 
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "5");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "5");
 
             string before = viewModel.InputAndResultText;
-            StandardViewModelTests.Press(viewModel, key);
+            CalculatorViewModelTests.Press(viewModel, key);
 
             Assert.NotEqual(before, viewModel.InputAndResultText);
         }
@@ -99,16 +103,16 @@ namespace FluentMath.Tests
         [MemberData(nameof(NotImplementedKey))]
         public void ANotImplementedKeyLeavesEverythingWhereItIs(string key)
         {
-            var viewModel = new StandardViewModel();
-            StandardViewModelTests.Press(viewModel, "5");
+            var viewModel = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(viewModel, "5");
 
             string afterInput = viewModel.InputAndResultText;
-            StandardViewModelTests.Press(viewModel, key);
+            CalculatorViewModelTests.Press(viewModel, key);
 
             Assert.Equal(afterInput, viewModel.InputAndResultText);
 
-            StandardViewModel onAResult = WithAShownResult();
-            StandardViewModelTests.Press(onAResult, key);
+            CalculatorViewModel onAResult = WithAShownResult();
+            CalculatorViewModelTests.Press(onAResult, key);
 
             Assert.Equal("2", onAResult.InputAndResultText);
         }
@@ -119,16 +123,16 @@ namespace FluentMath.Tests
         [MemberData(nameof(ViewKey))]
         public void AViewKeyLeavesTheFormulaBehindTheResultAlone(string key)
         {
-            StandardViewModel onAResult = WithAShownResult();
-            StandardViewModelTests.Press(onAResult, key, "cmd_nav_left");
+            CalculatorViewModel onAResult = WithAShownResult();
+            CalculatorViewModelTests.Press(onAResult, key, "cmd_nav_left");
 
             Assert.Equal(3, onAResult.InputTokens.Count);
 
-            var duringInput = new StandardViewModel();
-            StandardViewModelTests.Press(duringInput, "1", "+", "1", key);
+            var duringInput = new CalculatorViewModel();
+            CalculatorViewModelTests.Press(duringInput, "1", "+", "1", key);
             Assert.Null(duringInput.CaretTokens);
 
-            StandardViewModelTests.Press(duringInput, "cmd_nav_left");
+            CalculatorViewModelTests.Press(duringInput, "cmd_nav_left");
             Assert.Equal(3, duringInput.InputTokens.Count);
         }
 
@@ -149,8 +153,8 @@ namespace FluentMath.Tests
         [MemberData(nameof(EveryKey))]
         public void NoKeyLeavesAShownResultAsABareZero(string key)
         {
-            StandardViewModel viewModel = WithAShownResult();
-            StandardViewModelTests.Press(viewModel, key);
+            CalculatorViewModel viewModel = WithAShownResult();
+            CalculatorViewModelTests.Press(viewModel, key);
 
             Assert.NotEqual(BlankDisplay, viewModel.InputAndResultText);
         }
@@ -163,8 +167,8 @@ namespace FluentMath.Tests
                 && !Vocabulary.Operators.Contains(key)
                 && !Vocabulary.OperatorCommands.Contains(key)) return;
 
-            StandardViewModel viewModel = WithAShownResult();
-            StandardViewModelTests.Press(viewModel, key);
+            CalculatorViewModel viewModel = WithAShownResult();
+            CalculatorViewModelTests.Press(viewModel, key);
 
             Assert.Contains("2", viewModel.InputAndResultText);
         }
@@ -196,10 +200,10 @@ namespace FluentMath.Tests
 
         private static void PressOn(string key, params string[] before)
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
 
-            StandardViewModelTests.Press(viewModel, before);
-            StandardViewModelTests.Press(viewModel, key);
+            CalculatorViewModelTests.Press(viewModel, before);
+            CalculatorViewModelTests.Press(viewModel, key);
 
             // the display always holds something; an empty string is what used to crash the JS side
             Assert.False(string.IsNullOrEmpty(viewModel.InputAndResultText));

@@ -1,5 +1,6 @@
 ﻿using FluentMath.Models;
 using FluentMath.ViewModels;
+using System.Collections.Generic;
 using Xunit;
 
 namespace FluentMath.Tests
@@ -9,13 +10,13 @@ namespace FluentMath.Tests
     //
     // this is the layer the engine tests cannot reach, because the decision of whether a key continues
     // from the result, edits the old formula or starts over lives here and nowhere else
-    public class StandardViewModelTests
+    public class CalculatorViewModelTests
     {
         // === helpers ===
 
         // a multi character argument is split, since every keypad button sends exactly one character and
         // AddNumber would otherwise take "12" as a single token
-        internal static void Press(StandardViewModel viewModel, params string[] keys)
+        internal static void Press(CalculatorViewModel viewModel, params string[] keys)
         {
             foreach (string key in keys)
             {
@@ -53,14 +54,14 @@ namespace FluentMath.Tests
 
         // every result opens as its decimal, the way the display worked before exact came first; the
         // tests about the S to D cycle and about decimal digits start from there
-        private static StandardViewModel DecimalFirst()
+        private static CalculatorViewModel DecimalFirst()
         {
-            return new StandardViewModel(new CalculatorSettings { ExactFirst = false });
+            return new CalculatorViewModel(new CalculatorSettings { ExactFirst = false });
         }
 
-        private static StandardViewModel AfterOnePlusOne()
+        private static CalculatorViewModel AfterOnePlusOne()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "+", "1", "=");
 
             return viewModel;
@@ -78,7 +79,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ContinuesFromTheResultWhenTheExponentKeyIsPressed()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "cmd_exp");
 
             // the 2 has to still be standing with the exponent hanging off it; clearing it first and
@@ -102,7 +103,7 @@ namespace FluentMath.Tests
         [InlineData("cmd_exp")]
         public void KeepsTheResultOnScreenForEveryKeyThatReadsAnOperand(string key)
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, key);
 
             Assert.Contains("2", viewModel.InputAndResultText);
@@ -119,7 +120,7 @@ namespace FluentMath.Tests
         [InlineData("cmd_paren_open")]
         public void StartsOverForEveryKeyThatOpensSomethingNew(string key)
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, key);
 
             Assert.DoesNotContain("2", viewModel.InputAndResultText);
@@ -128,7 +129,7 @@ namespace FluentMath.Tests
         [Fact]
         public void GoesBackToEditingTheOldFormulaOnAnArrowKey()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "cmd_nav_left");
 
             // the tree still holds 1+1, so the arrow key brings the formula back rather than the result
@@ -139,7 +140,7 @@ namespace FluentMath.Tests
         [Fact]
         public void EditsTheOldFormulaOnBackspace()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "back", "3", "=");
 
             Assert.Equal("4", viewModel.InputAndResultText);
@@ -148,7 +149,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ClearsEverythingOnAllClear()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "AC");
 
             Assert.Equal("", viewModel.CalculationText);
@@ -158,7 +159,7 @@ namespace FluentMath.Tests
         [Fact]
         public void RepeatsTheSameResultOnASecondEquals()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "=");
 
             Assert.Equal("2", viewModel.InputAndResultText);
@@ -170,7 +171,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SwapsTheKeyboardLayerWithoutTouchingTheInput()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "+", "1");
 
             string before = viewModel.InputAndResultText;
@@ -193,7 +194,7 @@ namespace FluentMath.Tests
         [Fact]
         public void PicksOneTrigonometryGridForEveryCombinationOfTheTwoLatches()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "+", "1");
 
             string before = viewModel.InputAndResultText;
@@ -218,7 +219,7 @@ namespace FluentMath.Tests
             Assert.Equal(before, viewModel.InputAndResultText);
         }
 
-        private static void AssertOneTrigGrid(StandardViewModel viewModel,
+        private static void AssertOneTrigGrid(CalculatorViewModel viewModel,
                                               bool plain = false,
                                               bool inverse = false,
                                               bool hyperbolic = false,
@@ -233,7 +234,7 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesAShownResultAloneWhenTheAngleUnitChanges()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
 
             Press(viewModel, "cmd_angle_rad");
             Assert.Equal("RAD", viewModel.AngleModeLabel);
@@ -252,7 +253,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CyclesTheAngleUnitInOneDirectionAndComesBack()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
             Assert.Equal("DEG", viewModel.AngleModeLabel);
 
             Press(viewModel, "cmd_angle_cycle");
@@ -291,7 +292,7 @@ namespace FluentMath.Tests
         {
             // an empty formula is drawn as a 0, so a key that reads an operand has to find it; without
             // that the 0 vanishes and the key opens on an empty box instead
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
 
             Press(viewModel, key);
             if (followUp.Length > 0) Press(viewModel, followUp);
@@ -303,7 +304,7 @@ namespace FluentMath.Tests
         [Fact]
         public void TakesTheReciprocalOfTheZeroOnAnEmptyDisplay()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_inv", "=");
 
             Assert.Contains("Math ERROR", viewModel.InputAndResultText);
@@ -314,7 +315,7 @@ namespace FluentMath.Tests
         {
             // inside a structure an empty slot draws a box rather than a 0, so nothing was promised and
             // the power opens on an empty base the way it always did
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_sqrt", "cmd_pow_n", "2", "=");
 
             Assert.Contains("ERROR", viewModel.InputAndResultText);
@@ -337,7 +338,7 @@ namespace FluentMath.Tests
         [Fact]
         public void DissolvesTheExponentOnBackspace()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "3", "cmd_exp", "5", "cmd_nav_left", "back", "=");
 
             Assert.Equal("315", viewModel.InputAndResultText);
@@ -349,7 +350,7 @@ namespace FluentMath.Tests
         [Fact]
         public void PutsTheEvaluatedFormulaOnTheHistoryLine()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
 
             Assert.Contains("1", viewModel.CalculationText);
             Assert.EndsWith("=", viewModel.CalculationText);
@@ -361,7 +362,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ACombinationContinuesFromAShownResult()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "5", "=", "cmd_ncr", "2", "=");
 
             Assert.Equal("10", viewModel.InputAndResultText);
@@ -370,7 +371,7 @@ namespace FluentMath.Tests
         [Fact]
         public void APrefixContinuesFromAShownResult()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "5", "=", "cmd_prefix_kilo", "=");
 
             Assert.Equal("5000", viewModel.InputAndResultText);
@@ -379,7 +380,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ATwoArgumentFunctionTakesItsSecondArgumentAfterRight()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_gcd", "12", "cmd_nav_right", "18", "=");
 
             Assert.Equal("6", viewModel.InputAndResultText);
@@ -388,7 +389,7 @@ namespace FluentMath.Tests
         [Fact]
         public void NamesAnArgumentErrorTheWayACasioDoes()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_ranint", "6", "cmd_nav_right", "1", "=");
 
             Assert.Equal("Argument ERROR", viewModel.InputErrorText);
@@ -397,7 +398,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsHowACombinationAfterADivisionWasRead()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "12", "/", "2", "cmd_ncr", "2", "=");
 
             Assert.Equal("12", viewModel.InputAndResultText);
@@ -409,7 +410,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsHowAnImplicitProductWasReadWithoutRewritingTheFormula()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "6", "/", "2", "cmd_paren_open", "1", "+", "2", "cmd_paren_close", "=");
 
             Assert.Equal("1", viewModel.InputAndResultText);
@@ -449,7 +450,7 @@ namespace FluentMath.Tests
         [Fact]
         public void DoesNothingOnAResultWithNoFraction()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_ln", "2", "=");
 
             string before = viewModel.InputAndResultText;
@@ -495,7 +496,7 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesTheRecurringDecimalOutWhenTheSettingsSaySo()
         {
-            var viewModel = new StandardViewModel(new CalculatorSettings { RecurringDecimals = false });
+            var viewModel = new CalculatorViewModel(new CalculatorSettings { RecurringDecimals = false });
             Press(viewModel, "1", "/", "3", "=", "sd");
 
             Assert.Equal("0.333333333333", viewModel.InputAndResultText);
@@ -506,7 +507,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SwapsBetweenImproperAndMixedOnTheShiftOfSToD()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "7", "/", "3", "=");
             Assert.IsType<FractionToken>(viewModel.InputTokens[0]);
 
@@ -529,11 +530,11 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesAResultWithoutAMixedFormAloneOnTheShiftOfSToD()
         {
-            var fraction = new StandardViewModel();
+            var fraction = new CalculatorViewModel();
             Press(fraction, "1", "/", "4", "=", "cmd_frac_swap");
             Assert.Equal("\\frac{1}{4}", fraction.InputAndResultText);
 
-            var root = new StandardViewModel();
+            var root = new CalculatorViewModel();
             Press(root, "cmd_sqrt", "2", "=", "sd", "cmd_frac_swap");
             Assert.StartsWith("1.41421356237", root.InputAndResultText);
         }
@@ -639,7 +640,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsTheRemainderAndCarriesOnFromTheQuotient()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "17", "cmd_div_r", "5", "=");
             Assert.Equal("Q=3, R=2", viewModel.InputAndResultText);
 
@@ -650,7 +651,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ContinuesADivisionWithRemainderFromAResult()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "17", "=", "cmd_div_r", "5", "=");
 
             Assert.Equal("Q=3, R=2", viewModel.InputAndResultText);
@@ -659,7 +660,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsPolarCoordinatesAndCarriesOnFromR()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_pol", "3", "cmd_nav_right", "4", "=");
             Assert.Equal("r=5, θ=53.1301023542", viewModel.InputAndResultText);
 
@@ -673,7 +674,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsThePrimeFactorsAndGoesBackOnASecondPress()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1440", "=", "cmd_prime");
             Assert.StartsWith("2^{5}", viewModel.InputAndResultText);
 
@@ -684,7 +685,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesThePrimeFactorsOnAsTheProductTheyAre()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1440", "=", "cmd_prime", "+");
             Assert.IsType<PowerToken>(viewModel.InputTokens[0]);
 
@@ -696,7 +697,7 @@ namespace FluentMath.Tests
         [Fact]
         public void EvaluatesFirstWhenFactIsPressedDuringInput()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1440", "cmd_prime");
 
             Assert.StartsWith("2^{5}", viewModel.InputAndResultText);
@@ -705,7 +706,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AnswersAResultWithoutPrimeFactorsWithAMathError()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "3", "/", "2", "=", "cmd_prime");
             Assert.Equal("Math ERROR", viewModel.InputErrorText);
 
@@ -717,7 +718,7 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesTheFactorsForTheDecimalOnSToD()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1440", "=", "cmd_prime", "sd");
 
             Assert.Equal("1440", viewModel.InputAndResultText);
@@ -735,7 +736,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AClickBesideTheZeroOnAnEmptyDisplayIsNotAPlace()
         {
-            StandardViewModel viewModel = new StandardViewModel();
+            CalculatorViewModel viewModel = new CalculatorViewModel();
 
             Assert.False(viewModel.CanPlaceCursor);
 
@@ -753,7 +754,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AClickOnAShownResultCarriesItAndTakesTheCursorWithIt()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
 
             // in front of the 2 the display is showing
             viewModel.PlaceCursor("@0");
@@ -765,7 +766,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AClickBehindAShownResultCarriesItAndWritesOnTheEnd()
         {
-            StandardViewModel viewModel = AfterOnePlusOne();
+            CalculatorViewModel viewModel = AfterOnePlusOne();
 
             viewModel.PlaceCursor("@1");
             Press(viewModel, "3", "=");
@@ -780,7 +781,7 @@ namespace FluentMath.Tests
         [Fact]
         public void OpensAResultAsItsFractionWhenExactComesFirst()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "/", "4", "=");
             Assert.Contains("frac{1}{4}", viewModel.InputAndResultText);
 
@@ -801,7 +802,7 @@ namespace FluentMath.Tests
         [Fact]
         public void OpensTheMixedFormFirstWhenTheSettingsSaySo()
         {
-            var viewModel = new StandardViewModel(new CalculatorSettings { MixedFirst = true });
+            var viewModel = new CalculatorViewModel(new CalculatorSettings { MixedFirst = true });
             Press(viewModel, "5", "/", "4", "=");
             Assert.IsType<MixedFractionToken>(viewModel.InputTokens[0]);
 
@@ -817,7 +818,7 @@ namespace FluentMath.Tests
         public void WritesTheDecimalInTheNumberFormatAndCarriesTheFullValueOn()
         {
             var settings = new CalculatorSettings { ExactFirst = false, NumberFormat = new NumberFormat(NumberNotation.Fix, 2) };
-            var viewModel = new StandardViewModel(settings);
+            var viewModel = new CalculatorViewModel(settings);
 
             Press(viewModel, "1", "/", "3", "=");
             Assert.Equal("0.33", viewModel.InputAndResultText);
@@ -838,7 +839,7 @@ namespace FluentMath.Tests
         [Fact]
         public void RoundsToTheNumberFormatWithRnd()
         {
-            var viewModel = new StandardViewModel(new CalculatorSettings { NumberFormat = new NumberFormat(NumberNotation.Fix, 2) });
+            var viewModel = new CalculatorViewModel(new CalculatorSettings { NumberFormat = new NumberFormat(NumberNotation.Fix, 2) });
 
             Press(viewModel, "cmd_rnd", "1", "/", "3", "=");
             Assert.Contains("frac{33}{100}", viewModel.InputAndResultText);
@@ -851,16 +852,35 @@ namespace FluentMath.Tests
         public void KeepsTheAngleUnitForTheNextViewModel()
         {
             var settings = new CalculatorSettings();
-            Press(new StandardViewModel(settings), "cmd_angle_cycle");
+            Press(new CalculatorViewModel(settings), "cmd_angle_cycle");
 
-            Assert.Equal("RAD", new StandardViewModel(settings).AngleModeLabel);
+            Assert.Equal("RAD", new CalculatorViewModel(settings).AngleModeLabel);
         }
 
         [Fact]
         public void LabelsTheDecimalKeyWithTheMarkTheDisplayDraws()
         {
-            Assert.Equal(",", new StandardViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Comma }).DecimalMarkLabel);
-            Assert.Equal(".", new StandardViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Dot }).DecimalMarkLabel);
+            Assert.Equal(",", new CalculatorViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Comma }).DecimalMarkLabel);
+            Assert.Equal(".", new CalculatorViewModel(new CalculatorSettings { DecimalMark = DecimalMark.Dot }).DecimalMarkLabel);
+        }
+
+        // the settings page writes the setup behind the back of a view model that lives on in a cached page
+        [Fact]
+        public void RefreshingTheLabelsAnnouncesWhatTheSettingsPageChanged()
+        {
+            var settings = new CalculatorSettings { DecimalMark = DecimalMark.Dot };
+            var viewModel = new CalculatorViewModel(settings);
+            var raised = new List<string>();
+            viewModel.PropertyChanged += (_, e) => raised.Add(e.PropertyName);
+
+            settings.AngleMode = AngleMode.Radians;
+            settings.DecimalMark = DecimalMark.Comma;
+            viewModel.RefreshSettingLabels();
+
+            Assert.Contains(nameof(CalculatorViewModel.AngleModeLabel), raised);
+            Assert.Contains(nameof(CalculatorViewModel.DecimalMarkLabel), raised);
+            Assert.Equal("RAD", viewModel.AngleModeLabel);
+            Assert.Equal(",", viewModel.DecimalMarkLabel);
         }
 
 
@@ -870,7 +890,7 @@ namespace FluentMath.Tests
         [Fact]
         public void StepsThroughTheEngineeringForms()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
 
             Press(viewModel, "1234", "=", "cmd_eng");
             Assert.StartsWith("1.234", viewModel.InputAndResultText);
@@ -895,7 +915,7 @@ namespace FluentMath.Tests
         [Fact]
         public void WritesTheEngineeringFormWithAPrefixAndCarriesItOn()
         {
-            var viewModel = new StandardViewModel(new CalculatorSettings { UsePrefixes = true });
+            var viewModel = new CalculatorViewModel(new CalculatorSettings { UsePrefixes = true });
 
             Press(viewModel, "1234", "=", "cmd_eng");
             Assert.Equal("1.234\\mathrm{k}", viewModel.InputAndResultText);
@@ -914,7 +934,7 @@ namespace FluentMath.Tests
 
         private static string ResultOf(params string[] keys)
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, keys);
             Press(viewModel, "=");
 
@@ -927,7 +947,7 @@ namespace FluentMath.Tests
         {
             Assert.Equal(TwoThirty, ResultOf("2", "cmd_dms", "30", "cmd_dms"));
 
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "2.2583", "=", "cmd_dms");
             Assert.Equal("2{}^{\\circ}15{}'29.88{}''", viewModel.InputAndResultText);
         }
@@ -947,7 +967,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SwitchesBetweenTheAngleAndTheDecimal()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "=", "cmd_dms");
             Assert.Equal("2.5", viewModel.InputAndResultText);
 
@@ -966,7 +986,7 @@ namespace FluentMath.Tests
         [Fact]
         public void TypesAMarkerDuringInputAndEvaluatesOnDeg()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "cmd_degrees");
             Assert.Equal("2.5", viewModel.InputAndResultText);
 
@@ -978,7 +998,7 @@ namespace FluentMath.Tests
         [Fact]
         public void CarriesAnAngleOnAtItsFullValue()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "/", "7", "=", "cmd_dms");
             Assert.Equal("0{}^{\\circ}8{}'34.29{}''", viewModel.InputAndResultText);
 
@@ -994,7 +1014,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SquaresANegativeAngleAsAWhole()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "-", "2", "cmd_dms", "30", "cmd_dms", "=", "cmd_pow_2", "=");
 
             Assert.Equal("\\frac{25}{4}", viewModel.InputAndResultText);
@@ -1004,7 +1024,7 @@ namespace FluentMath.Tests
         [Fact]
         public void PlacesTheCaretInAShownAngle()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "=");
             viewModel.PlaceCursor("@3");
 
@@ -1017,11 +1037,11 @@ namespace FluentMath.Tests
         [Fact]
         public void ShowsAPairByItsFirstValueAndLeavesAValueTooLargeAlone()
         {
-            var pair = new StandardViewModel();
+            var pair = new CalculatorViewModel();
             Press(pair, "cmd_pol", "1", "cmd_nav_right", "1", "=", "cmd_dms");
             Assert.Equal("1{}^{\\circ}24{}'51.17{}''", pair.InputAndResultText);
 
-            var tooLarge = new StandardViewModel();
+            var tooLarge = new CalculatorViewModel();
             Press(tooLarge, "1", "cmd_exp", "8", "=", "cmd_dms");
             Assert.Equal("100000000", tooLarge.InputAndResultText);
         }
@@ -1049,7 +1069,7 @@ namespace FluentMath.Tests
         [Fact]
         public void NamesATimeOutTheWayACasioDoes()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_sum", "1", "cmd_nav_right", "100001", "cmd_nav_right", "cmd_x", "=");
 
             Assert.Equal("Time Out", viewModel.InputErrorText);
@@ -1065,7 +1085,7 @@ namespace FluentMath.Tests
         [Fact]
         public void StartsOverWhenACalculusKeyIsPressedOnAResult()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1", "+", "1", "=", "cmd_sum");
 
             Assert.IsType<LargeOperatorToken>(Assert.Single(viewModel.InputTokens));
@@ -1079,7 +1099,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SquaresANegativeResultAsAWhole()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "-", "5", "=", "cmd_pow_2", "=");
 
             Assert.Equal("25", viewModel.InputAndResultText);
@@ -1088,7 +1108,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SquaresThePrimeFactorsAsAWhole()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "1440", "=", "cmd_prime", "cmd_pow_2", "=");
 
             Assert.Equal("2073600", viewModel.InputAndResultText);
@@ -1097,7 +1117,7 @@ namespace FluentMath.Tests
         [Fact]
         public void SquaresAPowerOfTenAsAWhole()
         {
-            var viewModel = new StandardViewModel();
+            var viewModel = new CalculatorViewModel();
             Press(viewModel, "3", "cmd_exp", "20", "=", "cmd_pow_2", "=");
 
             Assert.StartsWith("9", viewModel.InputAndResultText);
@@ -1108,11 +1128,11 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesTheBracketsOutWhereTheyChangeNothing()
         {
-            var positive = new StandardViewModel();
+            var positive = new CalculatorViewModel();
             Press(positive, "5", "=", "cmd_pow_2");
             Assert.IsType<PowerToken>(Assert.Single(positive.InputTokens));
 
-            var negative = new StandardViewModel();
+            var negative = new CalculatorViewModel();
             Press(negative, "-", "5", "=", "+");
             Assert.Equal(TokenType.Operator, negative.InputTokens[0].Type);
         }

@@ -10,10 +10,10 @@ namespace FluentMath.ViewModels
 {
     // the only translator between the keypad and the input engine
     //
-    // every button in StandardPage is bound to the same InputCommand and identifies itself through its
-    // CommandParameter, so adding a key is a XAML change plus one arm in the switch below; the page
-    // itself stays free of input logic
-    public class StandardViewModel : INotifyPropertyChanged
+    // every button on the standard and the scientific page is bound to the same InputCommand and
+    // identifies itself through its CommandParameter, so adding a key is a XAML change plus one arm in
+    // the switch below; the pages themselves stay free of input logic, and each has a ViewModel of its own
+    public class CalculatorViewModel : INotifyPropertyChanged
     {
         // === fields ===
 
@@ -45,7 +45,7 @@ namespace FluentMath.ViewModels
 
         // === display properties ===
 
-        // both hold LaTeX, not plain text; StandardPage feeds them straight to KaTeX
+        // both hold LaTeX, not plain text; ScientificPage feeds them straight to KaTeX
         private string _inputAndResultText = "0";
         public string InputAndResultText
         {
@@ -259,9 +259,9 @@ namespace FluentMath.ViewModels
         // === constructor ===
 
         // a setup of its own with every setting at its default, for a caller that has no shared one
-        public StandardViewModel() : this(new CalculatorSettings()) { }
+        public CalculatorViewModel() : this(new CalculatorSettings()) { }
 
-        public StandardViewModel(CalculatorSettings settings)
+        public CalculatorViewModel(CalculatorSettings settings)
         {
             _settings = settings;
 
@@ -682,6 +682,15 @@ namespace FluentMath.ViewModels
         // what the decimal point key is labelled with; the key always types a dot, which the display draws
         // as the mark the settings ask for
         public string DecimalMarkLabel => _settings.DecimalMarkText;
+
+        // the settings page writes into the settings directly, while a page kept alive across the visit
+        // still shows the labels it read before it; the page calls this on its way back into view
+        public void RefreshSettingLabels()
+        {
+            OnPropertyChanged(nameof(CurrentAngleMode));
+            OnPropertyChanged(nameof(AngleModeLabel));
+            OnPropertyChanged(nameof(DecimalMarkLabel));
+        }
 
         // the input line is the only one that can be clicked, so it is the only one that asks for the
         // addresses that make a click resolvable back into a cursor position

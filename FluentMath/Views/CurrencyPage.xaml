@@ -6,6 +6,7 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:local="using:FluentMath.Views"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    NavigationCacheMode="Required"
     mc:Ignorable="d">
 
     <Grid
@@ -71,51 +72,41 @@
 
 
         <!--  currency 1 selection  -->
-        <DropDownButton
+        <!--
+            a text only button with a chevron of its own, which opens the hidden combo box under it in
+            one click; the combo box places its list over the selected currency itself, which replaces a
+            flyout that was pushed into place by a fixed offset and did not always land there
+            the grid holds the row at the height of the button, a combo box is taller
+        -->
+        <Grid
             Grid.Row="1"
             Grid.Column="0"
             Grid.ColumnSpan="3"
-            Height="26"
-            Margin="0"
-            HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Right"
-            Background="Transparent"
-            BorderThickness="0"
-            Content="{x:Bind ViewModel.SelectedCurrency1.DisplayName, Mode=OneWay}"
-            FontSize="12"
-            Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+            Height="26">
 
-            <DropDownButton.Flyout>
-                <Flyout
-                    x:Name="FlyoutCurrency1"
-                    Placement="BottomEdgeAlignedRight"
-                    ShouldConstrainToRootBounds="False">
+            <Button
+                Padding="4,0,4,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Stretch"
+                Click="CurrencyButton1_Click"
+                Style="{StaticResource TextButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.SelectedCurrency1.DisplayName, Mode=OneWay}" />
+                    <FontIcon FontSize="10" Glyph="&#xE70D;" />
+                </StackPanel>
+            </Button>
 
-                    <Flyout.FlyoutPresenterStyle>
-                        <Style TargetType="FlyoutPresenter">
-                            <Setter Property="MaxWidth" Value="250" />
-                            <Setter Property="MaxHeight" Value="450" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
-
-                            <Setter Property="RenderTransform">
-                                <Setter.Value>
-                                    <TranslateTransform Y="-200" />
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Flyout.FlyoutPresenterStyle>
-
-                    <ListView
-                        DisplayMemberPath="DisplayName"
-                        ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
-                        SelectedItem="{x:Bind ViewModel.SelectedCurrency1, Mode=TwoWay}"
-                        SelectionChanged="ListView1_SelectionChanged"
-                        SelectionMode="Single" />
-
-                </Flyout>
-            </DropDownButton.Flyout>
-        </DropDownButton>
+            <!--  drives the actual selection; kept invisible, the button above just opens its dropdown  -->
+            <ComboBox
+                x:Name="CurrencyComboBox1"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                DisplayMemberPath="DisplayName"
+                IsHitTestVisible="False"
+                ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                Opacity="0"
+                SelectedItem="{x:Bind ViewModel.SelectedCurrency1, Mode=TwoWay}" />
+        </Grid>
 
         <!--  amount being typed  -->
         <!--  (scrolls sideways because a long number must not resize the layout)  -->
@@ -140,51 +131,35 @@
 
         <!--  currency 2 selection  -->
         <!--  (same picker as currency 1)  -->
-        <DropDownButton
+        <Grid
             Grid.Row="3"
             Grid.Column="0"
             Grid.ColumnSpan="3"
-            Height="26"
-            Margin="0"
-            HorizontalAlignment="Stretch"
-            HorizontalContentAlignment="Right"
-            Background="Transparent"
-            BorderThickness="0"
-            Content="{x:Bind ViewModel.SelectedCurrency2.DisplayName, Mode=OneWay}"
-            FontSize="12"
-            Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+            Height="26">
 
-            <DropDownButton.Flyout>
-                <Flyout
-                    x:Name="FlyoutCurrency2"
-                    Placement="BottomEdgeAlignedRight"
-                    ShouldConstrainToRootBounds="False">
+            <Button
+                Padding="4,0,4,0"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Stretch"
+                Click="CurrencyButton2_Click"
+                Style="{StaticResource TextButtonStyle}">
+                <StackPanel Orientation="Horizontal" Spacing="4">
+                    <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Text="{x:Bind ViewModel.SelectedCurrency2.DisplayName, Mode=OneWay}" />
+                    <FontIcon FontSize="10" Glyph="&#xE70D;" />
+                </StackPanel>
+            </Button>
 
-                    <Flyout.FlyoutPresenterStyle>
-                        <Style TargetType="FlyoutPresenter">
-                            <Setter Property="MaxWidth" Value="250" />
-                            <Setter Property="MaxHeight" Value="450" />
-                            <Setter Property="Padding" Value="0" />
-                            <Setter Property="CornerRadius" Value="{ThemeResource OverlayCornerRadius}" />
-
-                            <Setter Property="RenderTransform">
-                                <Setter.Value>
-                                    <TranslateTransform Y="-200" />
-                                </Setter.Value>
-                            </Setter>
-                        </Style>
-                    </Flyout.FlyoutPresenterStyle>
-
-                    <ListView
-                        DisplayMemberPath="DisplayName"
-                        ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
-                        SelectedItem="{x:Bind ViewModel.SelectedCurrency2, Mode=TwoWay}"
-                        SelectionChanged="ListView2_SelectionChanged"
-                        SelectionMode="Single" />
-
-                </Flyout>
-            </DropDownButton.Flyout>
-        </DropDownButton>
+            <!--  drives the actual selection; kept invisible, the button above just opens its dropdown  -->
+            <ComboBox
+                x:Name="CurrencyComboBox2"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Center"
+                DisplayMemberPath="DisplayName"
+                IsHitTestVisible="False"
+                ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                Opacity="0"
+                SelectedItem="{x:Bind ViewModel.SelectedCurrency2, Mode=TwoWay}" />
+        </Grid>
 
         <!--  converted result  -->
         <ScrollViewer
@@ -225,7 +200,9 @@
 
 
         <!--  input buttons  -->
+        <!--  (grows in when the page is shown, like the pads of the two calculators, see PadEntrance)  -->
         <Grid
+            x:Name="Pad"
             Grid.Row="6"
             Grid.Column="0"
             Grid.ColumnSpan="3"

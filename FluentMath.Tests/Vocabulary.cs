@@ -45,7 +45,7 @@ namespace FluentMath.Tests
             "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
         };
 
-        // drawn on a key but computing nothing yet; mirrors StandardViewModel.NotImplementedKeys and
+        // drawn on a key but computing nothing yet; mirrors CalculatorViewModel.NotImplementedKeys and
         // the revisit tag above it
         //
         // the header carries the history and memory keys ahead of what they need; a name leaves this list
@@ -56,7 +56,7 @@ namespace FluentMath.Tests
         };
 
         // the keys that read an operand to their left, so pressing one on a shown result carries on
-        // from it; mirrors StandardViewModel.ContinuesFromResult
+        // from it; mirrors CalculatorViewModel.ContinuesFromResult
         public static readonly string[] ContinuesFromResult =
         {
             "cmd_fact", "cmd_inv", "cmd_percent", "cmd_pow_2", "cmd_pow_n", "cmd_frac", "cmd_frac_mixed", "cmd_exp",
@@ -65,7 +65,7 @@ namespace FluentMath.Tests
         };
 
         // the keys that stand between two operands the way the arithmetic signs do, and carry a shown
-        // result on as their left one; mirrors the commands in StandardViewModel.IsOperator
+        // result on as their left one; mirrors the commands in CalculatorViewModel.IsOperator
         public static readonly string[] OperatorCommands =
         {
             "cmd_npr", "cmd_ncr", "cmd_div_r"
@@ -121,9 +121,9 @@ namespace FluentMath.Tests
         //
         // CallerFilePath resolves when the test project is compiled, which is what makes this work both
         // here and on a runner without anything having to know a working directory
-        public static string PageMarkupPath()
+        public static string PageMarkupPath(string page)
         {
-            return Path.Combine(RepositoryRoot(), "FluentMath", "Views", "StandardPage.xaml");
+            return Path.Combine(RepositoryRoot(), "FluentMath", "Views", page + ".xaml");
         }
 
         private static string RepositoryRoot([CallerFilePath] string testSourcePath = "")
