@@ -66,6 +66,12 @@ namespace FluentMath.Models
         // this, a leading 0 not counted: 1÷17 has all sixteen under its bar, 1÷97 has no bar at all
         private const int MaxRecurringDigits = 16;
 
+        // --- sexagesimal ---
+        // the largest angle written in degrees, minutes and seconds, the 9999999°59′59″ a Casio converts
+        private const long MaxSexagesimalDegrees = 9999999;
+        private const long HundredthsPerDegree = 360000;
+        private const long HundredthsPerMinute = 6000;
+
 
         // === public formatting ===
 
@@ -109,6 +115,18 @@ namespace FluentMath.Models
             {
                 if (!TryRecurring(value, out string leading, out string period)) return ToLatex(value.Value, format);
                 return $"{leading}\\overline{{{period}}}";
+            }
+
+            if (form == AnswerForm.Sexagesimal)
+            {
+                if (!TrySexagesimal(value.Value, out bool negative, out long degrees, out long minutes, out string seconds))
+                {
+                    return ToLatex(value.Value, format);
+                }
+
+                string sign = negative ? "-" : "";
+                return $"{sign}{degrees.ToString(CultureInfo.InvariantCulture)}{MarkerLatex("degrees")}"
+                    + $"{minutes.ToString(CultureInfo.InvariantCulture)}{MarkerLatex("minutes")}{seconds}{MarkerLatex("seconds")}";
             }
 
             if (!TryFraction(value, out long numerator, out long denominator))
@@ -243,6 +261,8 @@ namespace FluentMath.Models
 
                 return recurring;
             }
+
+            if (form == AnswerForm.Sexagesimal) return SexagesimalTokens(value.Value, asInput: false) ?? ToTokens(value.Value, format);
 
             if (TryFraction(value, out long numerator, out long denominator))
             {
@@ -692,6 +712,62 @@ namespace FluentMath.Models
             }
 
             return false;
+        }
+
+
+        // === sexagesimal ===
+
+        // the value as degrees, minutes and seconds, the seconds to two decimals and without the zeros
+        // behind them: 2.2583 is 2°15′29.88″ and 2.5 is 2°30′0″; a second that rounds up to sixty carries
+        // on into the minutes and the degrees
+        //
+        // read off the fifteen digits a Casio holds, the way the fixed decimals are; a negative value that
+        // rounds to nothing keeps its minus, as it does there
+        public static bool TrySexagesimal(double value, out bool negative, out long degrees, out long minutes, out string seconds)
+        {
+            negative = value < 0;
+            degrees = 0;
+            minutes = 0;
+            seconds = "0";
+
+            if (!double.IsFinite(value) || Math.Abs(value) >= MaxSexagesimalDegrees + 1) return false;
+
+            (decimal mantissa, int exponent) = Decompose(value);
+            long hundredths = (long)Math.Round(Math.Abs(Scale(mantissa, exponent)) * HundredthsPerDegree, MidpointRounding.AwayFromZero);
+
+            degrees = hundredths / HundredthsPerDegree;
+            if (degrees > MaxSexagesimalDegrees) return false;
+
+            minutes = hundredths % HundredthsPerDegree / HundredthsPerMinute;
+            seconds = (hundredths % HundredthsPerMinute / 100m).ToString("0.##", CultureInfo.InvariantCulture);
+            return true;
+        }
+
+        public static bool HasSexagesimalForm(double value)
+        {
+            return TrySexagesimal(value, out _, out _, out _, out _);
+        }
+
+        // the digits with the real markers of the °′″ key between them, so seeding them types the angle back
+        // in; asInput writes a leading minus as the sign
+        public static List<MathToken>? SexagesimalTokens(double value, bool asInput)
+        {
+            if (!TrySexagesimal(value, out bool negative, out long degrees, out long minutes, out string seconds)) return null;
+
+            List<MathToken> tokens = LeadingSign(negative, asInput);
+            tokens.AddRange(DigitTokens(degrees.ToString(CultureInfo.InvariantCulture)));
+            tokens.Add(new PostfixToken("degrees"));
+            tokens.AddRange(DigitTokens(minutes.ToString(CultureInfo.InvariantCulture)));
+            tokens.Add(new PostfixToken("minutes"));
+            tokens.AddRange(DigitTokens(seconds));
+            tokens.Add(new PostfixToken("seconds"));
+
+            return tokens;
+        }
+
+        private static string MarkerLatex(string kind)
+        {
+            return new PostfixToken(kind).ToLatex(null!);
         }
 
 

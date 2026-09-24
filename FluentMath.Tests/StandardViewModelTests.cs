@@ -908,6 +908,125 @@ namespace FluentMath.Tests
         }
 
 
+        // === sexagesimal ===
+
+        private const string TwoThirty = "2{}^{\\circ}30{}'0{}''";
+
+        private static string ResultOf(params string[] keys)
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, keys);
+            Press(viewModel, "=");
+
+            return viewModel.InputAndResultText;
+        }
+
+        // measured on the Casio: 2°30′ shows 2°30′0″, and 2.2583 followed by °′″ shows 2°15′29.88″
+        [Fact]
+        public void ShowsAnAngleInDegreesMinutesAndSeconds()
+        {
+            Assert.Equal(TwoThirty, ResultOf("2", "cmd_dms", "30", "cmd_dms"));
+
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "2.2583", "=", "cmd_dms");
+            Assert.Equal("2{}^{\\circ}15{}'29.88{}''", viewModel.InputAndResultText);
+        }
+
+        // measured on the Casio: °′″ plus °′″ stays one, and so does one times a plain number or with a
+        // minus in front; two of them multiplied are a plain 25/4
+        [Fact]
+        public void KeepsAnAngleWhereTheCasioDoes()
+        {
+            Assert.Equal("3{}^{\\circ}0{}'0{}''", ResultOf("1", "cmd_dms", "30", "cmd_dms", "+", "1", "cmd_dms", "30", "cmd_dms"));
+            Assert.Equal("5{}^{\\circ}0{}'0{}''", ResultOf("2", "cmd_dms", "30", "cmd_dms", "*", "2"));
+            Assert.Equal("-" + TwoThirty, ResultOf("-", "2", "cmd_dms", "30", "cmd_dms"));
+            Assert.Equal("\\frac{25}{4}", ResultOf("2", "cmd_dms", "30", "cmd_dms", "*", "2", "cmd_dms", "30", "cmd_dms"));
+        }
+
+        // the key switches a result between the angle and the decimal, deg and S⇔D go to the decimal
+        [Fact]
+        public void SwitchesBetweenTheAngleAndTheDecimal()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "=", "cmd_dms");
+            Assert.Equal("2.5", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_dms");
+            Assert.Equal(TwoThirty, viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_degrees");
+            Assert.Equal("2.5", viewModel.InputAndResultText);
+
+            Press(viewModel, "cmd_dms", "sd");
+            Assert.Equal("2.5", viewModel.InputAndResultText);
+        }
+
+        // during input the key types a marker and deg evaluates first; on an empty display the marker
+        // stands behind the 0, which is how minutes alone are typed
+        [Fact]
+        public void TypesAMarkerDuringInputAndEvaluatesOnDeg()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "cmd_degrees");
+            Assert.Equal("2.5", viewModel.InputAndResultText);
+
+            Assert.Equal("0{}^{\\circ}39{}'0{}''", ResultOf("cmd_dms", "39", "cmd_dms"));
+        }
+
+        // the angle carries on as real markers with the full value behind the rounded seconds, so a
+        // seventh of a degree times seven is one degree again
+        [Fact]
+        public void CarriesAnAngleOnAtItsFullValue()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "1", "/", "7", "=", "cmd_dms");
+            Assert.Equal("0{}^{\\circ}8{}'34.29{}''", viewModel.InputAndResultText);
+
+            Press(viewModel, "*");
+            Assert.IsType<PostfixToken>(viewModel.InputTokens[1]);
+
+            Press(viewModel, "7", "=");
+            Assert.Equal("1{}^{\\circ}0{}'0{}''", viewModel.InputAndResultText);
+        }
+
+        // a negative angle goes in brackets for a key that takes the operand on its left, like any
+        // negative result
+        [Fact]
+        public void SquaresANegativeAngleAsAWhole()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "-", "2", "cmd_dms", "30", "cmd_dms", "=", "cmd_pow_2", "=");
+
+            Assert.Equal("\\frac{25}{4}", viewModel.InputAndResultText);
+        }
+
+        // a click lands where it was aimed, since the angle is seeded as the tokens it is drawn as
+        [Fact]
+        public void PlacesTheCaretInAShownAngle()
+        {
+            var viewModel = new StandardViewModel();
+            Press(viewModel, "2", "cmd_dms", "30", "cmd_dms", "=");
+            viewModel.PlaceCursor("@3");
+
+            Assert.Equal(7, viewModel.InputTokens.Count);
+            Assert.Equal(3, viewModel.CaretIndex);
+        }
+
+        // a pair is shown by its first value, and a value past the largest angle the form writes stays
+        // as it is
+        [Fact]
+        public void ShowsAPairByItsFirstValueAndLeavesAValueTooLargeAlone()
+        {
+            var pair = new StandardViewModel();
+            Press(pair, "cmd_pol", "1", "cmd_nav_right", "1", "=", "cmd_dms");
+            Assert.Equal("1{}^{\\circ}24{}'51.17{}''", pair.InputAndResultText);
+
+            var tooLarge = new StandardViewModel();
+            Press(tooLarge, "1", "cmd_exp", "8", "=", "cmd_dms");
+            Assert.Equal("100000000", tooLarge.InputAndResultText);
+        }
+
+
         // === a result taken as the operand of the next key ===
 
         // a Casio squares Ans, so a negative result squares to a positive number; −5² typed by hand is

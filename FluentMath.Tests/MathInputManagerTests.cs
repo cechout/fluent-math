@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using FluentMath.Engines;
 using FluentMath.Models;
 using Xunit;
@@ -530,6 +531,30 @@ namespace FluentMath.Tests
             manager.StartPower();
             manager.AddNumber("2");
             Assert.Equal(1.5625, Value(manager));
+        }
+
+
+        // === sexagesimal markers ===
+
+        // one key for all three markers: a number gets the marker after the one in front of it
+        [Fact]
+        public void TypesTheMarkerTheNumberInFrontNeeds()
+        {
+            MathInputManager manager = Keys.Press("2", "dms", "30", "dms", "15", "dms");
+
+            Assert.Equal(new[] { "degrees", "minutes", "seconds" },
+                manager.RootTokens.OfType<PostfixToken>().Select(marker => marker.Value));
+        }
+
+        // where no number stands directly behind a degrees or a minutes marker, the key starts with degrees
+        [Theory]
+        [InlineData("(", "1", ")", "dms")]
+        [InlineData("2", "dms", "+", "30", "dms")]
+        [InlineData("2", "dms", "30", "dms", "15", "dms", "5", "dms")]
+        [InlineData("2", "dms", "dms")]
+        public void StartsWithDegreesWhereNoNumberFollowsAMarker(params string[] keys)
+        {
+            Assert.Equal("degrees", Keys.Press(keys).RootTokens.Last().Value);
         }
 
 

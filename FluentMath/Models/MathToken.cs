@@ -193,13 +193,25 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return $"\\overline{{{Value}}}"; }
     }
 
-    // x!, the reciprocal, percent and the decimal prefixes; all of them stand behind their operand
-    // instead of in front of it, which is the whole reason the evaluator has a postfix level at all
+    // x!, the reciprocal, percent, the decimal prefixes and the markers of the °′″ key; all of them
+    // stand behind their operand instead of in front of it, which is the whole reason the evaluator has a
+    // postfix level at all
     //
     // the reciprocal is a bare superscript rather than a named call, so it sits on the operand the same
     // way a Casio prints it
     public class PostfixToken : MathToken
     {
+        // the three markers of an angle in degrees, minutes and seconds, with what the number in front of
+        // each is divided by and the sign it is written as; the order of the divisors is the order they
+        // follow each other in
+        private static readonly Dictionary<string, (int Divisor, string Symbol, string Latex)> SexagesimalMarkers =
+            new Dictionary<string, (int Divisor, string Symbol, string Latex)>
+            {
+                ["degrees"] = (1, "°", "{}^{\\circ}"),
+                ["minutes"] = (60, "′", "{}'"),
+                ["seconds"] = (3600, "″", "{}''")
+            };
+
         // the decimal prefixes by name, with the power of ten each one stands for and the symbol it is
         // written as
         //
@@ -254,8 +266,20 @@ namespace FluentMath.Models
                         Symbol = prefix.Symbol;
                         _latex = kind == "micro" ? "\\mu" : $"\\mathrm{{{prefix.Symbol}}}";
                     }
+
+                    if (SexagesimalMarkers.TryGetValue(kind, out (int Divisor, string Symbol, string Latex) marker))
+                    {
+                        Symbol = marker.Symbol;
+                        _latex = marker.Latex;
+                    }
                     break;
             }
+        }
+
+        // what a number in front of a sexagesimal marker is divided by, or null for a postfix that is not one
+        public static int? SexagesimalDivisor(string kind)
+        {
+            return SexagesimalMarkers.TryGetValue(kind, out (int Divisor, string Symbol, string Latex) marker) ? marker.Divisor : null;
         }
 
         // the power of ten a prefix multiplies by, or null for a postfix that is not a prefix

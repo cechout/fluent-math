@@ -309,8 +309,8 @@ namespace FluentMath.ViewModels
             }
 
             // --- revisit: keys drawn before they compute ---
-            // the panels were laid out against the Windows Calculator and the keypad against a Casio,
-            // so both carry keys this engine has no token for yet
+            // the history and memory keys in the header are drawn ahead of the history list and the
+            // variable store they need
             // they return here rather than falling out of the switch below, because the fall-through
             // reaches BeginInputAfterResult first, which clears a shown result and leaves the display as
             // a bare 0 with the formula gone
@@ -338,6 +338,19 @@ namespace FluentMath.ViewModels
                 return;
             }
 
+            if (sign == "cmd_degrees")
+            {
+                ShowDecimalDegrees();
+                return;
+            }
+
+            // the °′″ key is a view key on a result only; during input it types a marker
+            if (sign == "cmd_dms" && _isShowingResult)
+            {
+                ToggleSexagesimal();
+                return;
+            }
+
             if (_isShowingResult) BeginInputAfterResult(sign);
 
             // an empty formula is shown as a 0, so a key that reads an operand has to find one standing
@@ -347,7 +360,9 @@ namespace FluentMath.ViewModels
             //
             // the mixed fraction is the exception: its empty template is what the key is there for, and a
             // 0 lifted into the whole part would put the cursor past the slot that is typed first
-            if (ContinuesFromResult(sign) && sign != "cmd_frac_mixed" && _inputManager.RootTokens.Count == 0)
+            // a marker of the °′″ key stands behind the 0 the same way, which is how 0°39′ is typed
+            if (((ContinuesFromResult(sign) && sign != "cmd_frac_mixed") || sign == "cmd_dms")
+                && _inputManager.RootTokens.Count == 0)
             {
                 _inputManager.AddNumber("0");
             }
@@ -407,6 +422,10 @@ namespace FluentMath.ViewModels
 
                     case "cmd_percent":
                         _inputManager.AddPostfix("%");
+                        break;
+
+                    case "cmd_dms":
+                        _inputManager.AddSexagesimalMarker();
                         break;
 
                     case "cmd_sin":
@@ -732,6 +751,8 @@ namespace FluentMath.ViewModels
         //
         // an exact form carries on as real roots and a real π, so the next calculation is exact again, and
         // a recurring decimal, which cannot be typed, as the fraction it stands for
+        // an angle in degrees, minutes and seconds carries on as real markers and stays an angle, with the
+        // full value behind the rounded seconds
         private void SeedWithShownResult()
         {
             MathValue value = _result.FirstValue;
@@ -739,6 +760,16 @@ namespace FluentMath.ViewModels
             if (_answerForm == AnswerForm.PrimeFactors && ResultFormatter.TryPrimeFactors(value.Value, out var factors))
             {
                 _inputManager.SeedWithTokens(ResultFormatter.PrimeFactorTokens(factors));
+                return;
+            }
+
+            List<MathToken>? angle = _answerForm == AnswerForm.Sexagesimal
+                ? ResultFormatter.SexagesimalTokens(value.Value, asInput: true)
+                : null;
+
+            if (angle != null)
+            {
+                _inputManager.SeedWithTokens(angle, value);
                 return;
             }
 
@@ -820,11 +851,10 @@ namespace FluentMath.ViewModels
 
         // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
         //
-        // dms and deg on the function panel; the two header keys, which are waiting on a history list and
-        // a variable store rather than on a token
+        // the two header keys, which are waiting on a history list and a variable store rather than on a
+        // token
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
-            "cmd_dms", "cmd_degrees",
             "cmd_history", "cmd_memory"
         };
 
@@ -964,6 +994,37 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
+        // the °′″ key on a result, which switches between degrees, minutes and seconds and the decimal the
+        // way it does on a Casio; during input it types a marker instead, see AddSexagesimalMarker
+        //
+        // a pair turns into its first value, as it does for FACT and ENG, and a value past the largest
+        // angle the form writes is left as it is
+        private void ToggleSexagesimal()
+        {
+            if (_answerForm == AnswerForm.Sexagesimal)
+            {
+                _answerForm = AnswerForm.Decimal;
+                PublishResult();
+                return;
+            }
+
+            if (!ResultFormatter.HasSexagesimalForm(_result.Value)) return;
+
+            _result = EvaluationResult.Success(_result.FirstValue);
+            _answerForm = AnswerForm.Sexagesimal;
+            PublishResult();
+        }
+
+        // deg, the shown result back in decimal degrees from whichever view it was in; pressed during input
+        // it evaluates first
+        private void ShowDecimalDegrees()
+        {
+            if (!_isShowingResult && !CalculateResult()) return;
+
+            _answerForm = AnswerForm.Decimal;
+            PublishResult();
+        }
+
         // cycles the shown result through its exact form, its recurring decimal and its decimal, the way
         // S⇔D does on a Casio: 7/3, 2.3 with a bar, 2.333333333; skipping whichever this value does not
         // have, so √2/2 only switches with its decimal; a pair switches both values together, and has a
@@ -981,7 +1042,8 @@ namespace FluentMath.ViewModels
                 ? 0
                 : Array.IndexOf(cycle, _answerForm);
 
-            // the prime factors and the ENG view are left for the decimal, from where the cycle starts over
+            // the prime factors, the ENG view and degrees, minutes and seconds are left for the decimal, from
+            // where the cycle starts over
             if (at < 0)
             {
                 _answerForm = AnswerForm.Decimal;
@@ -1022,10 +1084,16 @@ namespace FluentMath.ViewModels
             return _mixedFraction && HasForm(AnswerForm.Mixed) ? AnswerForm.Mixed : AnswerForm.Improper;
         }
 
-        // the form a new result opens in: with exact first, the exact form when the value has one, and the
-        // decimal when it has none
+        // the form a new result opens in: an angle in degrees, minutes and seconds as one; otherwise, with
+        // exact first, the exact form when the value has one, and the decimal when it has none
         private AnswerForm FirstAnswerForm()
         {
+            if (_result.Kind == ResultKind.Single && _result.FirstValue.IsSexagesimal
+                && ResultFormatter.HasSexagesimalForm(_result.Value))
+            {
+                return AnswerForm.Sexagesimal;
+            }
+
             if (!_settings.ExactFirst || !HasForm(AnswerForm.Improper)) return AnswerForm.Decimal;
 
             return ExactForm();

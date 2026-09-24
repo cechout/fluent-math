@@ -35,7 +35,8 @@ namespace FluentMath.Models
     // under both names, since only a fraction has a whole part to split off
     // a value only has a form when one was found for it at all, and the prime factors only when it is a
     // whole number above zero, which the FACT key asks for; the ENG keys ask for the engineering form, a
-    // mantissa over a power of ten that is a multiple of three
+    // mantissa over a power of ten that is a multiple of three, and the °′″ key for degrees, minutes and
+    // seconds
     public enum AnswerForm
     {
         Decimal,
@@ -43,7 +44,8 @@ namespace FluentMath.Models
         Mixed,
         Recurring,
         PrimeFactors,
-        Engineering
+        Engineering,
+        Sexagesimal
     }
 
 
@@ -72,11 +74,21 @@ namespace FluentMath.Models
         public double Value { get; }
         public ExactValue? Exact { get; }
 
-        public MathValue(double value, ExactValue? exact = null)
+        // whether the value is an angle in degrees, minutes and seconds, which a result is shown as; the
+        // evaluator decides which operations keep it one, and every operation below drops it except a
+        // sign, since −2°30′ is still an angle
+        public bool IsSexagesimal { get; }
+
+        public MathValue(double value, ExactValue? exact = null) : this(value, exact, false) { }
+
+        private MathValue(double value, ExactValue? exact, bool sexagesimal)
         {
             Value = exact != null ? exact.ToDouble() : value;
             Exact = exact;
+            IsSexagesimal = sexagesimal;
         }
+
+        public MathValue AsSexagesimal(bool sexagesimal) => new MathValue(Value, Exact, sexagesimal);
 
         // a whole number with its exact value, for the functions whose answer is always whole; past the
         // range a double holds every whole number in, the digits are no longer the value
@@ -101,7 +113,7 @@ namespace FluentMath.Models
 
         public static MathValue operator -(MathValue value)
         {
-            return new MathValue(-value.Value, ExactValue.Negate(value.Exact));
+            return new MathValue(-value.Value, ExactValue.Negate(value.Exact), value.IsSexagesimal);
         }
 
         public static MathValue operator *(MathValue left, MathValue right)

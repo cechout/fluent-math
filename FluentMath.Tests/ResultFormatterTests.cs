@@ -302,6 +302,44 @@ namespace FluentMath.Tests
         }
 
 
+        // === sexagesimal ===
+
+        [Theory]
+        [InlineData(2.5, "2{}^{\\circ}30{}'0{}''")]
+        [InlineData(2.2583, "2{}^{\\circ}15{}'29.88{}''")]
+        [InlineData(3.14159265358979, "3{}^{\\circ}8{}'29.73{}''")]
+        [InlineData(-2.5, "-2{}^{\\circ}30{}'0{}''")]
+        [InlineData(0, "0{}^{\\circ}0{}'0{}''")]
+        public void WritesDegreesMinutesAndSeconds(double value, string expected)
+        {
+            Assert.Equal(expected, ResultFormatter.ToLatex(new MathValue(value), AnswerForm.Sexagesimal, false));
+        }
+
+        // a second that rounds up to sixty carries on into the minutes and on into the degrees
+        [Fact]
+        public void CarriesARoundedSecondOn()
+        {
+            Assert.True(ResultFormatter.TrySexagesimal(2.9999999, out bool negative, out long degrees, out long minutes, out string seconds));
+
+            Assert.False(negative);
+            Assert.Equal(3, degrees);
+            Assert.Equal(0, minutes);
+            Assert.Equal("0", seconds);
+        }
+
+        // up to the 9999999°59′59″ the Casio converts; past it the decimal is shown
+        [Fact]
+        public void WritesAnglesUpToTheLargestTheCasioConverts()
+        {
+            Assert.True(ResultFormatter.HasSexagesimalForm(9999999.9));
+            Assert.False(ResultFormatter.HasSexagesimalForm(10000000));
+            Assert.False(ResultFormatter.HasSexagesimalForm(9999999.99999999));
+            Assert.False(ResultFormatter.HasSexagesimalForm(double.NaN));
+
+            Assert.Equal("100000000", ResultFormatter.ToLatex(new MathValue(1e8), AnswerForm.Sexagesimal, false));
+        }
+
+
         // === number formats ===
 
         private static (string Digits, int? Exponent) Written(double value, NumberFormat format)

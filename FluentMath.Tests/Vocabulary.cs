@@ -47,11 +47,10 @@ namespace FluentMath.Tests
         // drawn on a key but computing nothing yet; mirrors StandardViewModel.NotImplementedKeys and
         // the revisit tag above it
         //
-        // the panels were laid out against the Windows Calculator and the keypad against a Casio, so
-        // both carry keys ahead of the engine; a name leaves this list as it lands
+        // the header carries the history and memory keys ahead of what they need; a name leaves this list
+        // as it lands
         public static readonly string[] NotImplemented =
         {
-            "cmd_dms", "cmd_degrees",
             "cmd_history", "cmd_memory"
         };
 
@@ -73,9 +72,11 @@ namespace FluentMath.Tests
 
         // the keys that change how a result is shown and leave the formula behind it alone; pressed during
         // input they evaluate first
+        //
+        // the °′″ key is one on a result only, since during input it types a marker
         public static readonly string[] ViewKeys =
         {
-            "cmd_prime", "cmd_eng", "cmd_eng_back", "cmd_frac_swap"
+            "cmd_prime", "cmd_eng", "cmd_eng_back", "cmd_frac_swap", "cmd_degrees"
         };
 
         // the keys that change a mode instead of the formula, and must leave both the input and a shown

@@ -19,12 +19,16 @@ namespace FluentMath.Engines
     //   combination := product (nPr or nCr, product)*
     //   product     := unary (implicit, postfix)*
     //   unary       := sign* postfix
-    //   postfix     := atom (factorial or reciprocal or percent or prefix)*
+    //   postfix     := atom (factorial or reciprocal or percent or prefix or sexagesimal marker)*
     //   atom        := number | constant | Ans | Ran# | bracketed expression | fraction | mixed fraction
     //                   | power | root | function | logarithm
     //
     // every value carries its exact value beside the double, see MathValue; a step with no exact answer,
     // a logarithm, e or a sine of 18°, drops it and the rest of the calculation goes on with the double
+    //
+    // an angle in degrees, minutes and seconds stays one through the operations the Casio manual names:
+    // plus and minus between two of them, times and divided by a plain number, and a sign; the display
+    // opens such a result in the same form
     //
     // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
     // half-typed formula is the normal state of the input rather than an exceptional one
@@ -130,9 +134,12 @@ namespace FluentMath.Engines
 
                 position++;
                 MathValue right = ParseTerm(tokens, ref position);
+                bool sexagesimal = value.IsSexagesimal && right.IsSexagesimal;
 
                 if (token.Value == "+") { value += right; }
                 else { value -= right; }
+
+                value = value.AsSexagesimal(sexagesimal);
             }
 
             return value;
@@ -157,12 +164,12 @@ namespace FluentMath.Engines
 
                 if (token.Value == "*")
                 {
-                    value *= right;
+                    value = (value * right).AsSexagesimal(value.IsSexagesimal != right.IsSexagesimal);
                 }
                 else if (token.Value == "/")
                 {
                     if (right.Value == 0) return Fail(EvaluationError.DivideByZero);
-                    value /= right;
+                    value = (value / right).AsSexagesimal(value.IsSexagesimal && !right.IsSexagesimal);
                 }
                 else
                 {
@@ -236,7 +243,8 @@ namespace FluentMath.Engines
             // error instead of 12
             while (_error == EvaluationError.None && position < tokens.Count && StartsAtom(tokens[position]))
             {
-                value *= ParsePostfix(tokens, ref position);
+                MathValue factor = ParsePostfix(tokens, ref position);
+                value = (value * factor).AsSexagesimal(value.IsSexagesimal != factor.IsSexagesimal);
             }
 
             return value;
@@ -269,6 +277,7 @@ namespace FluentMath.Engines
         // 5 factorial rather than the factorial of -5, which has none
         private MathValue ParsePostfix(IReadOnlyList<MathToken> tokens, ref int position)
         {
+            int start = position;
             MathValue value = ParseAtom(tokens, ref position);
 
             while (_error == EvaluationError.None && position < tokens.Count)
@@ -278,6 +287,11 @@ namespace FluentMath.Engines
 
                 position++;
                 value = ApplyPostfix(token.Value, value);
+
+                if (PostfixToken.SexagesimalDivisor(token.Value) is int divisor)
+                {
+                    value = ContinueSexagesimal(tokens, start, ref position, value, divisor);
+                }
             }
 
             return value;
@@ -465,7 +479,7 @@ namespace FluentMath.Engines
                 while (position < tokens.Count && StartsAtom(tokens[position]))
                 {
                     position = AtomEnd(tokens, position, ref unclosed);
-                    while (position < tokens.Count && tokens[position].Type == TokenType.Postfix) position++;
+                    position = PostfixEnd(tokens, position);
 
                     factors++;
                 }
@@ -507,6 +521,89 @@ namespace FluentMath.Engines
         }
 
 
+        // the postfix keys behind an atom, with the minutes and seconds that belong to a sexagesimal marker
+        // among them, the same way ParsePostfix reads them
+        private static int PostfixEnd(List<MathToken> tokens, int position)
+        {
+            while (position < tokens.Count && tokens[position].Type == TokenType.Postfix)
+            {
+                int? divisor = PostfixToken.SexagesimalDivisor(tokens[position].Value);
+                position++;
+
+                while (divisor is int current)
+                {
+                    int end = SexagesimalPartEnd(tokens, position, current);
+                    if (end < 0) break;
+
+                    divisor = PostfixToken.SexagesimalDivisor(tokens[end - 1].Value);
+                    position = end;
+                }
+            }
+
+            return position;
+        }
+
+
+        // === sexagesimal ===
+
+        // the minutes and seconds behind a marker belong to the same angle, so 2°30′ is two and a half
+        // degrees rather than the product the implicit multiplication would make of 2° and 30′
+        //
+        // the value is an angle from here on; a result carried on in this form is its full value for as
+        // long as the whole group is what it was seeded as, the same as a run of digits
+        private MathValue ContinueSexagesimal(IReadOnlyList<MathToken> tokens, int start, ref int position,
+            MathValue value, int divisor)
+        {
+            while (_error == EvaluationError.None)
+            {
+                int end = SexagesimalPartEnd(tokens, position, divisor);
+                if (end < 0) break;
+
+                MathValue part = ParseAtom(tokens, ref position);
+                divisor = PostfixToken.SexagesimalDivisor(tokens[position].Value)!.Value;
+                position = end;
+
+                value += part / MathValue.Whole(divisor);
+            }
+
+            if (IsSeededGroup(tokens, start, position)) value = tokens[start].Seed!.Magnitude;
+
+            return value.AsSexagesimal(true);
+        }
+
+        // where a run of digits closed by a marker further down the order than divisor ends, the marker
+        // included, or -1 when the tokens at position are not one
+        private static int SexagesimalPartEnd(IReadOnlyList<MathToken> tokens, int position, int divisor)
+        {
+            int end = position;
+            while (end < tokens.Count && tokens[end].Type == TokenType.Number) end++;
+
+            if (end == position || end >= tokens.Count) return -1;
+            if (tokens[end].Type != TokenType.Postfix || PostfixToken.SexagesimalDivisor(tokens[end].Value) is not int next) return -1;
+
+            return next > divisor ? end + 1 : -1;
+        }
+
+        // every digit of the group shares one seed and there are exactly as many as were seeded; the
+        // markers between the runs carry none
+        private static bool IsSeededGroup(IReadOnlyList<MathToken> tokens, int start, int end)
+        {
+            SeededValue? seed = tokens[start].Seed;
+            if (seed == null) return false;
+
+            int digits = 0;
+            for (int index = start; index < end; index++)
+            {
+                if (tokens[index].Type != TokenType.Number) continue;
+                if (!ReferenceEquals(tokens[index].Seed, seed)) return false;
+
+                digits++;
+            }
+
+            return digits == seed.DigitCount;
+        }
+
+
         // === postfix ===
 
         private MathValue ApplyPostfix(string kind, MathValue value)
@@ -536,6 +633,9 @@ namespace FluentMath.Engines
 
                 return exponent < 0 ? value / scale : value * scale;
             }
+
+            // a number of minutes is a sixtieth of a degree and one of seconds a sixtieth of that
+            if (PostfixToken.SexagesimalDivisor(kind) is int divisor) return value / MathValue.Whole(divisor);
 
             return Fail(EvaluationError.Syntax);
         }

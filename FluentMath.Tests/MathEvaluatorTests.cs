@@ -1278,5 +1278,106 @@ namespace FluentMath.Tests
 
             Assert.Equal(Whole(2), new MathEvaluator().Evaluate(manager.RootTokens).FirstValue.Exact);
         }
+
+
+        // === sexagesimal ===
+
+        private static MathValue Angle(params string[] keys)
+        {
+            EvaluationResult result = new MathEvaluator().Evaluate(Keys.Press(keys).RootTokens);
+
+            Assert.True(result.IsSuccess, "expected a value but got " + result.Error);
+            return result.FirstValue;
+        }
+
+        // the minutes and the seconds belong to the degrees in front of them rather than being multiplied
+        // with them
+        [Fact]
+        public void ReadsDegreesMinutesAndSeconds()
+        {
+            Assert.Equal(2.5, Value("2", "dms", "30", "dms"));
+            Assert.Equal(2.51, Value("2", "dms", "30", "dms", "36", "dms"));
+            Assert.Equal(2.01, Value("2", "dms", "0", "dms", "36", "dms"));
+            Assert.Equal(0.65, Value("0", "dms", "39", "dms"));
+            Assert.Equal(-2.5, Value("-", "2", "dms", "30", "dms"));
+
+            Assert.Equal(ExactValue.FromRational(new Rational(251, 100)), Angle("2", "dms", "30", "dms", "36", "dms").Exact);
+        }
+
+        // a marker stands behind a bracket as well, and minutes left without their degrees are a sixtieth
+        [Fact]
+        public void ReadsAMarkerBehindABracketAndOnItsOwn()
+        {
+            Assert.Equal(2.5, Value("(", "1", "+", "1", ")", "dms", "30", "dms"));
+
+            var minutes = new List<MathToken>
+            {
+                new MathToken(TokenType.Number, "3"), new MathToken(TokenType.Number, "0"), new PostfixToken("minutes")
+            };
+
+            Assert.Equal(0.5, new MathEvaluator().Evaluate(minutes).Value);
+        }
+
+        // the operations the Casio manual names keep an angle one: plus and minus between two of them,
+        // times and divided by a plain number, and a sign
+        [Fact]
+        public void KeepsAnAngleThroughTheOperationsThatKeepItOne()
+        {
+            Assert.True(Angle("2", "dms", "+", "1", "dms", "30", "dms").IsSexagesimal);
+            Assert.True(Angle("2", "dms", "30", "dms", "-", "1", "dms").IsSexagesimal);
+            Assert.True(Angle("2", "dms", "30", "dms", "*", "2").IsSexagesimal);
+            Assert.True(Angle("2", "*", "2", "dms", "30", "dms").IsSexagesimal);
+            Assert.True(Angle("2", "dms", "30", "dms", "/", "2").IsSexagesimal);
+            Assert.True(Angle("(", "2", "dms", ")", "2").IsSexagesimal);
+            Assert.True(Angle("-", "2", "dms", "30", "dms").IsSexagesimal);
+        }
+
+        [Fact]
+        public void DropsTheAngleEverywhereElse()
+        {
+            MathValue squared = Angle("2", "dms", "30", "dms", "*", "2", "dms", "30", "dms");
+            Assert.False(squared.IsSexagesimal);
+            Assert.Equal(ExactValue.FromRational(new Rational(25, 4)), squared.Exact);
+
+            Assert.False(Angle("2", "dms", "30", "dms", "+", "1").IsSexagesimal);
+            Assert.False(Angle("1", "/", "2", "dms").IsSexagesimal);
+            Assert.False(Angle("2", "dms", "30", "dms", "divr", "2").IsSexagesimal);
+            Assert.False(Angle("2", "dms", "pow", "2").IsSexagesimal);
+            Assert.False(Angle("fn:sin", "30", "dms").IsSexagesimal);
+            Assert.False(Angle("2", "dms", "30", "dms", "%").IsSexagesimal);
+        }
+
+        // the history line reads an angle as the one operand it is, and only a real product behind a
+        // division gets its brackets
+        [Fact]
+        public void ReadsAnAngleAsOneOperandBehindADivision()
+        {
+            Assert.Equal("1/2degrees30minutes", Read("1", "/", "2", "dms", "30", "dms"));
+            Assert.Equal("1/(2degrees3)", Read("1", "/", "2", "dms", "3"));
+
+            Assert.Equal(0.4, Value("1", "/", "2", "dms", "30", "dms"));
+        }
+
+        // an angle carried on from a result is its full value behind the rounded seconds, until the group
+        // is edited
+        [Fact]
+        public void CarriesTheFullValueOfASeededAngle()
+        {
+            ExactValue seventh = ExactValue.FromRational(new Rational(1, 7));
+            MathValue value = new MathValue(0, seventh);
+
+            var manager = new MathInputManager();
+            manager.SeedWithTokens(ResultFormatter.SexagesimalTokens(value.Value, asInput: true)!, value);
+
+            MathValue carried = new MathEvaluator().Evaluate(manager.RootTokens).FirstValue;
+            Assert.Equal(seventh, carried.Exact);
+            Assert.True(carried.IsSexagesimal);
+
+            // a digit typed into the seconds
+            manager.SetCursorPosition("@4");
+            manager.AddNumber("5");
+
+            Assert.NotEqual(seventh, new MathEvaluator().Evaluate(manager.RootTokens).FirstValue.Exact);
+        }
     }
 }

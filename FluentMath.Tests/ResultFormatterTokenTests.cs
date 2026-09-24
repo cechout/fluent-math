@@ -189,6 +189,24 @@ namespace FluentMath.Tests
         }
 
 
+        // === sexagesimal ===
+
+        // real markers between the digits, the minus drawn with the number and seeded as a sign
+        [Fact]
+        public void AnAngleIsItsDigitsWithTheRealMarkers()
+        {
+            List<MathToken> tokens = ResultFormatter.ToTokens(new MathValue(-2.2583), AnswerForm.Sexagesimal, false);
+
+            Assert.Equal(Minus + "21529.88", Digits(tokens));
+            Assert.Equal(new[] { "degrees", "minutes", "seconds" }, tokens.OfType<PostfixToken>().Select(marker => marker.Value));
+            Assert.Equal(TokenType.Number, tokens[0].Type);
+
+            MathToken seeded = ResultFormatter.SexagesimalTokens(-2.2583, asInput: true)![0];
+            Assert.Equal(TokenType.Operator, seeded.Type);
+            Assert.Equal("-", seeded.Value);
+        }
+
+
         // === scientific ===
 
         [Fact]
