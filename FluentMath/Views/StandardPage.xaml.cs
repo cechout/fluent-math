@@ -13,7 +13,7 @@ namespace FluentMath.Views
 
         // --- display ---
         // font sizes in pixels; the scientific page has its own pair
-        private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
+        private const double InputLineFontSize = 36; // the lower line, the formula being typed and then its result (bigger = larger)
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
 
 
