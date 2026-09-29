@@ -6,13 +6,14 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Linq;
+using Windows.Foundation;
 using Windows.UI;
 
 namespace FluentMath.Views
 {
     // the scientific calculator; the display is a CalculatorDisplay and every key is bound straight to the
-    // ViewModel, so what is left here is the panel bar
-    public sealed partial class ScientificPage : Page
+    // ViewModel, so what is left here is the panel bar and the way into compact mode
+    public sealed partial class ScientificPage : Page, ICompactPage
     {
         public CalculatorViewModel ViewModel { get; }
 
@@ -20,6 +21,25 @@ namespace FluentMath.Views
         // font sizes in pixels; the standard page has its own pair
         private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
+
+        // --- row floors ---
+        // in px; also how far the splitter goes; (the full window and compact mode each have their own pair)
+        private const double DisplayFloor = 96; // the display with the caret bar under it
+        private const double PadFloor = 252; // the panel bar over the keypad of six rows
+        private const double CompactDisplayFloor = 96;
+        private const double CompactPadFloor = 220;
+        private const double PushBuffer = 4; // room the pad keeps over its floor when it pushes the splitter
+
+        // --- compact mode ---
+        // sizes in px
+        private const double CompactStartWidth = 340;
+        private const double CompactStartHeight = 520;
+        private const double CompactMinWidth = 220; // the caret bar needs the angle key and four arrows
+
+        // --- key labels ---
+        // key font drops to smaller size once the keypad is shorter than this; (the panel bar keeps its size)
+        private const double SmallKeysBelowHeight = 205; // keypad height in pixels
+        private const double SmallKeyTextScale = 0.8;
 
 
         // === constructor ===
@@ -31,6 +51,10 @@ namespace FluentMath.Views
 
             Display.InputFontSize = InputLineFontSize;
             Display.HistoryFontSize = HistoryLineFontSize;
+
+            DisplayRow.MinHeight = DisplayFloor;
+            PadRow.MinHeight = PadFloor;
+            SmallKeyLabels.Attach(Keypad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
@@ -55,6 +79,55 @@ namespace FluentMath.Views
             base.OnNavigatedTo(e);
 
             ViewModel.RefreshSettingLabels();
+        }
+
+
+        // === compact mode ===
+
+        // MainWindow owns compact mode; the page only asks for it and lays itself out
+        private void CompactButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow.Instance.EnterCompactMode();
+        }
+
+        public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
+
+        // both floors, the divider row and 8 of margins
+        public Size CompactMinSize => new Size(CompactMinWidth,
+            CompactDisplayFloor + DividerRow.ActualHeight + CompactPadFloor + 8);
+
+        public void SetCompactLayout(bool compact)
+        {
+            Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+            DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
+            PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
+
+            InvalidateMeasure();
+        }
+
+
+        // === display height ===
+
+        // a window too short for the pad pushes the splitter up, and it stays there until it is dragged
+        //
+        // done in the measure, where the real available height arrives; a Grid that does not fit is laid out
+        // at its own size, so its SizeChanged never reports the squeeze (header and divider by set height)
+        protected override Size MeasureOverride(Size availableSize)
+        {
+            if (!double.IsInfinity(availableSize.Height))
+            {
+                double header = Header.Visibility == Visibility.Visible ? Header.Height : 0;
+                double divider = DividerLine.Height + DividerLine.Margin.Top + DividerLine.Margin.Bottom;
+                double room = availableSize.Height - RootGrid.Margin.Top - RootGrid.Margin.Bottom
+                    - header - divider - PadRow.MinHeight - PushBuffer;
+
+                if (DisplayRow.Height.Value > room)
+                {
+                    DisplayRow.Height = new GridLength(Math.Max(DisplayRow.MinHeight, room));
+                }
+            }
+
+            return base.MeasureOverride(availableSize);
         }
 
 

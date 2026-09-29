@@ -13,25 +13,22 @@
 
     <!--
         four rows: header, display, divider, pad; the pad is the panel bar over the keypad
-        the caret bar moved into the display block and the divider has a row of its own, which leaves
-        the two halves of the page as the star rows either side of it; a splitter laid over the
-        divider trades height between them, and since only a star sized row inside either half can
-        grow, neither bar ever changes height
-        a MinHeight on each star row is the whole travel limit: the two always add up to the same
-        number, so a floor under one is the ceiling over the other
+        the display has a fixed height only the splitter changes, the pad takes the rest
+        (row floors in the code-behind; a window too short for the pad pushes the splitter up)
     -->
-    <Grid Margin="4,4,4,4">
+    <Grid x:Name="RootGrid" Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="4*" MinHeight="96" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="5*" MinHeight="252" />
+            <RowDefinition x:Name="DisplayRow" Height="150" />
+            <RowDefinition x:Name="DividerRow" Height="Auto" />
+            <RowDefinition x:Name="PadRow" Height="*" />
         </Grid.RowDefinitions>
 
 
         <!--  page header  -->
         <!--  (the left margin clears the navigation views hamburger button)  -->
         <Grid
+            x:Name="Header"
             Grid.Row="0"
             Height="38"
             Margin="45,0,0,0"
@@ -47,14 +44,16 @@
                     Style="{ThemeResource SubtitleTextBlockStyle}"
                     Text="Scientific" />
 
-                <!--  planned: compact mode toggle  -->
-                <!--<Button
+                <!--  compact mode toggle  -->
+                <!--  (the Windows Calculator keep on top glyph)  -->
+                <Button
                     Width="32"
                     Height="32"
                     Padding="0"
-                    Style="{ThemeResource SubtleButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xE81C;" />
-                </Button>-->
+                    Click="CompactButton_Click"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xEE49;" />
+                </Button>
             </StackPanel>
 
             <!--  history and memory  -->
@@ -181,6 +180,7 @@
             sits in the middle of the 9px band the splitter takes hold of
         -->
         <Rectangle
+            x:Name="DividerLine"
             Grid.Row="2"
             Height="1"
             Margin="-4,4,-4,4"
@@ -1519,6 +1519,7 @@
                 NormalVisibility / ShiftVisibility, one of which is always collapsed
             -->
             <Grid
+                x:Name="Keypad"
                 Grid.Row="1"
                 ColumnSpacing="{StaticResource KeySpacing}"
                 RowSpacing="{StaticResource KeySpacing}">

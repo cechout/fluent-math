@@ -22,7 +22,7 @@
         <controls:MathPanel
             x:Name="MathDisplay1"
             Grid.Row="0"
-            Margin="4,0,4,0"
+            Margin="4,4,4,0"
             Ink="{ThemeResource TextFillColorSecondaryBrush}" />
 
         <!--  the input line scrolls sideways once the formula is wider than the display  -->
@@ -30,15 +30,13 @@
             the tap is taken here rather than on the panel, and the transparent background is what
             makes that work: the formula is only as wide as it is, and aiming at the air beside it
             is how a short one is clicked into at all
-            the scroller reaches to 4px above the caret bar and the panel inside it gives those
-            4px back at the bottom, which leaves the formula exactly where it was and opens a
-            strip underneath it; a ScrollViewer draws its scrollbar inside its own bounds, so
-            without that strip the bar is drawn over the formula rather than below it
+            the panel keeps a 4px strip free at the bottom for the scrollbar, which a ScrollViewer
+            draws inside its own bounds and so over the formula otherwise
         -->
         <ScrollViewer
             x:Name="InputScroller"
             Grid.Row="1"
-            Margin="4,0,4,4"
+            Margin="4,0,4,2"
             Background="Transparent"
             HorizontalScrollBarVisibility="Auto"
             HorizontalScrollMode="Auto"

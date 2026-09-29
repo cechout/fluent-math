@@ -22,6 +22,7 @@
         <!--  custom title bar  -->
         <!--  (the window extends its content into the caption area, so the bar is drawn here)  -->
         <TitleBar
+            x:Name="AppTitleBar"
             Title="Fluent Math"
             Grid.Row="0"
             Background="Transparent"
@@ -30,9 +31,29 @@
             IsBackButtonVisible="False"
             IsPaneToggleButtonVisible="False">
 
+            <!--  (holds the bar at 32 with the return key in it, as high as the close button)  -->
+            <TitleBar.Resources>
+                <x:Double x:Key="TitleBarExpandedHeight">32</x:Double>
+            </TitleBar.Resources>
+
             <TitleBar.IconSource>
                 <ImageIconSource ImageSource="/Assets/Icon/Icon.ico" />
             </TitleBar.IconSource>
+
+            <!--  compact return key  -->
+            <!--
+                only in the bar while compact, sized and placed from MainWindow
+                (the Windows Calculator back to full view glyph)
+            -->
+            <TitleBar.LeftHeader>
+                <Button
+                    x:Name="CompactReturnButton"
+                    VerticalAlignment="Top"
+                    Click="CompactReturnButton_Click"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xEE47;" />
+                </Button>
+            </TitleBar.LeftHeader>
         </TitleBar>
 
         <!--  navigation view  -->
