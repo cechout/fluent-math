@@ -185,6 +185,12 @@ namespace FluentMath
             _windowManager.MinWidth = CompactMinWidth + borderWidth;
             _windowManager.MinHeight = AppTitleBar.ActualHeight + StandardPage.CompactMinHeight + borderHeight;
 
+            // the return key takes the size of the close button across the bar from it; with minimize and
+            // maximize gone that button is all the caption area holds, and its measures follow the flags
+            // above straight away
+            CompactReturnButton.Width = AppWindow.TitleBar.RightInset / scale;
+            CompactReturnButton.Height = AppWindow.TitleBar.Height / scale;
+
             this.SetWindowSize(_compactSize.Width, _compactSize.Height);
             PinCompactWindow();
 
