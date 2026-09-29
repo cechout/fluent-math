@@ -20,22 +20,24 @@ namespace FluentMath.Views
         private const double InputLineFontSize = 36; // the lower line, the formula being typed and then its result (bigger = larger)
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
 
+        // --- row floors ---
+        // in pixels; the full window and compact mode each have their own pair
+        private const double DisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
+        private const double PadFloor = 220; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
+        private const double CompactDisplayFloor = 120; // the same two while compact
+        private const double CompactPadFloor = 180;
+
         // --- compact mode ---
-        // sizes in pixels; the start size is the one the Windows Calculator opens its keep on top window at,
-        // and the row floors hold while compact, outside it the page keeps the ones in the markup
+        // sizes in pixels; the start size is the one the Windows Calculator opens its keep on top window at
         private const double CompactStartWidth = 320; // the first compact window of a session, title bar included (bigger = wider)
         private const double CompactStartHeight = 394; // (bigger = taller)
         private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
-        private const double CompactDisplayFloor = 120; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        private const double CompactPadFloor = 180; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
 
         // the key labels drop to a smaller size under this window height while compact, since the keys are
         // too short for them by then
         private const double SmallKeysBelowHeight = 380; // window height in pixels, title bar included (bigger = small labels sooner)
         private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
 
-        private readonly double _displayFloor;
-        private readonly double _padFloor;
         private bool _isCompact;
         private bool _hasSmallKeys;
 
@@ -53,8 +55,8 @@ namespace FluentMath.Views
             Display.InputFontSize = InputLineFontSize;
             Display.HistoryFontSize = HistoryLineFontSize;
 
-            _displayFloor = DisplayRow.MinHeight;
-            _padFloor = PadRow.MinHeight;
+            DisplayRow.MinHeight = DisplayFloor;
+            PadRow.MinHeight = PadFloor;
 
             this.Loaded += StandardPage_Loaded;
             this.SizeChanged += StandardPage_SizeChanged;
@@ -100,8 +102,8 @@ namespace FluentMath.Views
             _isCompact = compact;
 
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-            DisplayRow.MinHeight = compact ? CompactDisplayFloor : _displayFloor;
-            PadRow.MinHeight = compact ? CompactPadFloor : _padFloor;
+            DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
+            PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
 
             UpdateKeyTextSize();
         }

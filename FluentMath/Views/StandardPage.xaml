@@ -11,17 +11,12 @@
     mc:Ignorable="d">
 
     <!--  the scientific page without its panel bar, shift layer and splitter: header, display, keypad  -->
+    <!--  (the floors of the display and the keypad row are set in the code-behind)  -->
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition
-                x:Name="DisplayRow"
-                Height="4*"
-                MinHeight="96" />
-            <RowDefinition
-                x:Name="PadRow"
-                Height="6*"
-                MinHeight="220" />
+            <RowDefinition x:Name="DisplayRow" Height="4*" />
+            <RowDefinition x:Name="PadRow" Height="6*" />
         </Grid.RowDefinitions>
 
 

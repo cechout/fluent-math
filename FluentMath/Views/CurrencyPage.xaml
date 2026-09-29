@@ -9,6 +9,7 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
+    <!--  (the floors of the amount lines and the number pad are set in the code-behind)  -->
     <Grid
         x:Name="RootGrid"
         Margin="4"
@@ -17,15 +18,9 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition x:Name="PickerRow1" Height="Auto" />
-            <RowDefinition
-                x:Name="AmountRow1"
-                Height="*"
-                MinHeight="40" />
+            <RowDefinition x:Name="AmountRow1" Height="*" />
             <RowDefinition x:Name="PickerRow2" Height="Auto" />
-            <RowDefinition
-                x:Name="AmountRow2"
-                Height="*"
-                MinHeight="40" />
+            <RowDefinition x:Name="AmountRow2" Height="*" />
             <RowDefinition x:Name="RateRow" Height="Auto" />
             <RowDefinition x:Name="PadRow" Height="5*" />
         </Grid.RowDefinitions>

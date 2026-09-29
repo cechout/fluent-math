@@ -22,17 +22,19 @@ namespace FluentMath.Views
         private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
 
+        // --- row floors ---
+        // in pixels; how far the splitter goes either way, and how far a smaller window pushes it, since the pad
+        // never gets shorter than its floor; the full window and compact mode each have their own pair
+        private const double DisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
+        private const double PadFloor = 252; // the panel bar, 36, over the keypad of six rows (smaller = shorter keys allowed)
+        private const double CompactDisplayFloor = 96; // the same two while compact
+        private const double CompactPadFloor = 252;
+
         // --- compact mode ---
-        // sizes in pixels; the row floors hold while compact, outside it the page keeps the ones in the markup,
-        // and the splitter can trade height between the two rows down to whichever floor is in force
+        // sizes in pixels
         private const double CompactStartWidth = 340; // the first compact window of a session, title bar included (bigger = wider)
         private const double CompactStartHeight = 520; // (bigger = taller)
         private const double CompactMinWidth = 220; // how narrow the page can be dragged; the caret bar needs the angle key and four arrows side by side (smaller = narrower floor)
-        private const double CompactDisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        private const double CompactPadFloor = 252; // the panel bar, 36, over the keypad of six rows (smaller = shorter keys allowed)
-
-        private readonly double _displayFloor;
-        private readonly double _padFloor;
 
 
         // === constructor ===
@@ -45,8 +47,8 @@ namespace FluentMath.Views
             Display.InputFontSize = InputLineFontSize;
             Display.HistoryFontSize = HistoryLineFontSize;
 
-            _displayFloor = DisplayRow.MinHeight;
-            _padFloor = PadRow.MinHeight;
+            DisplayRow.MinHeight = DisplayFloor;
+            PadRow.MinHeight = PadFloor;
             RootGrid.SizeChanged += RootGrid_SizeChanged;
 
             ApplyPanelBarFade();
@@ -93,31 +95,28 @@ namespace FluentMath.Views
         public void SetCompactLayout(bool compact)
         {
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
-            DisplayRow.MinHeight = compact ? CompactDisplayFloor : _displayFloor;
-            PadRow.MinHeight = compact ? CompactPadFloor : _padFloor;
-
-            UpdateDisplayCeiling();
+            DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
+            PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
         }
 
 
         // === display height ===
 
         // the display keeps the height the splitter gave it however the window is resized, and the pad takes
-        // what is left; only once the pad is down to its floor does the display give way, through a ceiling
-        // that follows the window, and it grows back to its own height as soon as there is room again
+        // what is left; once the pad is down to its floor a smaller window pushes the splitter up with it, and
+        // the splitter stays where it was pushed when the window grows again, until it is dragged
         //
-        // the splitter checks the same ceiling, so a drag cannot push the pad under its floor either
+        // it runs after the pass that laid the page out at the new size, so the header already reads as it
+        // is, and a compact switch, which always resizes the window, comes through here as well
         private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            UpdateDisplayCeiling();
-        }
-
-        private void UpdateDisplayCeiling()
-        {
             double header = Header.Visibility == Visibility.Visible ? Header.ActualHeight : 0;
-            double room = RootGrid.ActualHeight - header - DividerRow.ActualHeight - PadRow.MinHeight;
+            double room = e.NewSize.Height - header - DividerRow.ActualHeight - PadRow.MinHeight;
 
-            DisplayRow.MaxHeight = Math.Max(DisplayRow.MinHeight, room);
+            if (DisplayRow.ActualHeight > room)
+            {
+                DisplayRow.Height = new GridLength(Math.Max(DisplayRow.MinHeight, room));
+            }
         }
 
 

@@ -16,21 +16,15 @@
         the display row has a fixed height that only the splitter over the divider changes, and the
         pad row takes whatever the window leaves; neither bar ever changes height, since each sits in
         an Auto row inside its half
-        the MinHeight on each row is how far the splitter goes; the display also carries a ceiling
-        from the code-behind that follows the window, so it gives way once the pad is on its floor
+        the floors of both rows are set in the code-behind and are how far the splitter goes; once
+        the pad is on its floor a smaller window pushes the splitter up, and it stays there
     -->
     <Grid x:Name="RootGrid" Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition
-                x:Name="DisplayRow"
-                Height="180"
-                MinHeight="96" />
+            <RowDefinition x:Name="DisplayRow" Height="150" />
             <RowDefinition x:Name="DividerRow" Height="Auto" />
-            <RowDefinition
-                x:Name="PadRow"
-                Height="*"
-                MinHeight="252" />
+            <RowDefinition x:Name="PadRow" Height="*" />
         </Grid.RowDefinitions>
 
 
