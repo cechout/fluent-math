@@ -25,6 +25,14 @@ namespace FluentMath.Views
         private const double CompactStartHeight = 460; // (bigger = taller)
         private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
 
+        // the key labels drop to a smaller size under this window height while compact, since the keys are
+        // too short for them by then
+        private const double SmallKeysBelowHeight = 400; // window height in pixels, title bar included (bigger = small labels sooner)
+        private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
+
+        private bool _isCompact;
+        private readonly SmallKeyLabels _smallKeys;
+
         public CurrencyPage()
         {
             this.InitializeComponent();
@@ -33,8 +41,10 @@ namespace FluentMath.Views
             AmountRow1.MinHeight = AmountFloor;
             AmountRow2.MinHeight = AmountFloor;
             PadRow.MinHeight = PadFloor;
+            _smallKeys = new SmallKeyLabels(Pad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             this.Loaded += CurrencyPage_Loaded;
+            this.SizeChanged += CurrencyPage_SizeChanged;
         }
 
 
@@ -77,10 +87,19 @@ namespace FluentMath.Views
 
         public void SetCompactLayout(bool compact)
         {
+            _isCompact = compact;
+
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             AmountRow1.MinHeight = compact ? CompactAmountFloor : AmountFloor;
             AmountRow2.MinHeight = compact ? CompactAmountFloor : AmountFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
+
+            _smallKeys.Update(_isCompact, XamlRoot);
+        }
+
+        private void CurrencyPage_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            _smallKeys.Update(_isCompact, XamlRoot);
         }
     }
 }

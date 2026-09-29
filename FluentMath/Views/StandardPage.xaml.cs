@@ -2,8 +2,6 @@ using FluentMath.ViewModels;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
-using System.Collections.Generic;
-using System.Linq;
 using Windows.Foundation;
 
 namespace FluentMath.Views
@@ -39,10 +37,7 @@ namespace FluentMath.Views
         private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
 
         private bool _isCompact;
-        private bool _hasSmallKeys;
-
-        // every label on the keypad with the size the markup gave it; filled on the first switch
-        private List<(DependencyObject Label, DependencyProperty Property, double Size)>? _keyLabels;
+        private readonly SmallKeyLabels _smallKeys;
 
 
         // === constructor ===
@@ -57,6 +52,7 @@ namespace FluentMath.Views
 
             DisplayRow.MinHeight = DisplayFloor;
             PadRow.MinHeight = PadFloor;
+            _smallKeys = new SmallKeyLabels(Pad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             this.Loaded += StandardPage_Loaded;
             this.SizeChanged += StandardPage_SizeChanged;
@@ -105,62 +101,12 @@ namespace FluentMath.Views
             DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
 
-            UpdateKeyTextSize();
+            _smallKeys.Update(_isCompact, XamlRoot);
         }
 
         private void StandardPage_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            UpdateKeyTextSize();
-        }
-
-        // the display needs nothing of the kind, since it scales its formula down to the height it gets
-        private void UpdateKeyTextSize()
-        {
-            bool small = _isCompact && XamlRoot != null && XamlRoot.Size.Height < SmallKeysBelowHeight;
-            if (small == _hasSmallKeys) return;
-
-            _hasSmallKeys = small;
-            _keyLabels ??= CollectKeyLabels();
-
-            double scale = small ? SmallKeyTextScale : 1;
-            foreach ((DependencyObject label, DependencyProperty property, double size) in _keyLabels)
-            {
-                label.SetValue(property, size * scale);
-            }
-        }
-
-        // the text or glyph on every key, and the two letters of the fraction key, which is a small grid
-        private List<(DependencyObject Label, DependencyProperty Property, double Size)> CollectKeyLabels()
-        {
-            var labels = new List<(DependencyObject Label, DependencyProperty Property, double Size)>();
-
-            foreach (Button key in Pad.Children.OfType<Button>())
-            {
-                CollectLabels(key.Content, labels);
-            }
-
-            return labels;
-        }
-
-        private static void CollectLabels(object content, List<(DependencyObject Label, DependencyProperty Property, double Size)> labels)
-        {
-            switch (content)
-            {
-                case TextBlock text:
-                    labels.Add((text, TextBlock.FontSizeProperty, text.FontSize));
-                    break;
-
-                case FontIcon icon:
-                    labels.Add((icon, FontIcon.FontSizeProperty, icon.FontSize));
-                    break;
-
-                case Panel panel:
-                    foreach (UIElement child in panel.Children)
-                    {
-                        CollectLabels(child, labels);
-                    }
-                    break;
-            }
+            _smallKeys.Update(_isCompact, XamlRoot);
         }
     }
 }

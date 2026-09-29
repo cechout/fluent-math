@@ -40,6 +40,14 @@ namespace FluentMath.Views
         private const double CompactStartHeight = 520; // (bigger = taller)
         private const double CompactMinWidth = 220; // how narrow the page can be dragged; the caret bar needs the angle key and four arrows side by side (smaller = narrower floor)
 
+        // the key labels drop to a smaller size under this window height while compact, since the keys are
+        // too short for them by then; the panel bar keeps its own, its keys never get shorter
+        private const double SmallKeysBelowHeight = 440; // window height in pixels, title bar included (bigger = small labels sooner)
+        private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
+
+        private bool _isCompact;
+        private readonly SmallKeyLabels _smallKeys;
+
 
         // === constructor ===
 
@@ -53,11 +61,13 @@ namespace FluentMath.Views
 
             DisplayRow.MinHeight = DisplayFloor;
             PadRow.MinHeight = PadFloor;
+            _smallKeys = new SmallKeyLabels(Keypad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
 
             this.Loaded += ScientificPage_Loaded;
+            this.SizeChanged += ScientificPage_SizeChanged;
         }
 
 
@@ -97,11 +107,19 @@ namespace FluentMath.Views
 
         public void SetCompactLayout(bool compact)
         {
+            _isCompact = compact;
+
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
 
             InvalidateMeasure();
+            _smallKeys.Update(_isCompact, XamlRoot);
+        }
+
+        private void ScientificPage_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            _smallKeys.Update(_isCompact, XamlRoot);
         }
 
 
