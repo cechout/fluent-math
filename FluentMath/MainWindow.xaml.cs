@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Windows.Foundation;
@@ -19,7 +20,7 @@ namespace FluentMath
     // the XAML content tree and the native title bar buttons on the AppWindow
     //
     // and the compact overlay, for the same reason: it changes the AppWindow itself and takes the navigation
-    // and the title bar out of the way, and the standard page only asks for it
+    // and the title bar out of the way, and a page only asks for it and brings its sizes, see ICompactPage
     public sealed partial class MainWindow : Window
     {
         // === win32 api imports ===
@@ -55,20 +56,16 @@ namespace FluentMath
         private const double FullMinHeight = 460; // how short the window can be dragged (smaller = lower floor)
 
         // --- compact window ---
-        // sizes in device independent pixels; the start size is the one the Windows Calculator opens its keep
-        // on top window at, and the height floor is not a number here but the title bar plus what the
-        // standard page needs while compact, StandardPage.CompactMinHeight
-        private const double CompactStartWidth = 320; // the first compact window of a session (bigger = wider)
-        private const double CompactStartHeight = 394; // (bigger = taller)
-        private const double CompactMinWidth = 200; // how narrow the content of the compact window can be dragged (smaller = narrower floor)
+        // the sizes are the pages own, see ICompactPage; only the place is decided here, in device independent
+        // pixels
         private const double CompactEdgeGap = 10; // how far the compact window stands off the top and right screen edge (bigger = further in)
 
         private readonly WindowManager _windowManager;
 
-        // the compact window comes back at the size it was last dragged to for the rest of the session, and
-        // the full window at the place and size it had before
+        // the compact window comes back at the size it was last dragged to on the same page for the rest of the
+        // session, and the full window at the place and size it had before
         private bool _isCompact;
-        private Size _compactSize = new Size(CompactStartWidth, CompactStartHeight);
+        private readonly Dictionary<Type, Size> _compactSizes = new Dictionary<Type, Size>();
         private RectInt32 _fullBounds;
         private bool _fullWasMaximized;
 
@@ -150,7 +147,7 @@ namespace FluentMath
 
         // === compact overlay ===
 
-        // a small window on top of every other one, holding the standard calculator and nothing else
+        // a small window on top of every other one, holding the page it was asked from and nothing else
         //
         // on purpose not the CompactOverlay presenter: the Windows App SDK takes the resize border off a
         // window on it, so it keeps whatever size it was given and cannot be dragged to another one; measured
@@ -162,7 +159,7 @@ namespace FluentMath
         // size
         public void EnterCompactMode()
         {
-            if (_isCompact) return;
+            if (_isCompact || MainFrame.Content is not ICompactPage page) return;
 
             OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
 
@@ -182,8 +179,8 @@ namespace FluentMath
             double borderWidth = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / scale;
             double borderHeight = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / scale;
 
-            _windowManager.MinWidth = CompactMinWidth + borderWidth;
-            _windowManager.MinHeight = AppTitleBar.ActualHeight + StandardPage.CompactMinHeight + borderHeight;
+            _windowManager.MinWidth = page.CompactMinSize.Width + borderWidth;
+            _windowManager.MinHeight = AppTitleBar.ActualHeight + page.CompactMinSize.Height + borderHeight;
 
             // the return key takes the size of the close button across the bar from it; with minimize and
             // maximize gone that button is all the caption area holds, and its measures follow the flags
@@ -191,7 +188,8 @@ namespace FluentMath
             CompactReturnButton.Width = AppWindow.TitleBar.RightInset / scale;
             CompactReturnButton.Height = AppWindow.TitleBar.Height / scale;
 
-            this.SetWindowSize(_compactSize.Width, _compactSize.Height);
+            Size size = _compactSizes.TryGetValue(page.GetType(), out Size dragged) ? dragged : page.CompactStartSize;
+            this.SetWindowSize(size.Width, size.Height);
             PinCompactWindow();
 
             _isCompact = true;
@@ -205,7 +203,7 @@ namespace FluentMath
             if (!_isCompact) return;
 
             double scale = Content.XamlRoot.RasterizationScale;
-            _compactSize = new Size(AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
+            _compactSizes[MainFrame.Content.GetType()] = new Size(AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
 
             OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
             presenter.IsAlwaysOnTop = false;
@@ -252,7 +250,7 @@ namespace FluentMath
         }
 
         // compact shows one row above the page, the return key and the close button: the pane toggle, the
-        // app icon and name go, and so does the header of the standard page
+        // app icon and name go, and so does the header of the page
         private void ShowCompactChrome(bool compact)
         {
             NavView.IsPaneOpen = false;
@@ -262,7 +260,7 @@ namespace FluentMath
             AppTitleBar.Title = compact ? "" : _titleBarTitle;
             AppTitleBar.LeftHeader = compact ? CompactReturnButton : null;
 
-            if (MainFrame.Content is StandardPage page)
+            if (MainFrame.Content is ICompactPage page)
             {
                 page.SetCompactLayout(compact);
             }

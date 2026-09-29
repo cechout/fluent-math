@@ -4,13 +4,14 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using System.Collections.Generic;
 using System.Linq;
+using Windows.Foundation;
 
 namespace FluentMath.Views
 {
     // the standard calculator: the display and the ViewModel of the scientific page over the keys a pocket
     // calculator prints; it has no panels and no shift, so there is nothing here but the way into view and
     // the way into compact mode
-    public sealed partial class StandardPage : Page
+    public sealed partial class StandardPage : Page, ICompactPage
     {
         public CalculatorViewModel ViewModel { get; }
 
@@ -20,13 +21,13 @@ namespace FluentMath.Views
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
 
         // --- compact mode ---
-        // the two row floors while compact, in pixels; outside compact the page keeps the ones in the markup
-        public const double CompactDisplayFloor = 120; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        public const double CompactPadFloor = 180; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
-
-        // what the page needs while compact: both floors plus the 12 of margins around and between the rows;
-        // MainWindow builds the floor of the compact window on it
-        public const double CompactMinHeight = CompactDisplayFloor + CompactPadFloor + 12;
+        // sizes in pixels; the start size is the one the Windows Calculator opens its keep on top window at,
+        // and the row floors hold while compact, outside it the page keeps the ones in the markup
+        private const double CompactStartWidth = 320; // the first compact window of a session, title bar included (bigger = wider)
+        private const double CompactStartHeight = 394; // (bigger = taller)
+        private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
+        private const double CompactDisplayFloor = 120; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
+        private const double CompactPadFloor = 180; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
 
         // the key labels drop to a smaller size under this window height while compact, since the keys are
         // too short for them by then
@@ -86,6 +87,11 @@ namespace FluentMath.Views
         {
             MainWindow.Instance.EnterCompactMode();
         }
+
+        public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
+
+        // both floors plus the 12 of margins around and between the rows
+        public Size CompactMinSize => new Size(CompactMinWidth, CompactDisplayFloor + CompactPadFloor + 12);
 
         // compact also lowers the two row floors, so the display and the keys can get shorter than the full
         // window ever lets them

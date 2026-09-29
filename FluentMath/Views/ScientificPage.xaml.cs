@@ -6,13 +6,14 @@ using Microsoft.UI.Xaml.Hosting;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Linq;
+using Windows.Foundation;
 using Windows.UI;
 
 namespace FluentMath.Views
 {
     // the scientific calculator; the display is a CalculatorDisplay and every key is bound straight to the
-    // ViewModel, so what is left here is the panel bar
-    public sealed partial class ScientificPage : Page
+    // ViewModel, so what is left here is the panel bar and the way into compact mode
+    public sealed partial class ScientificPage : Page, ICompactPage
     {
         public CalculatorViewModel ViewModel { get; }
 
@@ -20,6 +21,18 @@ namespace FluentMath.Views
         // font sizes in pixels; the standard page has its own pair
         private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
+
+        // --- compact mode ---
+        // sizes in pixels; the row floors hold while compact, outside it the page keeps the ones in the markup,
+        // and the splitter can trade height between the two rows down to whichever floor is in force
+        private const double CompactStartWidth = 340; // the first compact window of a session, title bar included (bigger = wider)
+        private const double CompactStartHeight = 520; // (bigger = taller)
+        private const double CompactMinWidth = 220; // how narrow the page can be dragged; the caret bar needs the angle key and four arrows side by side (smaller = narrower floor)
+        private const double CompactDisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
+        private const double CompactPadFloor = 252; // the panel bar, 36, over the keypad of six rows (smaller = shorter keys allowed)
+
+        private readonly double _displayFloor;
+        private readonly double _padFloor;
 
 
         // === constructor ===
@@ -31,6 +44,9 @@ namespace FluentMath.Views
 
             Display.InputFontSize = InputLineFontSize;
             Display.HistoryFontSize = HistoryLineFontSize;
+
+            _displayFloor = DisplayRow.MinHeight;
+            _padFloor = PadRow.MinHeight;
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
@@ -55,6 +71,29 @@ namespace FluentMath.Views
             base.OnNavigatedTo(e);
 
             ViewModel.RefreshSettingLabels();
+        }
+
+
+        // === compact mode ===
+
+        // the window owns compact mode, see MainWindow; this page only asks for it and hands back its header
+        // while it lasts, since the title bar carries the way back
+        private void CompactButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow.Instance.EnterCompactMode();
+        }
+
+        public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
+
+        // both floors, the divider row between them and the 8 of page margin
+        public Size CompactMinSize => new Size(CompactMinWidth,
+            CompactDisplayFloor + DividerRow.ActualHeight + CompactPadFloor + 8);
+
+        public void SetCompactLayout(bool compact)
+        {
+            Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+            DisplayRow.MinHeight = compact ? CompactDisplayFloor : _displayFloor;
+            PadRow.MinHeight = compact ? CompactPadFloor : _padFloor;
         }
 
 

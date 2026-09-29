@@ -23,15 +23,22 @@
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="4*" MinHeight="96" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="5*" MinHeight="252" />
+            <RowDefinition
+                x:Name="DisplayRow"
+                Height="4*"
+                MinHeight="96" />
+            <RowDefinition x:Name="DividerRow" Height="Auto" />
+            <RowDefinition
+                x:Name="PadRow"
+                Height="5*"
+                MinHeight="252" />
         </Grid.RowDefinitions>
 
 
         <!--  page header  -->
         <!--  (the left margin clears the navigation views hamburger button)  -->
         <Grid
+            x:Name="Header"
             Grid.Row="0"
             Height="38"
             Margin="45,0,0,0"
@@ -47,14 +54,20 @@
                     Style="{ThemeResource SubtitleTextBlockStyle}"
                     Text="Scientific" />
 
-                <!--  planned: compact mode toggle  -->
-                <!--<Button
+                <!--  compact mode toggle  -->
+                <!--
+                    shrinks the window to this page on top of every other one; the way back is a key in
+                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
+                    button
+                -->
+                <Button
                     Width="32"
                     Height="32"
                     Padding="0"
-                    Style="{ThemeResource SubtleButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xE81C;" />
-                </Button>-->
+                    Click="CompactButton_Click"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xEE49;" />
+                </Button>
             </StackPanel>
 
             <!--  history and memory  -->

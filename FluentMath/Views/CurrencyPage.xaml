@@ -10,17 +10,24 @@
     mc:Ignorable="d">
 
     <Grid
+        x:Name="RootGrid"
         Margin="4"
         ColumnSpacing="2.5"
         RowSpacing="2.5">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" MinHeight="40" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" MinHeight="40" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="5*" />
+            <RowDefinition x:Name="PickerRow1" Height="Auto" />
+            <RowDefinition
+                x:Name="AmountRow1"
+                Height="*"
+                MinHeight="40" />
+            <RowDefinition x:Name="PickerRow2" Height="Auto" />
+            <RowDefinition
+                x:Name="AmountRow2"
+                Height="*"
+                MinHeight="40" />
+            <RowDefinition x:Name="RateRow" Height="Auto" />
+            <RowDefinition x:Name="PadRow" Height="5*" />
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -33,6 +40,7 @@
         <!--  page header  -->
         <!--  (the left margin clears the navigation views hamburger button)  -->
         <Grid
+            x:Name="Header"
             Grid.Row="0"
             Grid.ColumnSpan="4"
             Height="38"
@@ -49,14 +57,20 @@
                     Style="{ThemeResource SubtitleTextBlockStyle}"
                     Text="Currency" />
 
-                <!--  planned: compact mode toggle  -->
-                <!--<Button
+                <!--  compact mode toggle  -->
+                <!--
+                    shrinks the window to this page on top of every other one; the way back is a key in
+                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
+                    button
+                -->
+                <Button
                     Width="32"
                     Height="32"
                     Padding="0"
-                    Style="{ThemeResource SubtleButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xE81C;" />
-                </Button>-->
+                    Click="CompactButton_Click"
+                    Style="{StaticResource SubtleBarButtonStyle}">
+                    <FontIcon FontSize="16" Glyph="&#xEE49;" />
+                </Button>
             </StackPanel>
 
             <!--  planned: history flyout  -->
