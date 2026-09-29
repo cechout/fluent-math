@@ -49,12 +49,12 @@
                 the way back from compact mode to the full window; it only hangs in the bar while
                 compact and takes the size of the close button, see MainWindow, and the glyph is the
                 one the Windows Calculator puts on its back to full view button
-                top aligned, since centred in the bar it stood a pixel below the top edge
+                top aligned and reaching a little past the top edge, see MainWindow, since centred
+                in the bar it stood a pixel below it
             -->
             <TitleBar.LeftHeader>
                 <Button
                     x:Name="CompactReturnButton"
-                    Padding="0"
                     VerticalAlignment="Top"
                     Click="CompactReturnButton_Click"
                     Style="{StaticResource SubtleBarButtonStyle}">

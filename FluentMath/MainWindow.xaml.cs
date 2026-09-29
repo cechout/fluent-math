@@ -65,6 +65,11 @@ namespace FluentMath
         // which the bottom row of keys paid for at the very floor
         private const double CompactFloorBuffer = 8; // (bigger = more room left at the floor, a slightly taller floor)
 
+        // how far the return key reaches past the top of the bar, where the window cuts it off, so it meets
+        // the top edge whatever the bar rounds to; sized to the caption height alone it still stood a pixel
+        // below it, and the glyph stays centred on the part that shows
+        private const double CompactReturnKeyOverhang = 2; // (bigger = reaches further up)
+
         private readonly WindowManager _windowManager;
 
         // the compact window comes back at the size it was last dragged to on the same page for the rest of the
@@ -192,7 +197,9 @@ namespace FluentMath
             // maximize gone that button is all the caption area holds, and its measures follow the flags
             // above straight away
             CompactReturnButton.Width = AppWindow.TitleBar.RightInset / scale;
-            CompactReturnButton.Height = AppWindow.TitleBar.Height / scale;
+            CompactReturnButton.Height = (AppWindow.TitleBar.Height / scale) + CompactReturnKeyOverhang;
+            CompactReturnButton.Margin = new Thickness(0, -CompactReturnKeyOverhang, 0, 0);
+            CompactReturnButton.Padding = new Thickness(0, CompactReturnKeyOverhang, 0, 0);
 
             // the page takes its compact layout before the window shrinks, so no layout pass ever sees the small
             // window with the full floors and the header still in it
