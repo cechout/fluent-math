@@ -47,6 +47,7 @@ namespace FluentMath.Views
 
             _displayFloor = DisplayRow.MinHeight;
             _padFloor = PadRow.MinHeight;
+            RootGrid.SizeChanged += RootGrid_SizeChanged;
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
@@ -94,6 +95,29 @@ namespace FluentMath.Views
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             DisplayRow.MinHeight = compact ? CompactDisplayFloor : _displayFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : _padFloor;
+
+            UpdateDisplayCeiling();
+        }
+
+
+        // === display height ===
+
+        // the display keeps the height the splitter gave it however the window is resized, and the pad takes
+        // what is left; only once the pad is down to its floor does the display give way, through a ceiling
+        // that follows the window, and it grows back to its own height as soon as there is room again
+        //
+        // the splitter checks the same ceiling, so a drag cannot push the pad under its floor either
+        private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateDisplayCeiling();
+        }
+
+        private void UpdateDisplayCeiling()
+        {
+            double header = Header.Visibility == Visibility.Visible ? Header.ActualHeight : 0;
+            double room = RootGrid.ActualHeight - header - DividerRow.ActualHeight - PadRow.MinHeight;
+
+            DisplayRow.MaxHeight = Math.Max(DisplayRow.MinHeight, room);
         }
 
 

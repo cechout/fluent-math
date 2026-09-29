@@ -13,24 +13,23 @@
 
     <!--
         four rows: header, display, divider, pad; the pad is the panel bar over the keypad
-        the caret bar moved into the display block and the divider has a row of its own, which leaves
-        the two halves of the page as the star rows either side of it; a splitter laid over the
-        divider trades height between them, and since only a star sized row inside either half can
-        grow, neither bar ever changes height
-        a MinHeight on each star row is the whole travel limit: the two always add up to the same
-        number, so a floor under one is the ceiling over the other
+        the display row has a fixed height that only the splitter over the divider changes, and the
+        pad row takes whatever the window leaves; neither bar ever changes height, since each sits in
+        an Auto row inside its half
+        the MinHeight on each row is how far the splitter goes; the display also carries a ceiling
+        from the code-behind that follows the window, so it gives way once the pad is on its floor
     -->
-    <Grid Margin="4,4,4,4">
+    <Grid x:Name="RootGrid" Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition
                 x:Name="DisplayRow"
-                Height="4*"
+                Height="180"
                 MinHeight="96" />
             <RowDefinition x:Name="DividerRow" Height="Auto" />
             <RowDefinition
                 x:Name="PadRow"
-                Height="5*"
+                Height="*"
                 MinHeight="252" />
         </Grid.RowDefinitions>
 
