@@ -187,6 +187,7 @@
             sits in the middle of the 9px band the splitter takes hold of
         -->
         <Rectangle
+            x:Name="DividerLine"
             Grid.Row="2"
             Height="1"
             Margin="-4,4,-4,4"

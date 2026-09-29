@@ -188,12 +188,14 @@ namespace FluentMath
             CompactReturnButton.Width = AppWindow.TitleBar.RightInset / scale;
             CompactReturnButton.Height = AppWindow.TitleBar.Height / scale;
 
+            // the page takes its compact layout before the window shrinks, so no layout pass ever sees the small
+            // window with the full floors and the header still in it
+            _isCompact = true;
+            ShowCompactChrome(true);
+
             Size size = _compactSizes.TryGetValue(page.GetType(), out Size dragged) ? dragged : page.CompactStartSize;
             this.SetWindowSize(size.Width, size.Height);
             PinCompactWindow();
-
-            _isCompact = true;
-            ShowCompactChrome(true);
         }
 
         // back to the full window where it was; the normal bounds go back first and the maximize after them,

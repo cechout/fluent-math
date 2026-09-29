@@ -49,7 +49,6 @@ namespace FluentMath.Views
 
             DisplayRow.MinHeight = DisplayFloor;
             PadRow.MinHeight = PadFloor;
-            RootGrid.SizeChanged += RootGrid_SizeChanged;
 
             ApplyPanelBarFade();
             AccentPanelButtonsWhileOpen();
@@ -97,6 +96,8 @@ namespace FluentMath.Views
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
+
+            InvalidateMeasure();
         }
 
 
@@ -106,17 +107,27 @@ namespace FluentMath.Views
         // what is left; once the pad is down to its floor a smaller window pushes the splitter up with it, and
         // the splitter stays where it was pushed when the window grows again, until it is dragged
         //
-        // it runs after the pass that laid the page out at the new size, so the header already reads as it
-        // is, and a compact switch, which always resizes the window, comes through here as well
-        private void RootGrid_SizeChanged(object sender, SizeChangedEventArgs e)
+        // worked out while the page is measured, because that is the one place the height the window really
+        // offers arrives: a Grid whose fixed rows do not fit is laid out at the height they need and clipped,
+        // so neither its size nor its SizeChanged ever reports the window getting smaller than that; the
+        // header and the divider are read from their set heights, since a header that has just come back has
+        // not been measured yet
+        protected override Size MeasureOverride(Size availableSize)
         {
-            double header = Header.Visibility == Visibility.Visible ? Header.ActualHeight : 0;
-            double room = e.NewSize.Height - header - DividerRow.ActualHeight - PadRow.MinHeight;
-
-            if (DisplayRow.ActualHeight > room)
+            if (!double.IsInfinity(availableSize.Height))
             {
-                DisplayRow.Height = new GridLength(Math.Max(DisplayRow.MinHeight, room));
+                double header = Header.Visibility == Visibility.Visible ? Header.Height : 0;
+                double divider = DividerLine.Height + DividerLine.Margin.Top + DividerLine.Margin.Bottom;
+                double room = availableSize.Height - RootGrid.Margin.Top - RootGrid.Margin.Bottom
+                    - header - divider - PadRow.MinHeight;
+
+                if (DisplayRow.Height.Value > room)
+                {
+                    DisplayRow.Height = new GridLength(Math.Max(DisplayRow.MinHeight, room));
+                }
             }
+
+            return base.MeasureOverride(availableSize);
         }
 
 
