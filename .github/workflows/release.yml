@@ -1,5 +1,6 @@
 # builds the win-x64 installer and drafts a GitHub release whenever a version tag is pushed
 # csproj Version is the single source of truth, Inno Setup receives it as a command line define
+# the msixupload for the microsoft store is packaged last and left as an artifact, see the comment above it
 name: release
 
 on:
@@ -71,3 +72,29 @@ jobs:
           gh release create ${{ github.ref_name }}
           Setup/Output/FluentMath_Installer.exe
           --draft --generate-notes --title "Fluent Math ${{ github.ref_name }}"
+
+      # built last, after the draft release already exists: it rebuilds the same project packaged, into the same
+      # bin and obj folders the installer was compiled from, and a red step here must not cost the installer and
+      # the release that are already done
+      # the unpackaged build above is the full build pass the xaml compiler needs, so this publish may build
+      # StoreUpload produces a .msixupload holding an unsigned msix, which is what partner center takes; the store
+      # signs it itself
+      # no version is passed: the StampAppxManifestVersion target in the csproj writes it into the manifest
+      - name: package msix for the store
+        run: >
+          dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64
+          -p:PublishProfile=win-x64
+          -p:WindowsPackageType=MSIX
+          -p:GenerateAppxPackageOnBuild=true
+          -p:UapAppxPackageBuildMode=StoreUpload
+          -p:AppxPackageSigningEnabled=false
+          "-p:AppxPackageDir=${{ github.workspace }}\Setup\Output\Msix\\"
+
+      # deliberately not a release asset: a .msixupload belongs in partner center and nobody can install it from a
+      # release page, so it stays an artifact to download and upload by hand
+      - name: upload msix artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: FluentMath_Store
+          path: Setup/Output/Msix/*.msixupload
+          if-no-files-found: error
