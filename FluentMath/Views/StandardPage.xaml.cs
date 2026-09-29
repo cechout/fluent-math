@@ -21,8 +21,8 @@ namespace FluentMath.Views
 
         // --- compact mode ---
         // the two row floors while compact, in pixels; outside compact the page keeps the ones in the markup
-        public const double CompactDisplayFloor = 88; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        public const double CompactPadFloor = 144; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
+        public const double CompactDisplayFloor = 120; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
+        public const double CompactPadFloor = 180; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
 
         // what the page needs while compact: both floors plus the 12 of margins around and between the rows;
         // MainWindow builds the floor of the compact window on it
@@ -30,7 +30,7 @@ namespace FluentMath.Views
 
         // the key labels drop to a smaller size under this window height while compact, since the keys are
         // too short for them by then
-        private const double SmallKeysBelowHeight = 340; // window height in pixels, title bar included (bigger = small labels sooner)
+        private const double SmallKeysBelowHeight = 380; // window height in pixels, title bar included (bigger = small labels sooner)
         private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
 
         private readonly double _displayFloor;
