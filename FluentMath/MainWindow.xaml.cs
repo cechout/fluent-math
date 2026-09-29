@@ -60,6 +60,11 @@ namespace FluentMath
         // pixels
         private const double CompactEdgeGap = 10; // how far the compact window stands off the top and right screen edge (bigger = further in)
 
+        // room the compact floor keeps over what the page adds up to; every row is rounded to whole device
+        // pixels, and at 150 percent six key rows and their gaps alone round a pixel or two past their sum,
+        // which the bottom row of keys paid for at the very floor
+        private const double CompactFloorBuffer = 8; // (bigger = more room left at the floor, a slightly taller floor)
+
         private readonly WindowManager _windowManager;
 
         // the compact window comes back at the size it was last dragged to on the same page for the rest of the
@@ -180,7 +185,8 @@ namespace FluentMath
             double borderHeight = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / scale;
 
             _windowManager.MinWidth = page.CompactMinSize.Width + borderWidth;
-            _windowManager.MinHeight = AppTitleBar.ActualHeight + page.CompactMinSize.Height + borderHeight;
+            _windowManager.MinHeight = AppTitleBar.ActualHeight + page.CompactMinSize.Height + borderHeight
+                + CompactFloorBuffer;
 
             // the return key takes the size of the close button across the bar from it; with minimize and
             // maximize gone that button is all the caption area holds, and its measures follow the flags

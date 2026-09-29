@@ -28,7 +28,11 @@ namespace FluentMath.Views
         private const double DisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
         private const double PadFloor = 252; // the panel bar, 36, over the keypad of six rows (smaller = shorter keys allowed)
         private const double CompactDisplayFloor = 96; // the same two while compact
-        private const double CompactPadFloor = 252;
+        private const double CompactPadFloor = 220;
+
+        // how much earlier than the exact sum the splitter is pushed, so the pad keeps a little room over its
+        // floor for the rounding of its rows to whole device pixels
+        private const double PushBuffer = 4; // (bigger = the display gives way sooner)
 
         // --- compact mode ---
         // sizes in pixels
@@ -119,7 +123,7 @@ namespace FluentMath.Views
                 double header = Header.Visibility == Visibility.Visible ? Header.Height : 0;
                 double divider = DividerLine.Height + DividerLine.Margin.Top + DividerLine.Margin.Bottom;
                 double room = availableSize.Height - RootGrid.Margin.Top - RootGrid.Margin.Bottom
-                    - header - divider - PadRow.MinHeight;
+                    - header - divider - PadRow.MinHeight - PushBuffer;
 
                 if (DisplayRow.Height.Value > room)
                 {
