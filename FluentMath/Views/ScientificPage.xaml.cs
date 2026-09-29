@@ -23,29 +23,23 @@ namespace FluentMath.Views
         private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
 
         // --- row floors ---
-        // in pixels; how far the splitter goes either way, and how far a smaller window pushes it, since the pad
-        // never gets shorter than its floor; the full window and compact mode each have their own pair
-        private const double DisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        private const double PadFloor = 252; // the panel bar, 36, over the keypad of six rows (smaller = shorter keys allowed)
-        private const double CompactDisplayFloor = 96; // the same two while compact
+        // in px; also how far the splitter goes; (the full window and compact mode each have their own pair)
+        private const double DisplayFloor = 96; // the display with the caret bar under it
+        private const double PadFloor = 252; // the panel bar over the keypad of six rows
+        private const double CompactDisplayFloor = 96;
         private const double CompactPadFloor = 220;
-
-        // how much earlier than the exact sum the splitter is pushed, so the pad keeps a little room over its
-        // floor for the rounding of its rows to whole device pixels
-        private const double PushBuffer = 4; // (bigger = the display gives way sooner)
+        private const double PushBuffer = 4; // room the pad keeps over its floor when it pushes the splitter
 
         // --- compact mode ---
-        // sizes in pixels
-        private const double CompactStartWidth = 340; // the first compact window of a session, title bar included (bigger = wider)
-        private const double CompactStartHeight = 520; // (bigger = taller)
-        private const double CompactMinWidth = 220; // how narrow the page can be dragged; the caret bar needs the angle key and four arrows side by side (smaller = narrower floor)
+        // sizes in px
+        private const double CompactStartWidth = 340;
+        private const double CompactStartHeight = 520;
+        private const double CompactMinWidth = 220; // the caret bar needs the angle key and four arrows
 
         // --- key labels ---
-        // they drop to a smaller size once the keypad is shorter than this, since the keys are too short for
-        // them by then; only the keypad, the panel bar keys never get shorter, and the splitter can squeeze
-        // the keypad in a window of any size
-        private const double SmallKeysBelowHeight = 205; // keypad height in pixels, about six rows of 32 (bigger = small labels sooner)
-        private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
+        // key font drops to smaller size once the keypad is shorter than this; (the panel bar keeps its size)
+        private const double SmallKeysBelowHeight = 205; // keypad height in pixels
+        private const double SmallKeyTextScale = 0.8;
 
 
         // === constructor ===
@@ -90,8 +84,7 @@ namespace FluentMath.Views
 
         // === compact mode ===
 
-        // the window owns compact mode, see MainWindow; this page only asks for it and hands back its header
-        // while it lasts, since the title bar carries the way back
+        // MainWindow owns compact mode; the page only asks for it and lays itself out
         private void CompactButton_Click(object sender, RoutedEventArgs e)
         {
             MainWindow.Instance.EnterCompactMode();
@@ -99,7 +92,7 @@ namespace FluentMath.Views
 
         public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
 
-        // both floors, the divider row between them and the 8 of page margin
+        // both floors, the divider row and 8 of margins
         public Size CompactMinSize => new Size(CompactMinWidth,
             CompactDisplayFloor + DividerRow.ActualHeight + CompactPadFloor + 8);
 
@@ -115,15 +108,10 @@ namespace FluentMath.Views
 
         // === display height ===
 
-        // the display keeps the height the splitter gave it however the window is resized, and the pad takes
-        // what is left; once the pad is down to its floor a smaller window pushes the splitter up with it, and
-        // the splitter stays where it was pushed when the window grows again, until it is dragged
+        // a window too short for the pad pushes the splitter up, and it stays there until it is dragged
         //
-        // worked out while the page is measured, because that is the one place the height the window really
-        // offers arrives: a Grid whose fixed rows do not fit is laid out at the height they need and clipped,
-        // so neither its size nor its SizeChanged ever reports the window getting smaller than that; the
-        // header and the divider are read from their set heights, since a header that has just come back has
-        // not been measured yet
+        // done in the measure, where the real available height arrives; a Grid that does not fit is laid out
+        // at its own size, so its SizeChanged never reports the squeeze (header and divider by set height)
         protected override Size MeasureOverride(Size availableSize)
         {
             if (!double.IsInfinity(availableSize.Height))

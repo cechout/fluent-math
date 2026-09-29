@@ -11,7 +11,7 @@
     mc:Ignorable="d">
 
     <!--  the scientific page without its panel bar, shift layer and splitter: header, display, keypad  -->
-    <!--  (the floors of the display and the keypad row are set in the code-behind)  -->
+    <!--  (row floors in the code-behind)  -->
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -40,11 +40,7 @@
                     Text="Standard" />
 
                 <!--  compact mode toggle  -->
-                <!--
-                    shrinks the window to this page on top of every other one; the way back is a key in
-                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
-                    button
-                -->
+                <!--  (the Windows Calculator keep on top glyph)  -->
                 <Button
                     Width="32"
                     Height="32"
@@ -440,7 +436,7 @@
             </Button>
 
             <!--  equals key  -->
-            <!--  (no padding: the accent style pads its glyph, and a short compact key has no room for it)  -->
+            <!--  (no padding; a short key has no room for the accent style padding)  -->
             <Button
                 Grid.Row="5"
                 Grid.Column="3"

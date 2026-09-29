@@ -19,13 +19,12 @@ namespace FluentMath
     // also owns the theme, because switching it has to touch two things a Page cannot reach:
     // the XAML content tree and the native title bar buttons on the AppWindow
     //
-    // and the compact overlay, for the same reason: it changes the AppWindow itself and takes the navigation
-    // and the title bar out of the way, and a page only asks for it and brings its sizes, see ICompactPage
+    // and compact mode, for the same reason; a page only asks for it and brings its sizes (ICompactPage)
     public sealed partial class MainWindow : Window
     {
         // === win32 api imports ===
 
-        // the frame the window draws, without the invisible resize border around it
+        // the drawn window frame, without the invisible resize border
         [DllImport("dwmapi.dll")]
         private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out NativeRect value, int size);
 
@@ -49,37 +48,27 @@ namespace FluentMath
         public string CurrentTheme { get; private set; } = "Default";
 
         // --- full window ---
-        // sizes in device independent pixels
-        private const double FullStartWidth = 330; // the window the app opens with (bigger = wider)
-        private const double FullStartHeight = 500; // (bigger = taller)
-        private const double FullMinWidth = 300; // how narrow the window can be dragged (smaller = narrower floor)
-        private const double FullMinHeight = 460; // how short the window can be dragged (smaller = lower floor)
+        // in px
+        private const double FullStartWidth = 330;
+        private const double FullStartHeight = 500;
+        private const double FullMinWidth = 300;
+        private const double FullMinHeight = 460;
 
         // --- compact window ---
-        // the sizes are the pages own, see ICompactPage; only the place is decided here, in device independent
-        // pixels
-        private const double CompactEdgeGap = 10; // how far the compact window stands off the top and right screen edge (bigger = further in)
-
-        // room the compact floor keeps over what the page adds up to; every row is rounded to whole device
-        // pixels, and at 150 percent six key rows and their gaps alone round a pixel or two past their sum,
-        // which the bottom row of keys paid for at the very floor
-        private const double CompactFloorBuffer = 8; // (bigger = more room left at the floor, a slightly taller floor)
-
-        // how far the return key reaches past the top of the bar, where the window cuts it off, so it meets
-        // the top edge whatever the bar rounds to; sized to the caption height alone it still stood a pixel
-        // below it, and the glyph stays centred on the part that shows
-        private const double CompactReturnKeyOverhang = 2; // (bigger = reaches further up)
+        // in px; (the sizes come from the page, see ICompactPage)
+        private const double CompactEdgeGap = 10; // gap to the top and right screen edge
+        private const double CompactFloorBuffer = 8; // room over the page floors, for pixel rounding
+        private const double CompactReturnKeyOverhang = 2; // how far the return key reaches past the top edge
 
         private readonly WindowManager _windowManager;
 
-        // the compact window comes back at the size it was last dragged to on the same page for the rest of the
-        // session, and the full window at the place and size it had before
+        // the dragged compact size per page, and the full window bounds for the way back
         private bool _isCompact;
         private readonly Dictionary<Type, Size> _compactSizes = new Dictionary<Type, Size>();
         private RectInt32 _fullBounds;
         private bool _fullWasMaximized;
 
-        // what the title bar shows outside compact; the compact bar shows neither
+        // the title bar icon and name, hidden while compact
         private readonly IconSource? _titleBarIcon;
         private readonly string _titleBarTitle;
 
@@ -109,8 +98,7 @@ namespace FluentMath
                 AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             }
 
-            // the return key is declared in the title bar markup for its look, but only hangs in the bar
-            // while compact: a header the bar carries switches it to its header layout, visible or not
+            // the return key only hangs in the bar while compact; any set header changes the bar layout
             _titleBarIcon = AppTitleBar.IconSource;
             _titleBarTitle = AppTitleBar.Title;
             AppTitleBar.LeftHeader = null;
@@ -157,22 +145,17 @@ namespace FluentMath
 
         // === compact overlay ===
 
-        // a small window on top of every other one, holding the page it was asked from and nothing else
+        // the current page alone in a small window on top of every other one
         //
-        // on purpose not the CompactOverlay presenter: the Windows App SDK takes the resize border off a
-        // window on it, so it keeps whatever size it was given and cannot be dragged to another one; measured
-        // on 2.5.1, the presenter clears WS_THICKFRAME and the minimize and maximize boxes and sets
-        // WS_EX_TOPMOST, so the window keeps its own presenter and gets the same three changes minus the border
-        //
-        // a maximized window is restored first, so the bounds kept for the way back are its normal ones, and
-        // the floor is lowered before the resize, since the full one would hold the window above the compact
-        // size
+        // on purpose not the CompactOverlay presenter, which cannot be resized (WASDK 2.5.1 drops the resize
+        // border); the window keeps its presenter and gets the other three changes: on top, no min, no max
         public void EnterCompactMode()
         {
             if (_isCompact || MainFrame.Content is not ICompactPage page) return;
 
             OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
 
+            // a maximized window is restored first, so the kept bounds are its normal ones
             _fullWasMaximized = presenter.State == OverlappedPresenterState.Maximized;
             if (_fullWasMaximized) presenter.Restore();
 
@@ -183,8 +166,7 @@ namespace FluentMath
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
 
-            // the floor holds the outer window, which reaches past the content by the invisible resize border,
-            // so the border is measured and added onto what the content needs
+            // the floor is on the outer window, so the invisible resize border is added
             double scale = Content.XamlRoot.RasterizationScale;
             double borderWidth = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / scale;
             double borderHeight = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / scale;
@@ -193,16 +175,13 @@ namespace FluentMath
             _windowManager.MinHeight = AppTitleBar.ActualHeight + page.CompactMinSize.Height + borderHeight
                 + CompactFloorBuffer;
 
-            // the return key takes the size of the close button across the bar from it; with minimize and
-            // maximize gone that button is all the caption area holds, and its measures follow the flags
-            // above straight away
+            // the return key takes the size of the close button, all the caption area holds by now
             CompactReturnButton.Width = AppWindow.TitleBar.RightInset / scale;
             CompactReturnButton.Height = (AppWindow.TitleBar.Height / scale) + CompactReturnKeyOverhang;
             CompactReturnButton.Margin = new Thickness(0, -CompactReturnKeyOverhang, 0, 0);
             CompactReturnButton.Padding = new Thickness(0, CompactReturnKeyOverhang, 0, 0);
 
-            // the page takes its compact layout before the window shrinks, so no layout pass ever sees the small
-            // window with the full floors and the header still in it
+            // the page goes compact before the window shrinks, so no pass sees it small with full floors
             _isCompact = true;
             ShowCompactChrome(true);
 
@@ -211,8 +190,7 @@ namespace FluentMath
             PinCompactWindow();
         }
 
-        // back to the full window where it was; the normal bounds go back first and the maximize after them,
-        // so a window that was maximized still restores to its own size later rather than to the compact one
+        // back to the full window; bounds first, then the maximize, so a later restore gives the full size
         public void ExitCompactMode()
         {
             if (!_isCompact) return;
@@ -235,13 +213,8 @@ namespace FluentMath
             ShowCompactChrome(false);
         }
 
-        // every way into compact puts the window into the top right corner of the work area of the screen it
-        // is on, so the taskbar never covers it; it can be dragged away from there, and the next way in puts
-        // it back
-        //
-        // the gap is measured to the frame that is drawn: a resizable window reaches past it on the sides and
-        // the bottom with a border that is only there to catch the mouse, and a window is placed by its outer
-        // bounds, so that border is counted back in
+        // top right of the work area of the current screen, on every way in; the gap is measured to the
+        // drawn frame, so the invisible resize border is counted back in
         private void PinCompactWindow()
         {
             double scale = Content.XamlRoot.RasterizationScale;
@@ -264,8 +237,7 @@ namespace FluentMath
                 work.Y + gap - topBorder));
         }
 
-        // compact shows one row above the page, the return key and the close button: the pane toggle, the
-        // app icon and name go, and so does the header of the page
+        // compact keeps one row above the page: the return key and the close button
         private void ShowCompactChrome(bool compact)
         {
             NavView.IsPaneOpen = false;

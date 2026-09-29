@@ -31,11 +31,7 @@
             IsBackButtonVisible="False"
             IsPaneToggleButtonVisible="False">
 
-            <!--
-                any header content puts the bar at its tall height, and the return key is the only
-                content it ever gets; held at the short one, compact mode stays a single row as high
-                as the close button beside it
-            -->
+            <!--  (holds the bar at 32 with the return key in it, as high as the close button)  -->
             <TitleBar.Resources>
                 <x:Double x:Key="TitleBarExpandedHeight">32</x:Double>
             </TitleBar.Resources>
@@ -46,11 +42,8 @@
 
             <!--  compact return key  -->
             <!--
-                the way back from compact mode to the full window; it only hangs in the bar while
-                compact and takes the size of the close button, see MainWindow, and the glyph is the
-                one the Windows Calculator puts on its back to full view button
-                top aligned and reaching a little past the top edge, see MainWindow, since centred
-                in the bar it stood a pixel below it
+                only in the bar while compact, sized and placed from MainWindow
+                (the Windows Calculator back to full view glyph)
             -->
             <TitleBar.LeftHeader>
                 <Button

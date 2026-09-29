@@ -30,10 +30,8 @@
             the tap is taken here rather than on the panel, and the transparent background is what
             makes that work: the formula is only as wide as it is, and aiming at the air beside it
             is how a short one is clicked into at all
-            the scroller reaches to 2px above the caret bar and the panel inside it keeps 4px free
-            at the bottom, a strip underneath the formula; a ScrollViewer draws its scrollbar
-            inside its own bounds, so without that strip the bar is drawn over the formula rather
-            than below it
+            the panel keeps a 4px strip free at the bottom for the scrollbar, which a ScrollViewer
+            draws inside its own bounds and so over the formula otherwise
         -->
         <ScrollViewer
             x:Name="InputScroller"

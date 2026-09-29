@@ -13,11 +13,8 @@
 
     <!--
         four rows: header, display, divider, pad; the pad is the panel bar over the keypad
-        the display row has a fixed height that only the splitter over the divider changes, and the
-        pad row takes whatever the window leaves; neither bar ever changes height, since each sits in
-        an Auto row inside its half
-        the floors of both rows are set in the code-behind and are how far the splitter goes; once
-        the pad is on its floor a smaller window pushes the splitter up, and it stays there
+        the display has a fixed height only the splitter changes, the pad takes the rest
+        (row floors in the code-behind; a window too short for the pad pushes the splitter up)
     -->
     <Grid x:Name="RootGrid" Margin="4,4,4,4">
         <Grid.RowDefinitions>
@@ -48,11 +45,7 @@
                     Text="Scientific" />
 
                 <!--  compact mode toggle  -->
-                <!--
-                    shrinks the window to this page on top of every other one; the way back is a key in
-                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
-                    button
-                -->
+                <!--  (the Windows Calculator keep on top glyph)  -->
                 <Button
                     Width="32"
                     Height="32"

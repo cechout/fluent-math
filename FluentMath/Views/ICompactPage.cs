@@ -2,20 +2,16 @@ using Windows.Foundation;
 
 namespace FluentMath.Views
 {
-    // a page that can be shown in compact mode; the window owns the mode, see MainWindow, and each page brings
-    // the sizes it needs and lays itself out for it
+    // a page that can be shown in compact mode; MainWindow owns the mode, the page brings its sizes
     public interface ICompactPage
     {
-        // the first compact window of a session on this page, in pixels; after that it comes back at the size
-        // it was dragged to
+        // in px; the first compact window of a session on this page
         Size CompactStartSize { get; }
 
-        // the smallest the page itself can get while compact, in pixels; the window adds its title bar and
-        // its resize border on top
+        // in px; the smallest the page gets while compact, without title bar and resize border
         Size CompactMinSize { get; }
 
-        // compact hides the page header, since the title bar carries the way back, and drops the row floors
-        // to the compact ones
+        // hides the page header and switches to the compact row floors
         void SetCompactLayout(bool compact);
     }
 }

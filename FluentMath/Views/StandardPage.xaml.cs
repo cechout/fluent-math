@@ -76,8 +76,7 @@ namespace FluentMath.Views
 
         // === compact mode ===
 
-        // the window owns compact mode, see MainWindow; this page only asks for it and hands back its header
-        // while it lasts, since the title bar carries the way back
+        // MainWindow owns compact mode; the page only asks for it and lays itself out
         private void CompactButton_Click(object sender, RoutedEventArgs e)
         {
             MainWindow.Instance.EnterCompactMode();
@@ -85,11 +84,9 @@ namespace FluentMath.Views
 
         public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
 
-        // both floors plus the 12 of margins around and between the rows
+        // both floors plus 12 of margins
         public Size CompactMinSize => new Size(CompactMinWidth, CompactDisplayFloor + CompactPadFloor + 12);
 
-        // compact also lowers the two row floors, so the display and the keys can get shorter than the full
-        // window ever lets them
         public void SetCompactLayout(bool compact)
         {
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;

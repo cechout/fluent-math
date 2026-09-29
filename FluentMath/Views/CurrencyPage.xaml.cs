@@ -10,26 +10,22 @@ namespace FluentMath.Views
         public CurrencyViewModel ViewModel { get; }
 
         // --- row floors ---
-        // in pixels; the full window and compact mode each have their own pair
-        // this page has no display block, its display is the two amount lines with a currency picker over each
-        // and the rate line under them, so the display floor is the floor of each amount line; the pickers and
-        // the rate line keep their own height
-        private const double AmountFloor = 40; // each of the two amount lines (smaller = shorter lines allowed)
-        private const double PadFloor = 0; // the number pad, five rows of keys; none, it gets what is left (bigger = taller keys kept)
-        private const double CompactAmountFloor = 40; // the same two while compact
+        // in px; (the full window and compact mode each have their own pair)
+        private const double AmountFloor = 40; // each of the two amount lines, the display of this page
+        private const double PadFloor = 0; // the number pad, five rows of keys; 0 = no floor
+        private const double CompactAmountFloor = 40;
         private const double CompactPadFloor = 150;
 
         // --- compact mode ---
-        // sizes in pixels
-        private const double CompactStartWidth = 320; // the first compact window of a session, title bar included (bigger = wider)
-        private const double CompactStartHeight = 460; // (bigger = taller)
-        private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
+        // sizes in px
+        private const double CompactStartWidth = 320;
+        private const double CompactStartHeight = 460;
+        private const double CompactMinWidth = 200;
 
         // --- key labels ---
-        // they drop to a smaller size once the number pad is shorter than this, since the keys are too short
-        // for them by then
-        private const double SmallKeysBelowHeight = 170; // number pad height in pixels, about five rows of 32 (bigger = small labels sooner)
-        private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
+        // key font drops to smaller size once the number pad is shorter than this
+        private const double SmallKeysBelowHeight = 170; // number pad height in pixels
+        private const double SmallKeyTextScale = 0.8;
 
         public CurrencyPage()
         {
@@ -67,8 +63,7 @@ namespace FluentMath.Views
 
         // === compact mode ===
 
-        // the window owns compact mode, see MainWindow; this page only asks for it and hands back its header
-        // while it lasts, since the title bar carries the way back
+        // MainWindow owns compact mode; the page only asks for it and lays itself out
         private void CompactButton_Click(object sender, RoutedEventArgs e)
         {
             MainWindow.Instance.EnterCompactMode();
@@ -76,8 +71,7 @@ namespace FluentMath.Views
 
         public Size CompactStartSize => new Size(CompactStartWidth, CompactStartHeight);
 
-        // the floors, the pickers and the rate line as they are laid out, the six row gaps and the 8 of page
-        // margin
+        // the floors, the pickers and the rate line as laid out, six row gaps and 8 of margins
         public Size CompactMinSize => new Size(CompactMinWidth,
             PickerRow1.ActualHeight + PickerRow2.ActualHeight + RateRow.ActualHeight
             + (2 * CompactAmountFloor) + CompactPadFloor + (6 * RootGrid.RowSpacing) + 8);

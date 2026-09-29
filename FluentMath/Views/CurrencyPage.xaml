@@ -9,7 +9,7 @@
     NavigationCacheMode="Required"
     mc:Ignorable="d">
 
-    <!--  (the floors of the amount lines and the number pad are set in the code-behind)  -->
+    <!--  (row floors in the code-behind)  -->
     <Grid
         x:Name="RootGrid"
         Margin="4"
@@ -53,11 +53,7 @@
                     Text="Currency" />
 
                 <!--  compact mode toggle  -->
-                <!--
-                    shrinks the window to this page on top of every other one; the way back is a key in
-                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
-                    button
-                -->
+                <!--  (the Windows Calculator keep on top glyph)  -->
                 <Button
                     Width="32"
                     Height="32"
