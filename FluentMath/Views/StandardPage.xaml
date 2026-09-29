@@ -22,6 +22,7 @@
         <!--  page header  -->
         <!--  (the left margin clears the navigation views hamburger button)  -->
         <Grid
+            x:Name="Header"
             Grid.Row="0"
             Height="38"
             Margin="45,0,0,0"
@@ -38,16 +39,16 @@
                     Text="Standard" />
 
                 <!--  compact mode toggle  -->
-                <!--  revisit: keys drawn before they work  -->
                 <!--
-                    drawn and disabled until compact mode exists, along with history and memory; the
-                    glyph is the one the Windows Calculator puts on its keep on top button
+                    shrinks the window to this page on top of every other one; the way back is a key in
+                    the title bar, and the glyph is the one the Windows Calculator puts on its keep on top
+                    button
                 -->
                 <Button
                     Width="32"
                     Height="32"
                     Padding="0"
-                    IsEnabled="False"
+                    Click="CompactButton_Click"
                     Style="{StaticResource SubtleBarButtonStyle}">
                     <FontIcon FontSize="16" Glyph="&#xEE49;" />
                 </Button>

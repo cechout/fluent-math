@@ -6,7 +6,8 @@ using Microsoft.UI.Xaml.Navigation;
 namespace FluentMath.Views
 {
     // the standard calculator: the display and the ViewModel of the scientific page over the keys a pocket
-    // calculator prints; it has no panels and no shift, so there is nothing here but the way into view
+    // calculator prints; it has no panels and no shift, so there is nothing here but the way into view and
+    // the way into compact mode
     public sealed partial class StandardPage : Page
     {
         public CalculatorViewModel ViewModel { get; }
@@ -46,6 +47,21 @@ namespace FluentMath.Views
             base.OnNavigatedTo(e);
 
             ViewModel.RefreshSettingLabels();
+        }
+
+
+        // === compact mode ===
+
+        // the window owns compact mode, see MainWindow; this page only asks for it and hands back its header
+        // while it lasts, since the title bar carries the way back
+        private void CompactButton_Click(object sender, RoutedEventArgs e)
+        {
+            MainWindow.Instance.EnterCompactMode();
+        }
+
+        public void SetCompactLayout(bool compact)
+        {
+            Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
         }
     }
 }
