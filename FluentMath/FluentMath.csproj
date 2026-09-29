@@ -108,4 +108,28 @@
     <!-- trimming strips the WinRT/COM interop types the Windows App SDK resolves at runtime and crashes the app, never turn this on -->
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">False</PublishTrimmed>
   </PropertyGroup>
+
+  <!--
+    the store package is this same project with WindowsPackageType=MSIX passed on the command line by release.yml
+    the store wants a four part version, so the manifest is stamped here from the csproj Version instead of keeping
+    a second number in Package.appxmanifest
+    the stamp goes onto a copy in obj and @(AppxManifest) is pointed at that copy, because
+    _ValidatePresenceOfAppxManifestItems reads the version out of the source item and everything downstream hangs
+    off it: the package file name, the bundle manifest version and the final manifest
+  -->
+  <Target Name="StampAppxManifestVersion" BeforeTargets="_ValidatePresenceOfAppxManifestItems" Condition="'$(WindowsPackageType)' != 'None' and '@(AppxManifest)' != ''">
+    <PropertyGroup>
+      <_StampedAppxManifest>$(IntermediateOutputPath)Package.appxmanifest</_StampedAppxManifest>
+    </PropertyGroup>
+    <Copy SourceFiles="@(AppxManifest)" DestinationFiles="$(_StampedAppxManifest)" />
+    <XmlPoke XmlInputPath="$(_StampedAppxManifest)"
+             Query="/pkg:Package/pkg:Identity/@Version"
+             Value="$(Version).0"
+             Namespaces="&lt;Namespace Prefix='pkg' Uri='http://schemas.microsoft.com/appx/manifest/foundation/windows10' /&gt;" />
+    <ItemGroup>
+      <AppxManifest Remove="@(AppxManifest)" />
+      <AppxManifest Include="$(_StampedAppxManifest)" />
+    </ItemGroup>
+    <Message Importance="high" Text="stamped AppxManifest version $(Version).0" />
+  </Target>
 </Project>

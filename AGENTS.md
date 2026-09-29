@@ -4,7 +4,8 @@ This project is a C#/.NET 8 WinUI 3 desktop app: a calculator for Windows that w
 pocket calculator does. The whole equation is typed first and evaluated on `=`, which is what guarantees
 the correct order of operations, rather than being evaluated after every operator the way the built-in
 Windows Calculator does. It also converts currencies from the European Central Bank daily reference
-rates. It ships unpackaged and self-contained and needs no elevation.
+rates. It ships unpackaged and self-contained through an installer, is packaged as an MSIX for the
+Microsoft Store from the same project, and needs no elevation.
 
 - Keep the work scoped to what was asked. Avoid opportunistic refactors, formatting churn, dependency
   bumps and drive-by renames.
@@ -114,6 +115,15 @@ CRLF and every line of every file is reported as a violation. Note that `dotnet 
 properties; passing `-p:Platform=x64` makes it print its usage help and exit non-zero, so the check would
 silently never run.
 
+The Microsoft Store package is the same project with `WindowsPackageType=MSIX` passed on the command line,
+which overrides the `None` the `.csproj` sets, so the installer build needs no second project and no
+edit. The release workflow runs it last, because it rebuilds into the same `bin` and `obj` folders the
+installer is compiled from. The result is an unsigned `.msixupload`; the Store signs the package itself.
+
+```powershell
+dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:PublishProfile=win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageSigningEnabled=false
+```
+
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter and the keypad
@@ -195,8 +205,12 @@ repository setting, not in the build.
   makes a publish in CI apply the exact same settings as a local one, `PublishTrimmed` included.
 - **Never bump `<Version>` in a feature branch.** The bump is a release activity and belongs on the same
   commit that carries the tag. The `.csproj` is the only place it is written: MSBuild derives
-  `AssemblyVersion` and `FileVersion` from it, and the release workflow reads it out and hands it to Inno
-  Setup, so the installer can never drift out of sync.
+  `AssemblyVersion` and `FileVersion` from it, the release workflow reads it out and hands it to Inno
+  Setup, and the `StampAppxManifestVersion` target writes it into the Store package, so neither the
+  installer nor the package can drift out of sync. The version in `Package.appxmanifest` is a placeholder.
+- **The package identity matches Partner Center.** `Name`, `Publisher` and `PublisherDisplayName` in
+  `Package.appxmanifest` are dictated by the reserved app in Partner Center; an upload with any other
+  value is rejected.
 - **The release asset name is a contract.** `FluentMath_Installer.exe` is what the release workflow
   uploads, what the Inno Setup script produces, and what the release notes tell people to download.
   Renaming one of the three breaks the other two quietly.
