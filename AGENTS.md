@@ -73,7 +73,8 @@ FluentMath/
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
-└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance
+└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance,
+                  ICompactPage, SmallKeyLabels
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
@@ -82,7 +83,8 @@ FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 bar, and sizes the window through `WinUIEx.WindowManager`. The navigation groups the pages under two
 headers, the calculators (Standard, Scientific) and the converters (Currency). Both calculators share
 `CalculatorViewModel` and `CalculatorDisplay`, and every page but the settings is cached, so it keeps
-its content across a navigation.
+its content across a navigation. `MainWindow` also owns compact mode, a small window on top of every
+other one that holds the page it was asked from; each page brings its own sizes through `ICompactPage`.
 
 `Setup/` holds the Inno Setup installer scripts, `Calculator/` the retired WPF version 1, and `.github/`
 the workflows, the issue and pull request templates and the public README.
