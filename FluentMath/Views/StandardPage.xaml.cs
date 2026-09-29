@@ -6,37 +6,36 @@ using Windows.Foundation;
 
 namespace FluentMath.Views
 {
-    // the standard calculator: the display and the ViewModel of the scientific page over the keys a pocket
-    // calculator prints; it has no panels and no shift, so there is nothing here but the way into view and
+    // the standard calculator:
+    // the display and the ViewModel of the scientific page over the keys a pocket calculator prints;
+    // It has no panels and no shift, so there is nothing here but the way into view and
     // the way into compact mode
     public sealed partial class StandardPage : Page, ICompactPage
     {
         public CalculatorViewModel ViewModel { get; }
 
         // --- display ---
-        // font sizes in pixels; the scientific page has its own pair
-        private const double InputLineFontSize = 36; // the lower line, the formula being typed and then its result (bigger = larger)
-        private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
+        // in px; (the scientific page has its own pair)
+        private const double InputLineFontSize = 36; // the lower line; input
+        private const double HistoryLineFontSize = 16; // the upper line; output
 
         // --- row floors ---
-        // in pixels; the full window and compact mode each have their own pair
-        private const double DisplayFloor = 96; // the display with the caret bar under it, which alone takes 32 (smaller = shorter display allowed)
-        private const double PadFloor = 220; // the whole keypad, six rows of keys (smaller = shorter keys allowed)
-        private const double CompactDisplayFloor = 120; // the same two while compact
+        // in px; (the full window and compact mode each have their own pair)
+        private const double DisplayFloor = 96; // the display with the caret bar under it
+        private const double PadFloor = 220; // the keypad, six rows of keys
+        private const double CompactDisplayFloor = 120;
         private const double CompactPadFloor = 180;
 
         // --- compact mode ---
-        // sizes in pixels; the start size is the one the Windows Calculator opens its keep on top window at
-        private const double CompactStartWidth = 320; // the first compact window of a session, title bar included (bigger = wider)
-        private const double CompactStartHeight = 394; // (bigger = taller)
-        private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
+        // sizes in px; the start size is the one the Windows Calculator opens its keep on top window at
+        private const double CompactStartWidth = 320;
+        private const double CompactStartHeight = 394;
+        private const double CompactMinWidth = 200;
 
         // --- key labels ---
-        // they drop to a smaller size once the keypad is shorter than this, since the keys are too short for
-        // them by then; the 200 is about what the compact window gave the keypad at the 380 window height
-        // this knob had before
-        private const double SmallKeysBelowHeight = 200; // keypad height in pixels (bigger = small labels sooner)
-        private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
+        // key font drops to smaller size once the keypad is shorter than this
+        private const double SmallKeysBelowHeight = 200; // keypad height in pixels
+        private const double SmallKeyTextScale = 0.8;
 
 
         // === constructor ===
