@@ -31,13 +31,12 @@ namespace FluentMath.Views
         private const double CompactStartHeight = 394; // (bigger = taller)
         private const double CompactMinWidth = 200; // how narrow the page can be dragged (smaller = narrower floor)
 
-        // the key labels drop to a smaller size under this window height while compact, since the keys are
-        // too short for them by then
-        private const double SmallKeysBelowHeight = 380; // window height in pixels, title bar included (bigger = small labels sooner)
+        // --- key labels ---
+        // they drop to a smaller size once the keypad is shorter than this, since the keys are too short for
+        // them by then; the 200 is about what the compact window gave the keypad at the 380 window height
+        // this knob had before
+        private const double SmallKeysBelowHeight = 200; // keypad height in pixels (bigger = small labels sooner)
         private const double SmallKeyTextScale = 0.8; // the small labels against the normal ones (smaller = smaller labels)
-
-        private bool _isCompact;
-        private readonly SmallKeyLabels _smallKeys;
 
 
         // === constructor ===
@@ -52,10 +51,9 @@ namespace FluentMath.Views
 
             DisplayRow.MinHeight = DisplayFloor;
             PadRow.MinHeight = PadFloor;
-            _smallKeys = new SmallKeyLabels(Pad, SmallKeysBelowHeight, SmallKeyTextScale);
+            SmallKeyLabels.Attach(Pad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             this.Loaded += StandardPage_Loaded;
-            this.SizeChanged += StandardPage_SizeChanged;
         }
 
 
@@ -95,18 +93,9 @@ namespace FluentMath.Views
         // window ever lets them
         public void SetCompactLayout(bool compact)
         {
-            _isCompact = compact;
-
             Header.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
             DisplayRow.MinHeight = compact ? CompactDisplayFloor : DisplayFloor;
             PadRow.MinHeight = compact ? CompactPadFloor : PadFloor;
-
-            _smallKeys.Update(_isCompact, XamlRoot);
-        }
-
-        private void StandardPage_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            _smallKeys.Update(_isCompact, XamlRoot);
         }
     }
 }
