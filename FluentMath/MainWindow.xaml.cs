@@ -56,12 +56,11 @@ namespace FluentMath
 
         // --- compact window ---
         // sizes in device independent pixels; the start size is the one the Windows Calculator opens its keep
-        // on top window at, and the height floor is the title bar plus the display and pad floors of the
-        // standard page, 96 and 220
+        // on top window at, and the height floor is not a number here but the title bar plus what the
+        // standard page needs while compact, StandardPage.CompactMinHeight
         private const double CompactStartWidth = 320; // the first compact window of a session (bigger = wider)
         private const double CompactStartHeight = 394; // (bigger = taller)
-        private const double CompactMinWidth = 300; // how narrow the compact window can be dragged (smaller = narrower floor)
-        private const double CompactMinHeight = 360; // how short it can be dragged before the pad is squeezed (smaller = lower floor)
+        private const double CompactMinWidth = 200; // how narrow the content of the compact window can be dragged (smaller = narrower floor)
         private const double CompactEdgeGap = 10; // how far the compact window stands off the top and right screen edge (bigger = further in)
 
         private readonly WindowManager _windowManager;
@@ -177,8 +176,14 @@ namespace FluentMath
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
 
-            _windowManager.MinWidth = CompactMinWidth;
-            _windowManager.MinHeight = CompactMinHeight;
+            // the floor holds the outer window, which reaches past the content by the invisible resize border,
+            // so the border is measured and added onto what the content needs
+            double scale = Content.XamlRoot.RasterizationScale;
+            double borderWidth = (AppWindow.Size.Width - AppWindow.ClientSize.Width) / scale;
+            double borderHeight = (AppWindow.Size.Height - AppWindow.ClientSize.Height) / scale;
+
+            _windowManager.MinWidth = CompactMinWidth + borderWidth;
+            _windowManager.MinHeight = AppTitleBar.ActualHeight + StandardPage.CompactMinHeight + borderHeight;
 
             this.SetWindowSize(_compactSize.Width, _compactSize.Height);
             PinCompactWindow();

@@ -14,8 +14,14 @@
     <Grid Margin="4,4,4,4">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="4*" MinHeight="96" />
-            <RowDefinition Height="6*" MinHeight="220" />
+            <RowDefinition
+                x:Name="DisplayRow"
+                Height="4*"
+                MinHeight="96" />
+            <RowDefinition
+                x:Name="PadRow"
+                Height="6*"
+                MinHeight="220" />
         </Grid.RowDefinitions>
 
 
@@ -437,11 +443,15 @@
                 Style="{StaticResource OperatorButtonStyle}">
                 <FontIcon FontSize="14" Glyph="&#xE8AB;" />
             </Button>
+
+            <!--  equals key  -->
+            <!--  (no padding: the accent style pads its glyph, and a short compact key has no room for it)  -->
             <Button
                 Grid.Row="5"
                 Grid.Column="3"
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
+                Padding="0"
                 Command="{x:Bind ViewModel.CalculateCommand}"
                 Style="{ThemeResource AccentButtonStyle}">
                 <FontIcon
