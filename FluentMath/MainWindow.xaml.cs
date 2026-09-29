@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using Windows.Foundation;
 using Windows.Graphics;
 using WinUIEx;
@@ -17,10 +18,28 @@ namespace FluentMath
     // also owns the theme, because switching it has to touch two things a Page cannot reach:
     // the XAML content tree and the native title bar buttons on the AppWindow
     //
-    // and the compact overlay, for the same reason: it swaps the presenter on the AppWindow and takes the
-    // navigation and the title bar out of the way, and the standard page only asks for it
+    // and the compact overlay, for the same reason: it changes the AppWindow itself and takes the navigation
+    // and the title bar out of the way, and the standard page only asks for it
     public sealed partial class MainWindow : Window
     {
+        // === win32 api imports ===
+
+        // the frame the window draws, without the invisible resize border around it
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out NativeRect value, int size);
+
+        private const int DwmExtendedFrameBounds = 9; // DWMWA_EXTENDED_FRAME_BOUNDS
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NativeRect
+        {
+            public int Left;
+            public int Top;
+            public int Right;
+            public int Bottom;
+        }
+
+
         // === fields ===
 
         public static MainWindow Instance { get; private set; }
@@ -43,14 +62,14 @@ namespace FluentMath
         private const double CompactStartHeight = 394; // (bigger = taller)
         private const double CompactMinWidth = 300; // how narrow the compact window can be dragged (smaller = narrower floor)
         private const double CompactMinHeight = 360; // how short it can be dragged before the pad is squeezed (smaller = lower floor)
+        private const double CompactEdgeGap = 10; // how far the compact window stands off the top and right screen edge (bigger = further in)
 
         private readonly WindowManager _windowManager;
 
         // the compact window comes back at the size it was last dragged to for the rest of the session, and
-        // the full window at the place, size and presenter it had before
+        // the full window at the place and size it had before
         private bool _isCompact;
         private Size _compactSize = new Size(CompactStartWidth, CompactStartHeight);
-        private AppWindowPresenter? _fullPresenter;
         private RectInt32 _fullBounds;
         private bool _fullWasMaximized;
 
@@ -134,33 +153,42 @@ namespace FluentMath
 
         // a small window on top of every other one, holding the standard calculator and nothing else
         //
-        // the floor is lowered before the presenter changes, since the full one would hold the window above
-        // the compact size
+        // on purpose not the CompactOverlay presenter: the Windows App SDK takes the resize border off a
+        // window on it, so it keeps whatever size it was given and cannot be dragged to another one; measured
+        // on 2.5.1, the presenter clears WS_THICKFRAME and the minimize and maximize boxes and sets
+        // WS_EX_TOPMOST, so the window keeps its own presenter and gets the same three changes minus the border
+        //
+        // a maximized window is restored first, so the bounds kept for the way back are its normal ones, and
+        // the floor is lowered before the resize, since the full one would hold the window above the compact
+        // size
         public void EnterCompactMode()
         {
             if (_isCompact) return;
 
-            _fullPresenter = AppWindow.Presenter;
-            _fullWasMaximized = _fullPresenter is OverlappedPresenter overlapped
-                && overlapped.State == OverlappedPresenterState.Maximized;
+            OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
+
+            _fullWasMaximized = presenter.State == OverlappedPresenterState.Maximized;
+            if (_fullWasMaximized) presenter.Restore();
+
             _fullBounds = new RectInt32(AppWindow.Position.X, AppWindow.Position.Y,
                 AppWindow.Size.Width, AppWindow.Size.Height);
+
+            presenter.IsAlwaysOnTop = true;
+            presenter.IsMinimizable = false;
+            presenter.IsMaximizable = false;
 
             _windowManager.MinWidth = CompactMinWidth;
             _windowManager.MinHeight = CompactMinHeight;
 
-            AppWindow.SetPresenter(AppWindowPresenterKind.CompactOverlay);
             this.SetWindowSize(_compactSize.Width, _compactSize.Height);
+            PinCompactWindow();
 
             _isCompact = true;
             ShowCompactChrome(true);
         }
 
-        // back to the full window where it was; a maximized one is maximized again rather than given its
-        // maximized bounds as a plain size
-        //
-        // the presenter handed back is the one the window had, not a fresh one, so nothing that was set on it
-        // is lost on the way
+        // back to the full window where it was; the normal bounds go back first and the maximize after them,
+        // so a window that was maximized still restores to its own size later rather than to the compact one
         public void ExitCompactMode()
         {
             if (!_isCompact) return;
@@ -168,22 +196,48 @@ namespace FluentMath
             double scale = Content.XamlRoot.RasterizationScale;
             _compactSize = new Size(AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
 
-            AppWindow.SetPresenter(_fullPresenter);
+            OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
+            presenter.IsAlwaysOnTop = false;
+            presenter.IsMinimizable = true;
+            presenter.IsMaximizable = true;
 
             _windowManager.MinWidth = FullMinWidth;
             _windowManager.MinHeight = FullMinHeight;
 
-            if (_fullWasMaximized && _fullPresenter is OverlappedPresenter overlapped)
-            {
-                overlapped.Maximize();
-            }
-            else
-            {
-                AppWindow.MoveAndResize(_fullBounds);
-            }
+            AppWindow.MoveAndResize(_fullBounds);
+            if (_fullWasMaximized) presenter.Maximize();
 
             _isCompact = false;
             ShowCompactChrome(false);
+        }
+
+        // every way into compact puts the window into the top right corner of the work area of the screen it
+        // is on, so the taskbar never covers it; it can be dragged away from there, and the next way in puts
+        // it back
+        //
+        // the gap is measured to the frame that is drawn: a resizable window reaches past it on the sides and
+        // the bottom with a border that is only there to catch the mouse, and a window is placed by its outer
+        // bounds, so that border is counted back in
+        private void PinCompactWindow()
+        {
+            double scale = Content.XamlRoot.RasterizationScale;
+            int gap = (int)Math.Round(CompactEdgeGap * scale);
+
+            RectInt32 work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+
+            int rightBorder = 0;
+            int topBorder = 0;
+
+            if (DwmGetWindowAttribute(this.GetWindowHandle(), DwmExtendedFrameBounds, out NativeRect frame,
+                Marshal.SizeOf<NativeRect>()) == 0)
+            {
+                rightBorder = AppWindow.Position.X + AppWindow.Size.Width - frame.Right;
+                topBorder = frame.Top - AppWindow.Position.Y;
+            }
+
+            AppWindow.Move(new PointInt32(
+                work.X + work.Width - gap - AppWindow.Size.Width + rightBorder,
+                work.Y + gap - topBorder));
         }
 
         // compact shows one row above the page, the return key and the close button: the pane toggle, the
