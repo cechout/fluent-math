@@ -6,11 +6,8 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // layout is arithmetic, so it is checked with numbers chosen here rather than with a screenshot
-    //
-    // the measurer below is what makes that possible: no font is involved anywhere in this file, and the
-    // assertions are about how the engine combines what a measurer tells it, never about what a real face
-    // happens to report
+    // layout is arithmetic, so it is checked with numbers chosen here, through the fake measurer below
+    // (no font is involved anywhere in this file)
     public class MathLayoutTests
     {
         // === the fake ===

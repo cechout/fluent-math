@@ -4,11 +4,8 @@ using System.Runtime.CompilerServices;
 
 namespace FluentMath.Tests
 {
-    // the command vocabulary as data, so a test can press every key there is instead of the handful
-    // somebody thought of
-    //
-    // the list is maintained here on purpose rather than scraped out of the ViewModel: it is the
-    // contract, and CommandVocabularyTests holds both the markup and the ViewModel against it
+    // the command vocabulary as data, so a test can press every key there is
+    // (kept by hand as the contract; CommandVocabularyTests holds the markup and the ViewModel against it)
     internal static class Vocabulary
     {
         public static readonly string[] Commands =
@@ -35,21 +32,14 @@ namespace FluentMath.Tests
             "cmd_angle_cycle", "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
         };
 
-        // handled by the ViewModel but with no button anywhere
-        //
-        // the selector in the caret bar sends cmd_angle_cycle, because a button that shows
-        // the current unit can only offer the next one; these three set a unit outright, and the settings
-        // page writes the unit into the settings itself rather than sending them
+        // handled by the ViewModel but with no button anywhere; (the selector sends cmd_angle_cycle)
         public static readonly string[] Parked =
         {
             "cmd_angle_deg", "cmd_angle_rad", "cmd_angle_gra"
         };
 
-        // drawn on a key but computing nothing yet; mirrors CalculatorViewModel.NotImplementedKeys and
-        // the revisit tag above it
-        //
-        // the header carries the history and memory keys ahead of what they need; a name leaves this list
-        // as it lands
+        // drawn on a key but computing nothing yet; mirrors CalculatorViewModel.NotImplementedKeys
+        // (a name leaves this list as it lands)
         public static readonly string[] NotImplemented =
         {
             "cmd_history", "cmd_memory"
@@ -71,10 +61,8 @@ namespace FluentMath.Tests
             "cmd_npr", "cmd_ncr", "cmd_div_r"
         };
 
-        // the keys that change how a result is shown and leave the formula behind it alone; pressed during
-        // input they evaluate first
-        //
-        // the °′″ key is one on a result only, since during input it types a marker
+        // the keys that change how a result is shown and leave the formula alone; during input they
+        // evaluate first (the °′″ key only on a result, during input it types a marker)
         public static readonly string[] ViewKeys =
         {
             "cmd_prime", "cmd_eng", "cmd_eng_back", "cmd_frac_swap", "cmd_degrees"
@@ -117,10 +105,8 @@ namespace FluentMath.Tests
 
         // === source layout ===
 
-        // the markup is read straight off disk so the test can compare it against the list above
-        //
-        // CallerFilePath resolves when the test project is compiled, which is what makes this work both
-        // here and on a runner without anything having to know a working directory
+        // the markup read straight off disk; (CallerFilePath resolves at compile time, so no working
+        // directory is needed)
         public static string PageMarkupPath(string page)
         {
             return Path.Combine(RepositoryRoot(), "FluentMath", "Views", page + ".xaml");
