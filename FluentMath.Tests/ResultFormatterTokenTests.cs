@@ -5,10 +5,8 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // the result as tokens, for the display that draws them rather than handing LaTeX to a browser
-    //
-    // ToTokens mirrors ToLatex arm for arm, so these check the same decisions ResultFormatterTests checks
-    // on the string side; the two drifting apart is the thing to catch
+    // the result as tokens, the ones the display draws
+    // (ToTokens mirrors ToLatex arm for arm, so these check the decisions ResultFormatterTests checks)
     public class ResultFormatterTokenTests
     {
         private const string Minus = "−";
@@ -212,8 +210,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AValueOutsideTheWindowIsSpelledOutAsAMultiplicationAndAPower()
         {
-            // the same shape the EXP key produces, so a result and a typed formula are one thing rather
-            // than two that happen to look alike
+            // the same shape the EXP key produces
             List<MathToken> tokens = ResultFormatter.ToTokens(1.5e20);
 
             Assert.Equal("1.5", Digits(tokens.Take(tokens.Count - 2)));

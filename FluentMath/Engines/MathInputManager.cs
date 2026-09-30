@@ -6,25 +6,12 @@ using FluentMath.Models;
 
 namespace FluentMath.Engines
 {
-    // the whole input model of the calculator: it owns the token tree the user is building and the
-    // cursor that walks through it, and it is the only thing allowed to mutate either
+    // the input model:
+    // owns the token tree and the cursor, and is the only thing that mutates either; every editable slot
+    // is a ScopeContext on a stack whose top is the slot being typed into
     //
-    // the tree is not flat text, so a cursor cannot be a character offset; instead every editable slot
-    // (a numerator, an exponent, a function argument) is a ScopeContext with its own token list and its
-    // own cursor index, and those contexts live on a stack whose top is whatever the user is typing into
-    // right now; that is what makes nesting work without any position arithmetic
-    //
-    // the class knows nothing about buttons or LaTeX beyond GetLatexString; CalculatorViewModel does the
-    // translating in both directions
-    //
-    // the input is a sandbox: nothing typed is ever refused, corrected or rearranged, however broken the
-    // formula looks along the way
-    // a leading times sign, three operators in a row, two decimal points in one number, a lone factorial,
-    // an exponent with no number in front of it: all of it goes in as typed and stands there
-    // the single place a formula is judged is MathEvaluator, on = , and a broken one comes back as a
-    // Syntax ERROR that the user can walk back into and repair
-    // the guards that used to live here read as helpfulness and were not: they silently threw a keypress
-    // away, which is worse than an error message, because nothing on screen says why
+    // the input is a sandbox: nothing typed is refused, corrected or rearranged, however broken; the one
+    // place a formula is judged is MathEvaluator on =, and a broken one is a Syntax ERROR to walk back into
     public class MathInputManager
     {
         // === fields ===
@@ -32,8 +19,7 @@ namespace FluentMath.Engines
         private readonly List<MathToken> _rootTokens = new List<MathToken>();
         private readonly Stack<ScopeContext> _scopeStack = new Stack<ScopeContext>();
 
-        // the outermost scope, kept as a field so resetting can push the same instance back instead of
-        // building a new one around the same _rootTokens list
+        // the outermost scope, kept so a reset pushes the same instance back
         private readonly ScopeContext _rootContext;
 
         private List<MathToken> CurrentScope => _scopeStack.Peek().Tokens; // the token list being written into
@@ -59,11 +45,8 @@ namespace FluentMath.Engines
 
         // === cursor movement ===
 
-        // moving inside the current scope always wins; only once the cursor is already at a scope edge,
-        // or the direction is Up/Down, does the scopes own role decide where it goes next
-        //
-        // one press has to move the caret somewhere the eye can follow, which is what the call below the
-        // move is for: it keeps the cursor off a position that is drawn where the one beside it is drawn
+        // moving inside the current scope wins; at a scope edge, or for Up and Down, the scope role decides
+        // (the call after the move keeps the cursor off a position drawn on top of its neighbour)
         public void Move(NavDirection direction)
         {
             MoveOnce(direction);
@@ -108,14 +91,8 @@ namespace FluentMath.Engines
             HandleSlotNavigation(direction, ctx);
         }
 
-        // both helpers below follow the same shape for every structured token: push the sub-scope the
-        // cursor should land in and park the cursor at the far end, so entering from the right starts at
-        // the end of the slot and entering from the left starts at its beginning
-        //
-        // a fraction takes part like everything else: arriving from the left lands at the start of the
-        // numerator and arriving from the right at the end of the denominator, so both halves are
-        // reachable without switching to the Up and Down keys; the cost is that merely walking past a
-        // fraction now goes through it rather than over it
+        // both helpers below push the slot the cursor lands in, at the end it arrives from; a fraction too,
+        // so both halves are reachable without Up and Down
 
         // cursor sits right of the token and the user pressed Left
         // returns false when the token should be treated as atomic and simply stepped over
@@ -138,22 +115,16 @@ namespace FluentMath.Engines
             return true;
         }
 
-        // a power draws nothing in front of its base, so the position in front of the token and the first
-        // position inside the base are one place on screen; every other structured token draws something
-        // there, a bar with the numerator centred over it, a radical sign, or a name
-        //
-        // `MathLayoutEngine.BuildPower` is what makes that true, and the two have to move together
-        // a mixed fraction is the same case with its whole part, see `MathLayoutEngine.BuildMixedFraction`
+        // a power and a mixed fraction draw nothing in front of their first slot, so the place before the
+        // token and the first place inside are one spot on screen
+        // (MathLayoutEngine.BuildPower and BuildMixedFraction make that true and move together with this)
         private static bool BeginsWithItsFirstSlot(MathToken token)
         {
             return token is PowerToken || token is MixedFractionToken;
         }
 
-        // the cursor never stands in front of such a token, it stands in the slot instead
-        //
-        // standing on both costs a press of an arrow key that changes nothing the eye can see, in either
-        // direction. The inner one is the one that is kept, because what is typed there joins the number
-        // that is on screen rather than landing beside a structure the display draws no boundary for
+        // the cursor never stands in front of such a token but in its slot, where typing joins the number
+        // on screen
         private void EnterTokensThatBeginWithTheirFirstSlot()
         {
             while (true)
@@ -167,9 +138,8 @@ namespace FluentMath.Engines
             }
         }
 
-        // Left and Right first walk to the neighbouring slot of the same token and only leave the token
-        // once there is no neighbour left, which is what makes a root index, a logarithm base or the far
-        // half of a fraction reachable with the arrow keys alone
+        // Left and Right walk to the neighbouring slot of the same token first, so a root index, a log base
+        // or the far half of a fraction is reachable with the arrow keys alone
         private void HandleSlotNavigation(NavDirection direction, ScopeContext context)
         {
             if (direction == NavDirection.Left)
@@ -179,8 +149,7 @@ namespace FluentMath.Engines
                 _scopeStack.Pop();
                 PositionCursorAtParentToken(context.ParentToken, before: true);
 
-                // that position is the place the cursor just left when the token begins with the slot it
-                // came out of, so the move carries straight on out of it rather than stopping there
+                // out of a first slot the token begins with, that is the place just left, so the move carries on
                 if (BeginsWithItsFirstSlot(context.ParentToken)) MoveOnce(NavDirection.Left);
                 return;
             }
@@ -260,14 +229,8 @@ namespace FluentMath.Engines
 
         // === slots ===
 
-        // the slots of a structured token in reading order
-        //
-        // everything that walks between slots reads its answer out of this one list, so a further
-        // structured token needs one case here instead of a branch in each of the four callers
-        //
-        // the order is also the slot index a click address carries, which MathToken hardcodes per token
-        // when it renders; reordering a token here without reordering it there sends a click into the
-        // wrong half of a structure
+        // the slots of a structured token in reading order, the one list every slot walk reads
+        // (the order is the slot index of a click address, which MathToken and the layout hardcode per token)
         internal static List<TokenSlot> GetSlots(MathToken token)
         {
             switch (token)
@@ -353,8 +316,7 @@ namespace FluentMath.Engines
             return slots[neighbourIndex];
         }
 
-        // an empty neighbour is deliberately not skipped here; stepping into it is the only way to fill
-        // the index of a plain square root or the base of a logarithm that was left blank
+        // an empty neighbour is not skipped; it is the only way into a blank root index or log base
         private bool TryMoveToNeighbourSlot(ScopeContext context, bool next)
         {
             TokenSlot? neighbour = GetNeighbourSlot(context, next);
@@ -374,8 +336,7 @@ namespace FluentMath.Engines
             _scopeStack.Push(context);
         }
 
-        // swaps the top of the stack for another slot of the same token, the way the two fraction halves
-        // already trade places
+        // swaps the top of the stack for another slot of the same token
         private void SwitchToSlot(TokenSlot slot, MathToken parentToken, bool atEnd)
         {
             _scopeStack.Pop();
@@ -403,12 +364,7 @@ namespace FluentMath.Engines
 
         // === plain input ===
 
-        // one token per digit, so the cursor can stand between any two characters of a number the same
-        // way it stands between any two tokens; "125" is three tokens and the evaluator is the one place
-        // that reads such a run back as a single value
-        //
-        // a second decimal point in the same number is accepted like anything else, see the sandbox note
-        // on the class
+        // one token per digit, so the cursor can stand between any two; the evaluator reads the run as one value
         public void AddNumber(string digit)
         {
             var ctx = CurrentContext;
@@ -417,12 +373,7 @@ namespace FluentMath.Engines
             ctx.CursorIndex++;
         }
 
-        // every operator goes in where the cursor is, however many of them are already there and
-        // whatever stands beside them
-        //
-        // it used to refuse one with nothing on its left and to overwrite the one before it, both of
-        // which quietly changed what was typed; a leading minus needs no special case either, since
-        // nothing is refused for it to be an exception to
+        // every operator goes in where the cursor is, whatever stands beside it
         public void AddOperator(string op)
         {
             var ctx = CurrentContext;
@@ -517,8 +468,7 @@ namespace FluentMath.Engines
             var ctx = CurrentContext;
             var powerToken = new PowerToken();
 
-            // a power typed after a number should raise that number rather than open an empty base, so
-            // the token to the left is pulled out of the parent scope and becomes the base
+            // the operand on the left becomes the base
             MoveOperandIntoSlot(ctx, powerToken.BaseTokens);
 
             ctx.Tokens.Insert(ctx.CursorIndex, powerToken);
@@ -527,12 +477,7 @@ namespace FluentMath.Engines
             _scopeStack.Push(new ScopeContext(powerToken.ExponentTokens, powerToken, ScopeRole.Exponent));
         }
 
-        // the e to the x key; unlike StartPower it deliberately leaves whatever stands to its left
-        // alone, because the base is the thing the key already names
-        //
-        // there was a matching ten to the n key beside it and it was taken out: it sat next to the
-        // keypads own x10^n, looked almost the same and bound quite differently, which is a trap rather
-        // than a choice
+        // the e to the x key; unlike StartPower it leaves the left alone, since the key names its base
         public void StartPowerOfE()
         {
             var ctx = CurrentContext;
@@ -568,11 +513,9 @@ namespace FluentMath.Engines
             return -1;
         }
 
-        // the run of tokens directly left of the cursor that reads as one operand: everything back to
-        // the nearest operator, opening bracket or start of the scope, with a bracket group counted as
-        // one piece, so the base of (1+2) squared is the whole group
-        //
-        // returns cursorIndex itself when there is nothing to take, which is what leaves an empty slot
+        // the run of tokens left of the cursor that reads as one operand, back to the nearest operator,
+        // opening bracket or scope start; a bracket group counts as one piece
+        // (cursorIndex itself when there is nothing to take)
         private static int FindOperandStart(List<MathToken> tokens, int cursorIndex)
         {
             int start = cursorIndex;
@@ -599,11 +542,7 @@ namespace FluentMath.Engines
             return start;
         }
 
-        // moves that operand out of the scope and into the slot a structured token is about to own,
-        // which is what lets the fraction and the power keys continue from what is already typed
-        //
-        // says whether anything was taken; that is what decides which half the fraction key leaves the
-        // cursor in
+        // moves that operand into the slot a structured token is about to own; returns whether it took any
         private static bool MoveOperandIntoSlot(ScopeContext context, List<MathToken> slot)
         {
             int start = FindOperandStart(context.Tokens, context.CursorIndex);
@@ -637,13 +576,7 @@ namespace FluentMath.Engines
             }
         }
 
-        // the EXP key, which is the work taken off you for typing times, one, zero, power and nothing
-        // more; it builds exactly what those four keys build, so everything downstream treats it as what
-        // it is rather than as a shape of its own
-        //
-        // it used to be a token with a single slot, and that cost a cursor position: there was nowhere to
-        // stand between the ten and the exponent, because the ten was drawn rather than typed, so walking
-        // left out of the exponent left the whole times ten to the n behind in one step
+        // the EXP key: builds exactly what times, one, zero and power build
         public void StartScientific()
         {
             var ctx = CurrentContext;
@@ -672,12 +605,8 @@ namespace FluentMath.Engines
             _scopeStack.Push(new ScopeContext(funcToken.ParameterTokens, funcToken, ScopeRole.FunctionParameter));
         }
 
-        // the numerator continues from whatever already stands left of the cursor, the way a Casio does
-        // it: 5 + 45 followed by the fraction key lifts the 45 over the bar and drops the cursor into the
-        // denominator, which is the half still waiting to be typed
-        //
-        // with nothing to lift there is no half to continue into either, so an empty fraction opens in
-        // the numerator instead
+        // the operand on the left becomes the numerator and the cursor drops into the denominator, as on
+        // a Casio (5 + 45 lifts the 45); with nothing to lift it opens in the numerator
         public void StartFraction()
         {
             var ctx = CurrentContext;
@@ -697,11 +626,8 @@ namespace FluentMath.Engines
             _scopeStack.Push(new ScopeContext(fracToken.NumeratorTokens, fracToken, ScopeRole.Numerator));
         }
 
-        // the mixed fraction continues the same way: 2 followed by the key makes the 2 the whole part and
-        // drops the cursor into the empty numerator, which is where a Casio puts it
-        //
-        // a minus in front stays outside, since the operand stops at it, and negates the whole mixed
-        // number; with nothing to lift the template opens in the whole part
+        // the same with the whole part: 2 and the key make the 2 the whole part, the cursor in the numerator
+        // (a minus in front stays outside; with nothing to lift it opens in the whole part)
         public void StartMixedFraction()
         {
             var ctx = CurrentContext;
@@ -768,15 +694,8 @@ namespace FluentMath.Engines
 
         // === editing ===
 
-        // every Backspace deletes something
-        //
-        // at the start of a sub-scope there is no character left to take, so the structure itself goes
-        // and everything typed into it stays standing where the structure stood
-        //
-        // that can run two numbers together, and deliberately does: backspacing into the denominator of
-        // 1/2 leaves 12, and deleting the sin out of 2sin(30) leaves 230
-        // it used to step into the slot before instead, which meant a keypress that visibly did nothing
-        // and a second one needed to delete a single character
+        // every Backspace deletes something; at the start of a slot the structure goes and its contents stay
+        // (which can run two numbers together on purpose: 2sin(30) leaves 230)
         public void Backspace()
         {
             var ctx = CurrentContext;
@@ -790,18 +709,12 @@ namespace FluentMath.Engines
             // at the start of the root scope there is nothing left to delete
             if (ctx.CursorIndex == 0) return;
 
-            // digit, operator or a whole structure; everything left of the cursor is one token now, so
-            // it all goes away in one piece
+            // a digit, an operator or a whole structure, one token either way
             ctx.Tokens.RemoveAt(ctx.CursorIndex - 1);
             ctx.CursorIndex--;
         }
 
-        // drops the structure but keeps what was already typed into it, by putting the contents of its
-        // one remaining slot back into the parent scope where the token itself stood
-        //
-        // deleting the 7 out of 5^7 twice therefore leaves the 5 rather than taking it along; the slots
-        // are walked in reading order, though only one of them can contribute anything, since the caller
-        // only gets here while at most one is in use
+        // drops the structure and puts the contents of its slots back where it stood, so 5^7 leaves the 5
         private void DissolveStructure(MathToken structureToken, List<MathToken> leavingSlot)
         {
             _scopeStack.Pop();
@@ -817,16 +730,8 @@ namespace FluentMath.Engines
             parentCtx.CursorIndex = tokenIndex + cursorOffset;
         }
 
-        // what a dissolved structure leaves behind, and where in it the cursor lands
-        //
-        // the cursor stays at the point the slot it was standing in used to begin, so it does not jump
-        // over content it was in front of: backspacing out of the argument of 2sin(30) leaves the caret
-        // between the 2 and the 30, and out of the exponent of 5^7 leaves it behind the 5
-        //
-        // a scientific token also draws a times sign and a ten that were never tokens of their own, so
-        // those go back in as well; without them 3x10^5 would collapse to 35, a different number with
-        // nothing on screen saying so
-        // an untouched one has nothing on screen worth keeping and disappears whole
+        // what a dissolved structure leaves behind, and where the cursor lands: where its slot began, so
+        // out of 2sin(30) the caret stands between the 2 and the 30
         private static List<MathToken> SalvagedTokens(MathToken structureToken, List<MathToken> leavingSlot,
             out int cursorOffset)
         {
@@ -846,13 +751,8 @@ namespace FluentMath.Engines
             return salvaged;
         }
 
-        // puts the cursor where a click in the display landed, from the address the renderer wrote onto
-        // the token that was hit: a chain of tokenIndex.slotIndex steps and the position within the last
-        // of them, for example 2.0/5.1@3
-        //
-        // everything here arrives from the browser, so none of it is trusted; a malformed address or an
-        // index that no longer exists leaves the cursor exactly where it was, which is also what happens
-        // when a stale render is clicked after the tree has already changed
+        // puts the cursor where a click landed, from an address like 2.0/5.1@3 (tokenIndex.slotIndex steps
+        // and the position in the last); a malformed or stale one leaves the cursor where it was
         public bool SetCursorPosition(string address)
         {
             if (string.IsNullOrEmpty(address)) return false;
@@ -862,8 +762,7 @@ namespace FluentMath.Engines
 
             if (!TryParseIndex(address.Substring(separator + 1), out int cursorIndex)) return false;
 
-            // the walk builds the new stack beside the live one, so a bad step half way down cannot
-            // strand the cursor in a scope nobody asked for
+            // built beside the live stack, so a bad step cannot strand the cursor
             var scopes = new List<ScopeContext> { _rootContext };
             List<MathToken> tokens = _rootTokens;
 
@@ -883,9 +782,7 @@ namespace FluentMath.Engines
                     List<TokenSlot> slots = GetSlots(owner);
                     if (slotIndex >= slots.Count) return false;
 
-                    // the scope being left parks its cursor on the token, the same way entering a
-                    // structure from the left does, so Backspace out of it finds the token where it
-                    // expects to
+                    // the scope being left parks its cursor on the token, as entering from the left does
                     scopes[scopes.Count - 1].CursorIndex = tokenIndex;
 
                     TokenSlot slot = slots[slotIndex];
@@ -904,15 +801,13 @@ namespace FluentMath.Engines
 
             CurrentContext.CursorIndex = cursorIndex;
 
-            // an address in front of a token that begins with its own first slot names a place the caret
-            // is never drawn on its own, so it is resolved to the one inside the slot
+            // an address in front of a token that begins with its first slot resolves into the slot
             EnterTokensThatBeginWithTheirFirstSlot();
 
             return true;
         }
 
-        // invariant culture on purpose, the address is machine written and a German system would
-        // otherwise read a grouping separator into it
+        // invariant culture; the address is machine written
         private static bool TryParseIndex(string text, out int value)
         {
             if (!int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out value)) return false;
@@ -928,14 +823,8 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = 0;
         }
 
-        // drops everything and leaves the finished result behind as ordinary tokens, which is how it is
-        // carried into the calculation that continues from it
-        //
-        // the digits rather than an Ans token: the display is still showing that number, and swapping it
-        // for a word reads as the formula having been thrown away; it also keeps the result editable
-        // digit by digit
-        // fullValue is the value behind the twelve digits on screen; the digits carry it with them, so
-        // 1÷3 followed by ×3 is 1 again, until one of them is edited, see SeededValue
+        // replaces everything with the result as ordinary digits, editable one by one, to continue from
+        // (fullValue rides on the digits until one is edited, see SeededValue)
         public void SeedWithValue(string numberText, MathValue? fullValue = null)
         {
             Clear();
@@ -946,8 +835,7 @@ namespace FluentMath.Engines
             if (fullValue is MathValue value) CarryFullValue(value);
         }
 
-        // every digit of the seed shares the one full value behind it, the magnitude only, since a minus in
-        // front is a sign token of its own
+        // every digit of the seed shares the one full value, its magnitude only
         private void CarryFullValue(MathValue value)
         {
             List<MathToken> digits = _rootTokens.FindAll(token => token.Type == TokenType.Number);
@@ -955,8 +843,7 @@ namespace FluentMath.Engines
             foreach (MathToken digit in digits) digit.Seed = seed;
         }
 
-        // the same for a result the S to D key is showing as a fraction, so the display keeps the shape
-        // it had
+        // the same for a result shown as a fraction, so it keeps its shape
         public void SeedWithFraction(long numerator, long denominator)
         {
             Clear();
@@ -969,11 +856,7 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 
-        // and as a mixed number, which goes back in as the structure it is drawn as
-        //
-        // the sign rides on the whole part, where the sign rule of the mixed fraction makes it the sign of
-        // the whole number; a minus in front of the token would do the same until x squared lifts only
-        // the token and leaves the minus behind
+        // and as a mixed number; the sign rides on the whole part, so x² lifts it along
         public void SeedWithMixedFraction(long whole, long numerator, long denominator)
         {
             Clear();
@@ -987,12 +870,8 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 
-        // and as the tokens a result is drawn as, when those are real tokens already: the prime factors,
-        // whose powers and times signs carry on as the product they are, and an exact form with roots or π,
-        // whose roots are real roots
-        //
-        // an angle in degrees, minutes and seconds is real markers, and its digits carry the full value
-        // together, since the seconds are rounded to what the display shows
+        // and as the tokens a result is drawn as, when those are real tokens: prime factors, an exact form,
+        // an angle (whose digits carry the full value, the seconds being rounded)
         public void SeedWithTokens(IEnumerable<MathToken> tokens, MathValue? fullValue = null)
         {
             Clear();
@@ -1027,12 +906,8 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 
-        // puts a seeded result in brackets when it is more than the one operand a key to its right would
-        // take: a negative number, a power of ten, the prime factors, a sum of roots
-        //
-        // squaring −5 is then 25, the way a Casio squares Ans, rather than the −25 that −5² typed by hand
-        // is; a single operand, a number, a fraction, a number with a prefix or an angle in degrees,
-        // minutes and seconds, is left bare
+        // brackets a seeded result that is more than one operand (a negative number, a power of ten, prime
+        // factors, a sum of roots), so −5 squared is 25, as a Casio squares Ans
         public void EncloseIfCompound()
         {
             if (FindOperandStart(_rootTokens, _rootTokens.Count) == 0) return;
@@ -1042,9 +917,7 @@ namespace FluentMath.Engines
             _rootContext.CursorIndex = _rootTokens.Count;
         }
 
-        // one token per character, exactly what typing the same number by hand would leave behind; a
-        // leading minus is a sign rather than a digit, so it goes in as the operator the evaluator
-        // already reads that way
+        // one token per character, as typing it would leave; a leading minus goes in as the operator
         private static void FillWithDigits(List<MathToken> tokens, string numberText)
         {
             foreach (char character in numberText)
@@ -1065,17 +938,11 @@ namespace FluentMath.Engines
         // read-only view of the tree for the evaluator; this class stays the only thing that mutates it
         public IReadOnlyList<MathToken> RootTokens => _rootTokens;
 
-        // where the caret stands, for a display that draws it itself
-        //
-        // the list is handed out by reference on purpose: that identity is what tells one empty slot from
-        // another, and two of them compare equal by contents
+        // where the caret stands; the list by reference, which tells two empty slots apart
         public IReadOnlyList<MathToken> ActiveTokens => CurrentContext.Tokens;
         public int ActiveCursorIndex => CurrentContext.CursorIndex;
 
-        // empty input renders as "0" so the display is never blank
-        //
-        // the cursor belongs to the line being typed, so the history line asks for the same formula
-        // without it, and without the addresses that make a formula clickable
+        // empty input renders as "0"; the history line asks without cursor and addresses
         public string GetLatexString(bool withCursor = true, bool withAddresses = false,
             bool displayFractions = false)
         {

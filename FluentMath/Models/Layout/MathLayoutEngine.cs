@@ -5,11 +5,8 @@ using System.Text;
 
 namespace FluentMath.Models.Layout
 {
-    // turns a token list into a box tree
-    //
-    // it walks the lists MathInputManager owns, in the order MathInputManager.GetSlots returns them, so a
-    // place in the box tree maps straight back onto a cursor position; that is what the hit test will read
-    // later, and it is the reason nothing here reorders anything
+    // turns a token list into a box tree, in the slot order of MathInputManager.GetSlots, so a place in
+    // the tree maps straight back onto a cursor position
     public sealed class MathLayoutEngine
     {
         // === fields ===
@@ -18,14 +15,10 @@ namespace FluentMath.Models.Layout
         private readonly MathLayoutStyle _style;
         private readonly CaretTarget _caret;
 
-        // where the caret ended up, filled in while the boxes are built and read once they are placed
-        //
-        // it deliberately is not a box: a caret that takes part in the layout moves its neighbours as it
-        // travels, whatever its width, and that is the one mistake this display has to keep not making
+        // where the caret ended up, read once the boxes are placed; (no box, or it would move its neighbours)
         public CaretPlacement? Caret { get; private set; }
 
-        // the glyph an empty row takes its height from; a digit rather than a letter, because digits are
-        // what the display is mostly made of
+        // the glyph an empty row takes its height from
         private const string StrutText = "0";
 
         // signs the display draws that no token carries as its value
@@ -52,10 +45,8 @@ namespace FluentMath.Models.Layout
             return BuildRow(tokens, _style.FontSizePx, 0, "");
         }
 
-        // the size and the level both come in rather than off the style, because a slot one step further
-        // in is set smaller than the row around it and has to know how much further it may still shrink
-        // path is the address of this list, empty at the root; it is built exactly the way
-        // LatexRenderContext builds it, so MathInputManager.SetCursorPosition parses what comes out
+        // the size and script level come in, since a slot further in is set smaller
+        // (path is the address of this list, empty at the root, built the way LatexRenderContext builds it)
         public RowBox BuildRow(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel,
             string path = "")
         {
@@ -165,12 +156,8 @@ namespace FluentMath.Models.Layout
 
         // === leaves ===
 
-        // consecutive digits and the decimal point become one run; a bracket or a constant stays on its
-        // own, because a bracket has to scale with what it encloses as soon as it can
-        //
-        // with digit grouping on, the run is cut where a group of three begins and the gap goes between
-        // the pieces; the cuts depend on the digits alone and never on the caret, so no digit moves as the
-        // caret passes it
+        // consecutive digits and the decimal point become one run
+        // (with digit grouping, cut where a group of three begins; the cuts never depend on the caret)
         private List<TextRunBox> BuildNumberRun(IReadOnlyList<MathToken> tokens, int start, int end,
             double fontSize, string path)
         {
@@ -192,8 +179,7 @@ namespace FluentMath.Models.Layout
                     covered.Add(tokens[index]);
                 }
 
-                // the place in front of a group is the middle of the gap before it, so the caret stands
-                // between the two groups rather than against either of them
+                // the place in front of a group is the middle of the gap before it
                 bool afterGap = groups.Count > 0;
                 string run = text.ToString();
                 TextRunBox group = Addressed(new TextRunBox(run, fontSize, _measurer.Measure(run, fontSize), covered),
@@ -208,11 +194,8 @@ namespace FluentMath.Models.Layout
             return groups;
         }
 
-        // where a group of three begins inside each whole part of the run, counted from its last digit;
-        // digits behind a decimal point are left alone
-        //
-        // a run is not always one number: a pair writes both values and their names into one, so every
-        // unbroken stretch of digits is grouped on its own
+        // where a group of three begins in each whole part of the run, counted from its last digit
+        // (every stretch of digits on its own, since a pair writes two numbers into one run)
         private static List<int> GroupCuts(IReadOnlyList<MathToken> tokens, int start, int end)
         {
             List<int> cuts = new List<int>();
@@ -255,11 +238,7 @@ namespace FluentMath.Models.Layout
             return token.Value;
         }
 
-        // how far into a run the caret stands, when it stands between two digits of the same number
-        //
-        // the run itself is measured and drawn whole; only the caret is placed inside it. Splitting the
-        // run instead would hand the text stack two pieces to set, each with the side bearings of its own
-        // first glyph, and the digits either side of the caret would shift as it passed between them
+        // how far into a run the caret stands between two digits; the run stays whole, so no digit shifts
         private static double OffsetInRun(TextRunBox run, int tokenOffset)
         {
             if (tokenOffset <= 0) return run.TokenOffsets is { Count: > 0 } offsets ? offsets[0] : 0;
@@ -268,16 +247,8 @@ namespace FluentMath.Models.Layout
             return run.TokenOffsets[tokenOffset];
         }
 
-        // a run stands in front of several cursor positions at once, one per digit it covers, so a click
-        // between two digits of the same number can land between them
-        //
-        // each of them is measured rather than assumed to be an equal share of the width: a decimal point
-        // is far narrower than a digit, and the caret and a click have to agree on where the gap is
-        //
-        // the prefixes cost nothing after the first keystroke, since the measurer keeps every answer and a
-        // formula asks for the same handful of runs again on every rebuild
-        //
-        // the first place is at the left edge, or reaches back into the gap in front of a digit group
+        // one cursor position per digit of the run, each measured, since a point is narrower than a digit
+        // (the first at the left edge, or back in the gap before a digit group)
         private TextRunBox Addressed(TextRunBox run, string path, int firstTokenIndex, double fontSize,
             double firstOffset = 0)
         {
@@ -300,8 +271,7 @@ namespace FluentMath.Models.Layout
             return run;
         }
 
-        // the caret belongs to exactly one list, and it is that list by identity rather than by contents;
-        // two empty slots are equal by value and only the reference tells them apart
+        // the caret list by identity; two empty slots differ only by reference
         private bool CaretIsIn(IReadOnlyList<MathToken> tokens)
         {
             return _caret.Tokens != null && ReferenceEquals(tokens, _caret.Tokens);
@@ -323,13 +293,10 @@ namespace FluentMath.Models.Layout
             double operatorSize = fontSize * _style.OperatorScale;
             TextRunBox box = TextRun(OperatorSymbol(token.Value), operatorSize, token);
 
-            // the raise is em of the operator, so it shrinks with it rather than with the text around
-            // it; the axis on top of it is em of the text, which is what makes it the very lift the
-            // fraction bar beside it gets
+            // the raise in em of the operator, the axis in em of the text, the lift of the fraction bar
             box.Raise = operatorSize * _style.OperatorRaise + fontSize * _style.MathAxisRaise;
 
-            // the gap follows the size only as far as OperatorGapScaling says, because a gap that is
-            // fully proportional shrinks twice inside a fraction and closes up
+            // the gap follows the size only as far as OperatorGapScaling says
             double gapSize = GapAt(operatorSize, _style.FontSizePx * _style.OperatorScale,
                 _style.OperatorGapScaling);
 
@@ -339,9 +306,7 @@ namespace FluentMath.Models.Layout
             return box;
         }
 
-        // the divided by sign with an R behind it, the way the Casio key prints it: the sign rides on the
-        // axis like any other operator, the R stands on the baseline like the letter of nPr, and the
-        // operator gaps go around the pair rather than between its two halves
+        // ÷R the way the Casio key prints it: the sign on the axis, the R on the baseline, the gaps around both
         private RowBox BuildRemainderDivision(MathToken token, double fontSize)
         {
             TextRunBox sign = BuildOperator(token, fontSize);
@@ -360,8 +325,7 @@ namespace FluentMath.Models.Layout
             return TextRun(AtomText(token), fontSize, token);
         }
 
-        // the period of a recurring decimal, its digits under a bar that spans exactly them; the digits in
-        // front of it are an ordinary run, so the two measure and draw like one number
+        // the period of a recurring decimal under a bar; the digits in front are an ordinary run
         private OverlineBox BuildRecurring(RecurringToken token, double fontSize)
         {
             return new OverlineBox(TextRun(token.Value, fontSize, token),
@@ -377,12 +341,8 @@ namespace FluentMath.Models.Layout
                 fontSize, scriptLevel, path, tokenIndex);
         }
 
-        // the whole part stands in front of an ordinary fraction on the same baseline, and nothing is
-        // drawn ahead of it, which is what lets the cursor skip the place in front of the token, see
-        // MathInputManager.BeginsWithItsFirstSlot
-        //
-        // the gap keeps the end of the whole part and the start of the numerator apart on screen, the two
-        // places a press of Right steps between
+        // the whole part in front of an ordinary fraction, nothing drawn ahead of it (see
+        // MathInputManager.BeginsWithItsFirstSlot); the gap keeps the two caret places apart
         private RowBox BuildMixedFraction(MixedFractionToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.FractionScale;
@@ -402,8 +362,7 @@ namespace FluentMath.Models.Layout
         {
             double size = fontSize * _style.FractionScale;
 
-            // both halves drop a level, unless a display fraction is asked for, which keeps them at full
-            // size and takes the wider clearances with it
+            // both halves drop a level, unless a display fraction keeps them at full size
             bool display = _style.UseDisplayFractions;
             double innerSize = display ? size : ScriptSize(size, scriptLevel);
             int innerLevel = display ? scriptLevel : scriptLevel + 1;
@@ -418,9 +377,7 @@ namespace FluentMath.Models.Layout
                 size * _style.FractionSidePadding);
         }
 
-        // the base is a slot of its own rather than whatever atom happens to stand in front, which is the
-        // whole difference to writing this as latex: nothing has to be braced and nothing can bind to the
-        // wrong thing
+        // the base is a slot of its own, so nothing can bind to the wrong thing
         private RowBox BuildPower(PowerToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.PowerScale;
@@ -436,22 +393,17 @@ namespace FluentMath.Models.Layout
         {
             double size = fontSize * _style.RootScale;
 
-            // an empty index stays invisible rather than drawing a placeholder, so a square root looks
-            // like one; it appears the moment the caret walks into it, which is the only way a slot that
-            // shows nothing can be reached at all
+            // an empty index stays invisible until the caret walks into it
             MathBox index = token.IndexTokens.Count == 0 && !CaretIsIn(token.IndexTokens)
                 ? null
                 : BuildSlot(token.IndexTokens, size * _style.ScriptScriptScale, scriptLevel + 2, SlotPath(path, tokenIndex, 0));
 
-            // the air either side of the radicand follows the size only as far as RadicalPadScaling
-            // says; fully proportional it closes up on a root set small inside a fraction, which reads
-            // as the sign touching what it encloses
+            // the air around the radicand follows the size only as far as RadicalPadScaling says
             double padSize = GapAt(size, _style.FontSizePx * _style.RootScale, _style.RadicalPadScaling);
 
             MathBox radicand = BuildSlot(token.RadicandTokens, size, scriptLevel, SlotPath(path, tokenIndex, 1));
 
-            // the tip of the sign is measured from the baseline and not from the bottom of the radicand,
-            // whose box reaches well below the digits; only a radicand deeper than a digit takes it lower
+            // the tip is measured from the baseline; only a radicand deeper than a digit takes it lower
             double signDescent = size * _style.RadicalBottomDrop
                 + Math.Max(0, radicand.Descent - _measurer.Measure(StrutText, size).Descent);
 
@@ -473,8 +425,7 @@ namespace FluentMath.Models.Layout
             double size = fontSize * _style.LogarithmScale;
             List<MathBox> parts = new List<MathBox> { TextRun("log", size, token) };
 
-            // an empty base stays invisible, the same way an empty root index does, and comes back the
-            // same way too
+            // an empty base stays invisible, like an empty root index
             if (token.BaseTokens.Count > 0 || CaretIsIn(token.BaseTokens))
             {
                 MathBox logBase = BuildSlot(token.BaseTokens, ScriptSize(size, scriptLevel), scriptLevel + 1, SlotPath(path, tokenIndex, 0));
@@ -525,11 +476,8 @@ namespace FluentMath.Models.Layout
             return new RowBox(parts);
         }
 
-        // what stands between the brackets: the one slot, or the slots in a row with the separator drawn
-        // between them, since it is never typed and no token carries it
-        //
-        // the separator is what keeps the end of one argument and the start of the next from being drawn
-        // on the same pixel, so a press of Right from one to the other moves the caret somewhere visible
+        // what stands between the brackets: the one slot, or the slots with the drawn separator between them
+        // (which also keeps the end of one argument and the start of the next apart)
         private MathBox BuildArguments(FunctionToken token, double size, int scriptLevel, string path, int tokenIndex)
         {
             if (token.Arguments.Count == 1)
@@ -553,11 +501,8 @@ namespace FluentMath.Models.Layout
             return new RowBox(arguments);
         }
 
-        // Σ and Π: the upper bound above the sign, the lower bound below it with x= in front the way a Casio
-        // writes it, and the body in brackets on the right
-        //
-        // the bounds are drawn a level smaller, like an exponent, and the three are centred over each other
-        // in one StackBox; the numbers are the Σ and Π section of MathLayoutStyle
+        // Σ and Π: bounds a level smaller above and below the sign, x= in front of the lower as on a Casio,
+        // the body in brackets on the right; (the Σ and Π section of MathLayoutStyle)
         private RowBox BuildSeries(LargeOperatorToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double boundSize = ScriptSize(fontSize, scriptLevel);
@@ -589,10 +534,8 @@ namespace FluentMath.Models.Layout
             return new RowBox(parts);
         }
 
-        // the integral: the sign, the upper bound at its top right and the lower bound at its bottom right,
-        // the integrand, and dx at the end; the dx ends the integrand, so it needs no brackets
-        //
-        // the numbers are the integral section of MathLayoutStyle
+        // the integral: the sign with its bounds at the top and bottom right, the integrand, and dx, which
+        // ends it without brackets; (the integral section of MathLayoutStyle)
         private RowBox BuildIntegral(LargeOperatorToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double boundSize = ScriptSize(fontSize, scriptLevel);
@@ -626,11 +569,8 @@ namespace FluentMath.Models.Layout
             return sign;
         }
 
-        // puts the upper bound upperRaise above and the lower bound lowerDrop below the baseline of the
-        // sign, measured from baseline to baseline
-        //
-        // a bound taller than a line of digits, a fraction for example, moves further away by the extra
-        // height, so it never runs into the sign
+        // puts the bounds upperRaise above and lowerDrop below the baseline of the sign, baseline to baseline
+        // (a bound taller than a digit moves further out by the extra height)
         private void PlaceBounds(MathBox upper, MathBox lower, TextRunBox sign, double boundSize,
             double upperRaise, double lowerDrop)
         {
@@ -640,10 +580,8 @@ namespace FluentMath.Models.Layout
             lower.Raise = sign.Raise - lowerDrop - Math.Max(0, lower.Ascent - digits.Ascent);
         }
 
-        // d/dx drawn like a fraction, the function in brackets, a bar, and the point at the bottom right of
-        // the bar, the way a Casio writes the derivative at a point
-        //
-        // the numbers are the derivative section of MathLayoutStyle
+        // d/dx as a fraction, the function in brackets, a bar, and the point at its bottom right, as a
+        // Casio writes it; (the derivative section of MathLayoutStyle)
         private RowBox BuildDerivative(DerivativeToken token, double fontSize, int scriptLevel, string path, int tokenIndex)
         {
             double size = fontSize * _style.FractionScale;
@@ -691,8 +629,7 @@ namespace FluentMath.Models.Layout
 
             TextRunBox raised = TextRun(MinusOne, ScriptSize(fontSize, scriptLevel), token);
 
-            // there is no base box to measure here, since the operand is whatever precedes this token in
-            // the row, so the lift comes off a digit instead
+            // no base box to measure, so the lift comes off a digit
             raised.Raise = _measurer.Measure(StrutText, fontSize).Ascent * _style.SuperscriptShift;
 
             return raised;
@@ -701,15 +638,13 @@ namespace FluentMath.Models.Layout
 
         // === helpers ===
 
-        // a slot that holds nothing still has to occupy space, or it cannot be seen and a caret cannot
-        // stand in it
+        // an empty slot still occupies space, as a placeholder
         private MathBox BuildSlot(IReadOnlyList<MathToken> tokens, double fontSize, int scriptLevel,
             string path)
         {
             if (tokens.Count > 0) return BuildRow(tokens, fontSize, scriptLevel, path);
 
-            // the box is the same whether the caret stands in it or not, which is what keeps the slot
-            // from changing size as the caret walks in and out of it
+            // the same box with or without the caret, so the slot never changes size
             PlaceholderBox placeholder = new PlaceholderBox(
                 fontSize * _style.PlaceholderSize,
                 fontSize * _style.PlaceholderThickness,
@@ -724,8 +659,7 @@ namespace FluentMath.Models.Layout
             return placeholder;
         }
 
-        // a delimiter takes its height from what it encloses, which is why it is a box of its own rather
-        // than a character inside a run
+        // a delimiter takes its height from what it encloses, so it is a box of its own
         private void AddDelimited(List<MathBox> parts, MathBox content,
             DelimiterKind open, DelimiterKind close, double fontSize)
         {
@@ -746,11 +680,8 @@ namespace FluentMath.Models.Layout
             parts.Add(closing);
         }
 
-        // how far a delimiter reaches around a content of this size, for a function and for a typed
-        // bracket alike, so the two can never end up shaped differently
-        //
-        // the floor is the strut rather than a number of its own: a bracket around nothing stands as
-        // tall as one around a digit, which is the only sensible thing an empty pair can do
+        // how far a delimiter reaches around content of this size, for a function and a typed bracket alike
+        // (at least the strut, so an empty pair is as tall as one around a digit)
         private (double Ascent, double Descent) DelimiterReach(double ascent, double descent, double fontSize)
         {
             TextMetrics strut = _measurer.Measure(StrutText, fontSize);
@@ -760,8 +691,7 @@ namespace FluentMath.Models.Layout
                 Math.Max(descent, strut.Descent) * _style.DelimiterHeightScale + padding);
         }
 
-        // a typed bracket is a delimiter and not a glyph, so it can grow with what it encloses the way
-        // the bracket of a function does; it is built at the floor and stretched once the row is known
+        // a typed bracket is a delimiter, so it grows with its content; built at the floor, stretched later
         private DelimiterBox BuildTypedBracket(MathToken token, double fontSize)
         {
             DelimiterKind kind = token.Type == TokenType.BracketOpen
@@ -773,7 +703,7 @@ namespace FluentMath.Models.Layout
             DelimiterBox bracket = new DelimiterBox(kind, fontSize * _style.DelimiterWidth,
                 ascent, descent, fontSize * _style.DelimiterThickness);
 
-            // the air goes on the side the content is on, which is the only side it has one
+            // the air on the content side
             double air = fontSize * _style.DelimiterSidePadding;
             if (kind == DelimiterKind.ParenthesisOpen) bracket.TrailingGap = air;
             else bracket.LeadingGap = air;
@@ -781,20 +711,9 @@ namespace FluentMath.Models.Layout
             return bracket;
         }
 
-        // every typed bracket takes its height from what stands between it and its partner
-        //
-        // it runs over the boxes of the row and not over its tokens, because only a box knows how far it
-        // reaches, and it runs before the RowBox is built, because a row works its own reach out of the
-        // children it is handed
-        //
-        // the row stays flat and nothing is wrapped. The tokens between two typed brackets live in the
-        // same list the brackets do, unlike the parameter of a function which is a list of its own; a
-        // group around them would take every cursor position inside it out of the line a click is
-        // resolved against
-        //
-        // a bracket with nothing to pair it off reaches to the end of the row, or back to the start for
-        // a lone closing one. That is what keeps it growing while a formula is still being typed rather
-        // than snapping to height the moment it is closed
+        // every typed bracket takes its height from what stands between it and its partner, before the
+        // RowBox is built; the row stays flat, so every cursor position inside stays on its line
+        // (a lone bracket reaches to the end of the row, or back to its start)
         private void StretchTypedBrackets(List<MathBox> children, double fontSize)
         {
             List<int> open = new List<int>();
@@ -855,13 +774,8 @@ namespace FluentMath.Models.Layout
             return new TextRunBox(text, fontSize, _measurer.Measure(text, fontSize), new[] { token });
         }
 
-        // the size one step further in
-        //
-        // the two ratios are of the base size rather than of the level above, so the step from the second
-        // level to the third is a factor of one and a deeply nested formula stops shrinking instead of
-        // vanishing
-        // one cursor position, and the address of one slot of one token; both are built exactly the way
-        // LatexRenderContext builds them, which is what lets the input manager parse either of them
+        // one cursor position, and the address of one slot of one token, built the way LatexRenderContext
+        // builds them
         private static string Address(string path, int cursorIndex)
         {
             return path + "@" + cursorIndex.ToString(CultureInfo.InvariantCulture);
@@ -875,16 +789,13 @@ namespace FluentMath.Models.Layout
             return path.Length == 0 ? step : path + "/" + step;
         }
 
-        // how wide a gap is once the piece it belongs to has been set smaller than the line it is in
-        //
-        // a gap written in em shrinks with its piece, and inside a structure that is itself set smaller
-        // it shrinks twice over and closes up. 1 leaves it fully proportional, 0 keeps the gap the piece
-        // would have at full size however small it ended up, and anything between splits the difference
+        // how wide a gap is once its piece is set smaller: scaling 1 fully proportional, 0 the full size gap
         private static double GapAt(double size, double fullSize, double scaling)
         {
             return fullSize + (size - fullSize) * scaling;
         }
 
+        // the size one step further in; (both ratios are of the base size, so deep nesting stops shrinking)
         private double ScriptSize(double fontSize, int fromLevel)
         {
             return fontSize * (LevelScale(fromLevel + 1) / LevelScale(fromLevel));
@@ -936,8 +847,7 @@ namespace FluentMath.Models.Layout
             };
         }
 
-        // nPr and nCr are written with a letter, which stands on the baseline like the digits around it
-        // rather than on the axis the arithmetic signs are lifted to
+        // nPr and nCr, a letter on the baseline rather than on the axis
         private static bool IsLetterOperator(string value)
         {
             return value == "P" || value == "C";

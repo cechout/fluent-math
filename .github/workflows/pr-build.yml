@@ -1,5 +1,4 @@
-# validates that a pull request actually compiles before review, and reports how large the publish payload got
-# deliberately lighter than release.yml: no installer step, not tied to a version tag
+# builds every pull request and reports the publish payload size; (no installer, no version tag)
 name: pr build check
 
 on:
@@ -11,23 +10,16 @@ permissions:
   pull-requests: read
 
 jobs:
-  # build and format are required status checks on main, so this workflow has to report them on every pull
-  # request, including doc-only ones
-  #
-  # paths-ignore cannot do that: a workflow skipped by path filtering never reports its checks at all, they
-  # stay pending and the pull request can never be merged
-  # a job skipped by an if condition does report, as success, so the gate has to sit on the jobs instead
+  # build and format are required checks, so they report on every pull request, doc-only ones too; the gate
+  # sits on the jobs, since a workflow skipped by paths-ignore never reports and blocks the merge
   # https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/troubleshooting-required-status-checks
   changes:
     runs-on: ubuntu-latest
     outputs:
       code: ${{ steps.filter.outputs.code }}
     steps:
-      # asks the api for the changed files instead of diffing a checkout, so there is no clone and no
-      # guessing about how deep the history has to be fetched for a merge base
-      #
-      # every uncertain path sets code=true on purpose: a skipped job reports success, so guessing wrong
-      # in the other direction would wave an unbuilt pull request through the required checks
+      # the changed files from the api, so there is no clone and no fetch depth to guess
+      # (every uncertain path sets code=true, since a skipped job reports success)
       - name: check whether anything buildable changed
         id: filter
         env:
@@ -53,8 +45,7 @@ jobs:
             echo "code=false" >> "$GITHUB_OUTPUT"
           fi
 
-  # only an explicit code=false skips the build; if the filter job itself failed the output is empty and
-  # this still runs, so a broken filter costs a build rather than waving the pull request through
+  # only an explicit code=false skips the build, so a broken filter costs a build rather than a pass
   build:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
@@ -70,25 +61,20 @@ jobs:
           cache: true
           cache-dependency-path: FluentMath/FluentMath.csproj
 
-      # always the project, never FluentMath.slnx; the solution also contains the frozen
-      # WPF v1 (net472, packages.config) which does not build on a dotnet-only runner
+      # always the project, never FluentMath.slnx; the solution also holds WPF v1, which needs net472
       - name: restore
         run: dotnet restore FluentMath/FluentMath.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
-      # same build command release.yml relies on, a single full build pass feeds both the publish below
-      # and the size report
+      # the build release.yml relies on; one full pass feeds the publish and the size report
       - name: build win-x64
         run: dotnet build FluentMath/FluentMath.csproj --no-restore -c Release -p:Platform=x64 -r win-x64 -p:SelfContained=true
 
-      # publish is what makes the size number mean anything, the build output still carries payload the
-      # app never ships; it also proves the publish path works before a release tag depends on it, which is
-      # where the WMC1509/WMC9999 failures used to surface
-      # --no-build reuses the pass above, so it is cheap
+      # the publish is what the size means, and it proves the publish path before a release depends on it
+      # (--no-build reuses the pass above)
       - name: publish win-x64
         run: dotnet publish FluentMath/FluentMath.csproj --no-build -c Release -p:Platform=x64 -p:PublishProfile=win-x64
 
-      # absolute numbers only, diffing against main would mean building main too
-      # the ten largest files are there so a jump can be attributed without downloading anything
+      # absolute numbers only; the ten largest files show where a jump comes from
       - name: report publish size
         shell: pwsh
         run: |
@@ -113,8 +99,7 @@ jobs:
           $lines | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
           Write-Host "Publish payload: $([math]::Round($total / 1MB, 2)) MB"
 
-  # gated the same way as the two above for consistency, although it is not a required status check on
-  # main yet; adding it to the ruleset is a repository settings change
+  # gated like the two above, though not a required check yet
   test:
     needs: changes
     if: ${{ !cancelled() && needs.changes.outputs.code != 'false' }}
@@ -130,8 +115,7 @@ jobs:
           cache: true
           cache-dependency-path: FluentMath.Tests/FluentMath.Tests.csproj
 
-      # the test project links the engine and ViewModel sources rather than referencing the app, so it
-      # is plain net8.0 and needs neither a platform nor a runtime identifier here
+      # plain net8.0, so neither a platform nor a runtime identifier
       - name: engine tests
         run: dotnet test FluentMath.Tests/FluentMath.Tests.csproj -c Release
 
@@ -143,24 +127,17 @@ jobs:
       - name: checkout
         uses: actions/checkout@v7
 
-      # no cache here, unlike the build job, dotnet format whitespace does not
-      # reliably populate the nuget packages folder the cache action expects to save
+      # no cache; dotnet format does not reliably fill the nuget folder the cache action saves
       - name: setup dotnet
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "8.0.x"
 
-      # scoped to whitespace only, matches the .editorconfig, not style/analyzers
-      #
-      # no -p:Platform here, dotnet format has no MSBuild property option and answers one with its
-      # usage help and a non zero exit, so the check would never actually run
-      #
-      # end_of_line = lf only holds because .gitattributes pins the checkout to lf; without it the
-      # runner default core.autocrlf=true hands out a crlf tree and every line fails
+      # whitespace only, against the .editorconfig
+      # (no -p:Platform, which dotnet format answers with its usage help; lf holds through .gitattributes)
       - name: dotnet format whitespace check
         run: dotnet format whitespace FluentMath/FluentMath.csproj --verify-no-changes --verbosity diagnostic
 
-      # the test sources are held to the same editorconfig; the engine files it links are already
-      # covered by the run above, checking them twice costs nothing
+      # the test sources against the same editorconfig
       - name: dotnet format whitespace check, tests
         run: dotnet format whitespace FluentMath.Tests/FluentMath.Tests.csproj --verify-no-changes --verbosity diagnostic

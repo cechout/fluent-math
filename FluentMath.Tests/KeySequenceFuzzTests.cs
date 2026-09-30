@@ -8,13 +8,9 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // random key sequences against the invariants that have to hold for any input at all
-    //
-    // mathematical input is far too varied to enumerate, so this backs the written tests up: it will
-    // not say what a formula should come out as, only that nothing throws, that the display always has
-    // something in it, and that every address the renderer hands the page can be handed back
-    //
-    // the seed is fixed, so a failure is reproducible and the sequence is printed with it
+    // random key sequences against the invariants of any input: nothing throws, the display always holds
+    // something, and every address in the output can be handed back
+    // (a fixed seed, so a failure is reproducible; the sequence is printed with it)
     public class KeySequenceFuzzTests
     {
         private const int Seed = 20260920;
@@ -56,13 +52,11 @@ namespace FluentMath.Tests
                 addressesChecked += AssertEveryAddressResolves(manager, latex, trail);
             }
 
-            // without this the address check above could quietly be walking an empty match set and the
-            // whole invariant would pass on nothing
+            // or the address check could pass on an empty match set
             Assert.True(addressesChecked > 1000, "only " + addressesChecked + " addresses were checked");
         }
 
-        // a click can only be turned back into a cursor position if the address the renderer wrote is
-        // one SetCursorPosition accepts, so every one of them is handed straight back
+        // every address written has to be one SetCursorPosition accepts
         private static int AssertEveryAddressResolves(MathInputManager manager, string latex, string trail)
         {
             int checkedAddresses = 0;

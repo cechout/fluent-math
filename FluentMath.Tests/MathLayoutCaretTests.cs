@@ -6,16 +6,9 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // the caret
-    //
-    // the whole of it reduces to one rule: it may not move anything. Overlapping the digit beside it is
-    // fine, shifting it by a pixel is not, and that is what most of this file asserts, by laying the same
-    // formula out twice and comparing every box in the tree.
-    //
-    // the rule was got wrong three times while the display was KaTeX, and once more after that in the
-    // native renderer, where the caret split a number into two runs: the layout widths added up exactly
-    // and the drawn glyphs still moved, because two TextBlocks each bring the side bearings of their own
-    // first glyph. Comparing widths is not enough, which is why this compares boxes.
+    // the caret:
+    // it may not move anything, overlapping the digit beside it is fine; the same formula is laid out
+    // twice and every box compared (widths alone miss a run split in two)
     public class MathLayoutCaretTests
     {
         private sealed class FakeMeasurer : ITextMeasurer
@@ -129,8 +122,7 @@ namespace FluentMath.Tests
         [Fact]
         public void ACaretInAnEmptySlotLeavesEveryBoxExactlyWhereItWas()
         {
-            // the slot that used to grow the moment the caret walked into it, because the caret was
-            // wrapped into a row beside the placeholder and brought the metrics of a digit with it
+            // an empty slot keeps its size when the caret walks into it
             FractionToken fraction = new FractionToken();
             List<MathToken> tokens = new List<MathToken> { fraction };
 
@@ -234,9 +226,7 @@ namespace FluentMath.Tests
 
         // === how high it stands ===
 
-        // the caret hangs off the box it stands in front of, and an operator is not where its row is: it
-        // rides above the baseline so it reads level with the digits, and a caret that took its baseline
-        // from it would stand higher in front of a plus than in front of a digit
+        // the caret takes its baseline from its row, not from an operator riding above it
         [Fact]
         public void ACaretInFrontOfAnOperatorStandsOnTheBaselineOfItsRowRatherThanOnTheOperators()
         {
@@ -245,10 +235,7 @@ namespace FluentMath.Tests
                 Digit("1"), new MathToken(TokenType.Operator, "+"), Digit("1")
             };
 
-            // the raise is pinned here rather than read off the app, because this is about where the
-            // caret takes its baseline from and not about how high an operator happens to be tuned; at
-            // a raise of zero the row and the operator stand in the same place and the test asserts
-            // nothing at all
+            // the raise is pinned here; at zero the row and the operator coincide and nothing is asserted
             MathLayoutStyle raised = Style();
             raised.OperatorRaise = 0.2;
 

@@ -2,9 +2,8 @@
 
 namespace FluentMath.Models
 {
-    // which slot of a structured token a scope belongs to
-    // this is what decides how the cursor leaves a scope; Down out of a numerator lands in the
-    // denominator, Down out of an exponent lands in the base it belongs to
+    // which slot of a structured token a scope belongs to; decides how the cursor leaves it
+    // (Down out of a numerator lands in the denominator, out of an exponent in its base)
     public enum ScopeRole
     {
         Root,
@@ -48,19 +47,15 @@ namespace FluentMath.Models
     }
 
 
-    // one editable slot: the token list being typed into, the token that owns that list, and where the
-    // cursor currently sits inside it
-    //
-    // MathInputManager keeps these on a stack, so entering a fraction or an exponent is a push and
-    // leaving it is a pop; nesting needs no other bookkeeping
+    // one editable slot: the token list, the token that owns it, and the cursor in it
+    // (MathInputManager keeps these on a stack; entering a slot is a push, leaving it a pop)
     public class ScopeContext
     {
         public List<MathToken> Tokens { get; }
         public MathToken ParentToken { get; }
         public ScopeRole Role { get; }
 
-        // cursor position within Tokens, valid from 0 to Tokens.Count
-        // index i means the cursor sits before Tokens[i], Tokens.Count means it sits at the very end
+        // 0 to Tokens.Count; i stands before Tokens[i], Count at the very end
         public int CursorIndex { get; set; }
 
         public ScopeContext(List<MathToken> tokens, MathToken parentToken, ScopeRole role, int cursorIndex = 0)

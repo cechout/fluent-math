@@ -14,12 +14,9 @@ using WinUIEx;
 
 namespace FluentMath
 {
-    // shell of the app: navigation sidebar plus the content Frame every page is hosted in
-    //
-    // also owns the theme, because switching it has to touch two things a Page cannot reach:
-    // the XAML content tree and the native title bar buttons on the AppWindow
-    //
-    // and compact mode, for the same reason; a page only asks for it and brings its sizes (ICompactPage)
+    // the app shell:
+    // the navigation sidebar and the Frame every page is shown in;
+    // it also owns the theme and compact mode, since both reach the window beyond the page
     public sealed partial class MainWindow : Window
     {
         // === win32 api imports ===
@@ -44,7 +41,7 @@ namespace FluentMath
 
         public static MainWindow Instance { get; private set; }
 
-        // last theme tag that was applied; SettingsPage reads it back to preselect its combo box
+        // the applied theme tag; SettingsPage preselects its combo box with it
         public string CurrentTheme { get; private set; } = "Default";
 
         // --- full window ---
@@ -81,13 +78,11 @@ namespace FluentMath
             Instance = this;
             this.AppWindow.SetIcon("Assets\\Icon\\Icon.ico");
 
-            // the app opens on the standard calculator; its item is looked up by the tag, since the list
-            // opens with a group header
+            // opens on the standard calculator; its item is found by tag (the list starts with a header)
             ShowPage(typeof(StandardPage));
             NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == "Standard");
 
-            // draw our own title bar into the client area; the caption buttons keep transparent
-            // backgrounds so the Mica backdrop stays visible behind them
+            // our own title bar in the client area; transparent caption buttons, so the Mica shows through
             AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
             AppWindow.TitleBar.ExtendsContentIntoTitleBar = true;
 
@@ -103,10 +98,7 @@ namespace FluentMath
             _titleBarTitle = AppTitleBar.Title;
             AppTitleBar.LeftHeader = null;
 
-            // start size, plus a floor that keeps the keypad from being squeezed out of the window
-            //
-            // the floor carries the two fixed bars on the scientific page above the keypad, the caret bar
-            // and the panel bar, which together are about 80px that cannot shrink
+            // start size, and a floor that keeps the keypad in the window
             this.SetWindowSize(FullStartWidth, FullStartHeight);
             _windowManager = WindowManager.Get(this);
             _windowManager.MinWidth = FullMinWidth;
@@ -135,8 +127,7 @@ namespace FluentMath
             ShowPage(page);
         }
 
-        // every page switches in without the frames slide; the pages with a pad bring their own entrance,
-        // which grows the pad in rather than moving the whole page
+        // no frame slide; (the pad pages bring their own entrance)
         private void ShowPage(Type page)
         {
             MainFrame.Navigate(page, null, new SuppressNavigationTransitionInfo());
@@ -261,8 +252,7 @@ namespace FluentMath
 
         // === theming ===
 
-        // applies a theme to both halves of the window; the XAML content follows RequestedTheme on the
-        // root element, the native caption buttons only follow AppWindow.TitleBar.PreferredTheme
+        // applies a theme to the content and the caption buttons; (those only follow PreferredTheme)
         public void ApplyTheme(string themeTag)
         {
             CurrentTheme = themeTag;

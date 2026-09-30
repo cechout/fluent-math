@@ -7,9 +7,7 @@ using Xunit;
 namespace FluentMath.Tests
 {
     // the structured tokens: fractions, powers, roots, logarithms, functions and the scientific form
-    //
-    // the same fake measurer as MathLayoutTests, so every expected number is a short multiplication and
-    // nothing here depends on a font
+    // (the fake measurer of MathLayoutTests, so every expected number is a short multiplication)
     public class MathLayoutStructureTests
     {
         private sealed class FakeMeasurer : ITextMeasurer
@@ -304,8 +302,7 @@ namespace FluentMath.Tests
         [Fact]
         public void TheScientificFormIsAMultiplicationAndAPowerLikeAnyOther()
         {
-            // the EXP key spells out times, one, zero, power rather than making a shape of its own, so
-            // there is nothing here the layout has to know about
+            // the EXP key spells out times, one, zero, power, nothing the layout has to know about
             PowerToken power = new PowerToken();
             power.BaseTokens.Add(Digit("1"));
             power.BaseTokens.Add(Digit("0"));
@@ -714,9 +711,7 @@ namespace FluentMath.Tests
 
         // === typed brackets ===
 
-        // a bracket that was typed grows with what it encloses exactly the way the bracket of a
-        // function does; it is the same box and the same reach, worked out one step later because only
-        // the row knows what stands between a bracket and its partner
+        // a typed bracket grows with what it encloses exactly like the bracket of a function
 
         private static MathToken Open() => new MathToken(TokenType.BracketOpen, "(");
 
@@ -1105,9 +1100,7 @@ namespace FluentMath.Tests
         [Fact]
         public void AnEmptySlotIsExactlyAsTallAsOneHoldingADigit()
         {
-            // a fresh fraction used to be half the height of a filled one, because the placeholder box
-            // was as tall as its own square rather than as the text that would replace it; the two halves
-            // then sat visibly closer together than they would a keystroke later
+            // a fresh fraction is as tall as a filled one; the placeholder takes the height of the text
             FractionToken empty = new FractionToken();
 
             FractionToken filled = new FractionToken();

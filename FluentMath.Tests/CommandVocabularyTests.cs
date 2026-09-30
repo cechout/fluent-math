@@ -9,11 +9,8 @@ using Xunit;
 namespace FluentMath.Tests
 {
     // presses every key there is, in every state the calculator can be in
-    //
-    // the bug this exists for: a key that is missing from ContinuesFromResult clears the shown result,
-    // then finds nothing to work on and refuses, and the display is left as a bare 0 with the formula
-    // gone; nothing throws and nothing looks wrong from the inside, so only pressing all of them catches
-    // the next one
+    // (a key missing from ContinuesFromResult clears a shown result to a bare 0 without throwing, which
+    // only pressing all of them catches)
     public class CommandVocabularyTests
     {
         // what the input line renders when the token tree is empty
@@ -94,11 +91,8 @@ namespace FluentMath.Tests
             Assert.NotEqual(before, viewModel.InputAndResultText);
         }
 
-        // the skip above is a hole, so this closes it from the other side: a key on the list has to do
-        // nothing at all rather than something nobody looked at
-        //
-        // the second half is the one that matters, since an unguarded key would reach
-        // BeginInputAfterResult, clear the tree and leave the display as a bare 0
+        // closes the hole of the skip above: a key on the list does nothing at all, on a shown result
+        // too, where an unguarded key would leave a bare 0
         [Theory]
         [MemberData(nameof(NotImplementedKey))]
         public void ANotImplementedKeyLeavesEverythingWhereItIs(string key)
@@ -205,7 +199,7 @@ namespace FluentMath.Tests
             CalculatorViewModelTests.Press(viewModel, before);
             CalculatorViewModelTests.Press(viewModel, key);
 
-            // the display always holds something; an empty string is what used to crash the JS side
+            // the display always holds something
             Assert.False(string.IsNullOrEmpty(viewModel.InputAndResultText));
         }
     }

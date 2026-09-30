@@ -8,10 +8,7 @@ using Xunit;
 namespace FluentMath.Tests
 {
     // turning a point in the display back into a place in the tree
-    //
-    // the addresses the layout writes are checked against the thing that reads them rather than against a
-    // string literal: every one of them is fed to MathInputManager.SetCursorPosition, which is what would
-    // notice the two drifting apart
+    // (every address is fed to MathInputManager.SetCursorPosition rather than compared to a literal)
     public class MathHitTestTests
     {
         private sealed class FakeMeasurer : ITextMeasurer
@@ -229,9 +226,8 @@ namespace FluentMath.Tests
 
         // === a click lands in the line it was aimed at ===
 
-        // a slot and the row around it cover the same piece of screen, and the row is the wider of the
-        // two, so scoring their positions against each other hands most of a base, a numerator or a
-        // parameter to the position in front of the whole token: the line is picked first for that reason
+        // a slot and the row around it cover the same screen, so the line is picked first; scored together,
+        // most of a base would go to the position in front of the whole token
         [Fact]
         public void APointOnTheBaseOfAPowerLandsInTheBaseRatherThanInFrontOfTheWholePower()
         {
@@ -320,15 +316,8 @@ namespace FluentMath.Tests
             return (row, caret.Box.X + caret.Offset, caret.Line.Baseline);
         }
 
-        // the one property that ties the three pieces together: click the point the caret is drawn at and
-        // it has to stay on that point, for every position the cursor can walk to
-        //
-        // it is what a user does without thinking about it, and it catches the stops and the caret
-        // drifting apart in a way no single assertion about either of them does
-        //
-        // the assertion is about the point rather than about the position, because two positions can be
-        // drawn in one place: the start of the base of a power and the position in front of the whole
-        // power are the same pixel, and a click there is free to answer with either of them
+        // click the point the caret is drawn at and it has to stay on that point, for every position
+        // (the point, not the position: two positions can share a pixel, before a power and in its base)
         [Theory]
         [InlineData("123", "+", "456")]
         [InlineData("1", "frac", "2", "down", "3")]
@@ -375,15 +364,8 @@ namespace FluentMath.Tests
 
         // === a preview and the caret it previews ===
 
-        // hovering the display draws the caret a click would leave behind, and it is drawn from
-        // NearestCaret while the real one is drawn from what the engine reports after the click
-        //
-        // MathPanel puts both through one piece of geometry, so the whole promise rests on these two
-        // agreeing: the moment they do not, the preview stands somewhere the click does not
-        //
-        // every sample point over the formula is tried rather than a chosen few, which is what covers
-        // an exponent and an empty slot; a caret in a script is drawn smaller, and that size rides on
-        // the row rather than on the position
+        // the preview comes from NearestCaret, the real caret from the engine after the click; the two
+        // have to agree at every sample point over the formula, an exponent and an empty slot included
         [Theory]
         [InlineData("1", "+", "2")]
         [InlineData("1", "frac", "2", "down", "3")]

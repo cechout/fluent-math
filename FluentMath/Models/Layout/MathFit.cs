@@ -2,11 +2,7 @@ using System;
 
 namespace FluentMath.Models.Layout
 {
-    // how far a formula is scaled down to fit the box it is drawn in
-    //
-    // it sits here rather than in the panel so the rule can be asserted rather than looked at: it is load
-    // bearing, because a stacked fraction at the default size needs roughly twice the height the input
-    // line has, and getting it wrong either clips the formula or shrinks it to nothing
+    // how far a formula is scaled down to fit its box; here rather than in the panel, so the tests reach it
     public static class MathFit
     {
         public static double ScaleFor(double contentHeight, double availableHeight, double minScale)

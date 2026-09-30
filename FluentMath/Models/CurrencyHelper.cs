@@ -11,8 +11,7 @@ namespace FluentMath.Models
     }
 
 
-    // turns an ISO currency code into a display name, using what Windows already knows about regions
-    // instead of shipping our own currency name table
+    // the display name of an ISO currency code, from the regions Windows knows
     public static class CurrencyHelper
     {
         private static Dictionary<string, string> _currencyNames;
@@ -24,14 +23,12 @@ namespace FluentMath.Models
                 BuildCurrencyMap();
             }
 
-            // a currency Windows has no region for still has to appear in the list, so fall back to
-            // the raw code on both halves of the label
+            // no region for it: the raw code on both halves of the label
             string displayName = _currencyNames.ContainsKey(code) ? _currencyNames[code] : $"{code} - {code}";
             return new CurrencyInfo { Code = code, DisplayName = displayName };
         }
 
-        // built lazily and kept for the process lifetime; enumerating every culture is not cheap and
-        // the result never changes
+        // built once, lazily; enumerating every culture is not cheap
         private static void BuildCurrencyMap()
         {
             _currencyNames = new Dictionary<string, string>();
@@ -45,8 +42,7 @@ namespace FluentMath.Models
                     var region = new RegionInfo(culture.Name);
                     string isoCode = region.ISOCurrencySymbol;
 
-                    // many countries share one currency, so the first region that claims a code wins
-                    // and every later one is dropped
+                    // the first region that claims a code wins
                     if (!_currencyNames.ContainsKey(isoCode))
                     {
                         // reads as "United States - US Dollar" or "Japan - Japanese Yen"

@@ -58,14 +58,13 @@ namespace FluentMath.Views
 
         // === navigation ===
 
-        // Loaded rather than OnNavigatedTo, since a cached page is only back in the tree by then; it fires
-        // on every way in, the first one included
+        // Loaded, not OnNavigatedTo; a cached page is only back in the tree by then
         private void StandardPage_Loaded(object sender, RoutedEventArgs e)
         {
             PadEntrance.Play(Pad);
         }
 
-        // cached like the scientific page, so the decimal key reads its label again on the way back
+        // the page is cached, so the decimal key reads its label again on every way back
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);

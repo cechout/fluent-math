@@ -78,10 +78,8 @@
 
         <!--  currency 1 selection  -->
         <!--
-            a text only button with a chevron of its own, which opens the hidden combo box under it in
-            one click; the combo box places its list over the selected currency itself, which replaces a
-            flyout that was pushed into place by a fixed offset and did not always land there
-            the grid holds the row at the height of the button, a combo box is taller
+            a text button that opens the hidden combo box under it, which lays its list over the selection
+            (the grid holds the row at the height of the button; a combo box is taller)
         -->
         <Grid
             Grid.Row="1"
@@ -101,7 +99,7 @@
                 </StackPanel>
             </Button>
 
-            <!--  drives the actual selection; kept invisible, the button above just opens its dropdown  -->
+            <!--  (invisible; does the selecting, the button only opens it)  -->
             <ComboBox
                 x:Name="CurrencyComboBox1"
                 HorizontalAlignment="Stretch"
@@ -114,7 +112,7 @@
         </Grid>
 
         <!--  amount being typed  -->
-        <!--  (scrolls sideways because a long number must not resize the layout)  -->
+        <!--  (scrolls sideways, so a long number never resizes the layout)  -->
         <ScrollViewer
             Grid.Row="2"
             Grid.Column="0"
@@ -154,7 +152,7 @@
                 </StackPanel>
             </Button>
 
-            <!--  drives the actual selection; kept invisible, the button above just opens its dropdown  -->
+            <!--  (invisible; does the selecting, the button only opens it)  -->
             <ComboBox
                 x:Name="CurrencyComboBox2"
                 HorizontalAlignment="Stretch"
@@ -205,7 +203,7 @@
 
 
         <!--  input buttons  -->
-        <!--  (grows in when the page is shown, like the pads of the two calculators, see PadEntrance)  -->
+        <!--  (grows in through PadEntrance)  -->
         <Grid
             x:Name="Pad"
             Grid.Row="6"

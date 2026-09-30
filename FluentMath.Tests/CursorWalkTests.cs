@@ -8,14 +8,8 @@ using Xunit;
 namespace FluentMath.Tests
 {
     // walking the cursor through a formula with the arrow keys, and where it is drawn while doing it
-    //
-    // one press of an arrow key has to move the caret somewhere the eye can follow. Two cursor positions
-    // that are drawn on the same pixel therefore cost a press that looks like nothing happened, and
-    // crossing that place takes two presses in both directions; that is a bug the engine alone cannot
-    // see, because the positions are perfectly distinct in the tree
-    //
-    // this file is the categorical check: it walks every position of one formula per structured token
-    // and holds each step against the one before it
+    // every press has to move the caret somewhere visible; one formula per structured token, every step
+    // held against the one before it
     public class CursorWalkTests
     {
         private sealed class FakeMeasurer : ITextMeasurer
@@ -28,11 +22,8 @@ namespace FluentMath.Tests
 
         private const double FontSize = 10;
 
-        // where the caret is drawn for the cursor the manager is holding
-        //
-        // the layout is rebuilt for every step on purpose: a slot that is only drawn while the caret
-        // stands in it changes the formula around it, and the point has to be read out of the picture
-        // the user is actually looking at
+        // where the caret is drawn for the cursor the manager holds; (rebuilt every step, since a slot
+        // only drawn while the caret is in it changes the formula around it)
         private static (double X, double Baseline) CaretPoint(MathInputManager manager)
         {
             MathLayoutEngine engine = new MathLayoutEngine(new FakeMeasurer(),
@@ -69,7 +60,7 @@ namespace FluentMath.Tests
 
         [Theory]
         [InlineData("2", "pow", "3")]                  // a power, whose base begins where the token does
-        [InlineData("3", "*", "10", "pow", "5")]       // the same inside a formula, which is where it was found
+        [InlineData("3", "*", "10", "pow", "5")]       // the same inside a formula
         [InlineData("1", "frac", "2", "down", "3")]
         [InlineData("sqrt", "9")]
         [InlineData("root", "3", "right", "8")]
@@ -129,11 +120,8 @@ namespace FluentMath.Tests
 
         // === the press count, as it was reported ===
 
-        // typed as 3, times, 10, x^n, 5, which leaves 3x10^5 with the cursor in the exponent
-        //
-        // walking left out of it reaches the gap between the 3 and the times sign in five presses, and
-        // from there two presses have to land between the 1 and the 0; the position in front of the power
-        // used to make it three, and every one of them is drawn on the same pixel as the next
+        // typed as 3, times, 10, x^n, 5, which leaves 3x10^5 with the cursor in the exponent; left out of
+        // it reaches the gap between the 3 and the times sign in five presses, then two land between 1 and 0
         [Fact]
         public void CrossingIntoTheBaseOfAPowerCostsOnePressOfAnArrowKey()
         {

@@ -5,17 +5,13 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // the keypad path: which key does what to a formula being typed, and what each of them does to a
-    // result that is already on screen
-    //
-    // this is the layer the engine tests cannot reach, because the decision of whether a key continues
-    // from the result, edits the old formula or starts over lives here and nowhere else
+    // the keypad path: what each key does to a formula being typed and to a result on screen
+    // (whether a key continues a result, edits the old formula or starts over lives only here)
     public class CalculatorViewModelTests
     {
         // === helpers ===
 
-        // a multi character argument is split, since every keypad button sends exactly one character and
-        // AddNumber would otherwise take "12" as a single token
+        // a multi character argument is split, one character per key like the keypad
         internal static void Press(CalculatorViewModel viewModel, params string[] keys)
         {
             foreach (string key in keys)
@@ -52,8 +48,7 @@ namespace FluentMath.Tests
             }
         }
 
-        // every result opens as its decimal, the way the display worked before exact came first; the
-        // tests about the S to D cycle and about decimal digits start from there
+        // every result opens as its decimal, where the tests of the S⇔D cycle and the digits start
         private static CalculatorViewModel DecimalFirst()
         {
             return new CalculatorViewModel(new CalculatorSettings { ExactFirst = false });
@@ -82,8 +77,7 @@ namespace FluentMath.Tests
             CalculatorViewModel viewModel = AfterOnePlusOne();
             Press(viewModel, "cmd_exp");
 
-            // the 2 has to still be standing with the exponent hanging off it; clearing it first and
-            // then refusing the key leaves an empty tree, which renders as a bare 0
+            // the 2 still stands with the exponent hanging off it, rather than a bare 0
             Assert.Contains("2", viewModel.InputAndResultText);
             Assert.Contains("m-pow", viewModel.InputAndResultText);
         }
@@ -313,8 +307,7 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesAnEmptySlotAloneWhereNoZeroWasPromised()
         {
-            // inside a structure an empty slot draws a box rather than a 0, so nothing was promised and
-            // the power opens on an empty base the way it always did
+            // inside a structure an empty slot draws a box, not a 0, so the power opens on an empty base
             var viewModel = new CalculatorViewModel();
             Press(viewModel, "cmd_sqrt", "cmd_pow_n", "2", "=");
 
@@ -324,8 +317,7 @@ namespace FluentMath.Tests
 
         // === the exponent key ===
 
-        // the one way to get a power of ten, and it is a multiplication like any other: the key spells
-        // out times, one, zero, power rather than making a token that binds tighter than it looks
+        // the one way to get a power of ten, spelled out as times, one, zero, power like any multiplication
         [Fact]
         public void ReadsTheExponentKeyAsAnOrdinaryMultiplication()
         {
@@ -727,12 +719,8 @@ namespace FluentMath.Tests
 
         // === clicking into the display ===
 
-        // the zero on an empty formula is drawn rather than typed: there is one place the cursor can
-        // stand in it, and a click on the other side of it must not pretend otherwise
-        //
-        // the next digit is what proves it: a cursor that really had moved in front of the zero would
-        // leave a formula with the zero still in it, and the = is only there because the text while a
-        // formula is being typed is the whole LaTeX of it rather than the digits
+        // the zero of an empty formula is drawn, not typed, so a click beside it moves nothing
+        // (the next digit proves it; the = is there because the input text is LaTeX, not the digits)
         [Fact]
         public void AClickBesideTheZeroOnAnEmptyDisplayIsNotAPlace()
         {
@@ -746,11 +734,8 @@ namespace FluentMath.Tests
             Assert.Equal("5", viewModel.InputAndResultText);
         }
 
-        // a click on a shown result carries it into the next calculation the way an operator does, and
-        // lands the cursor at the place that was clicked
-        //
-        // the address was worked out against the result that is on screen, and seeding it is what puts
-        // those very tokens into the tree, which is what makes the address mean what it looked like
+        // a click on a shown result carries it on like an operator and lands the cursor where it was aimed
+        // (the result is seeded first, so the address means what it looked like)
         [Fact]
         public void AClickOnAShownResultCarriesItAndTakesTheCursorWithIt()
         {

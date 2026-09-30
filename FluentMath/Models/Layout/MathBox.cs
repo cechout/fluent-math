@@ -3,11 +3,8 @@ using System.Collections.Generic;
 
 namespace FluentMath.Models.Layout
 {
-    // the layout result for one piece of a formula
-    //
-    // a box reports its width and its two reaches around the baseline rather than one height, which is
-    // what lets a row place a fraction, a root and a digit beside each other and still know where their
-    // common baseline runs
+    // the layout result for one piece of a formula; a width and the two reaches around the baseline, so a
+    // row lines up a fraction, a root and a digit on one baseline
     public abstract class MathBox
     {
         // === measured ===
@@ -18,26 +15,20 @@ namespace FluentMath.Models.Layout
 
         public double Height => Ascent + Descent;
 
-        // how far this box rides above the baseline of the row it sits in; an operator uses it to sit on
-        // the math axis, an exponent to sit above it, and a logarithm base takes a negative one to drop
-        // below it
+        // how far this box rides above the baseline of its row; negative drops it (a logarithm base)
         public double Raise { get; internal set; }
 
-        // space the row leaves in front of and behind this box; a box that wants air on both sides has to
-        // ask for both, since the box after it may not exist
+        // space the row leaves in front of and behind this box
         public double LeadingGap { get; internal set; }
         public double TrailingGap { get; internal set; }
 
-        // the cursor position immediately in front of this box, in the form MathInputManager parses, so a
-        // click can be turned back into a place in the tree; null on a box that is not a token, such as
-        // the caret itself or a drawn delimiter
+        // the cursor address right in front of this box; null on a box that is no token, a drawn delimiter
         public string CursorAddress { get; internal set; }
 
 
         // === placed ===
 
-        // filled in by Place, in the coordinate space of the whole formula rather than of the parent, so a
-        // hit test does not have to walk back up the tree to add offsets
+        // filled in by Place, in the space of the whole formula, not of the parent
 
         public double X { get; private set; }
         public double Baseline { get; private set; }
@@ -45,8 +36,7 @@ namespace FluentMath.Models.Layout
         public double Top => Baseline - Ascent;
         public double Bottom => Baseline + Descent;
 
-        // the baseline handed in is the one of the surrounding row; a box that rides above it takes its
-        // own raise off here, so everything downstream can read Baseline and ignore Raise
+        // takes the raise off the row baseline, so everything downstream reads Baseline and ignores Raise
         public virtual void Place(double x, double baseline)
         {
             X = x;
@@ -55,27 +45,19 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // a run of glyphs measured and drawn as one piece
-    //
-    // digits arrive as one token each, so a multi digit number is several tokens and a single run;
-    // measuring and drawing per character would accumulate the rounding of every advance width and read as
-    // uneven spacing, so the run is the unit and the tokens it covers are kept for the caret and the hit
-    // test that come later
+    // a run of glyphs measured and drawn as one piece, so a number is spaced evenly
+    // (it keeps the tokens it covers for the caret and the hit test)
     public sealed class TextRunBox : MathBox
     {
         public string Text { get; }
         public double FontSize { get; }
         public IReadOnlyList<MathToken> Tokens { get; }
 
-        // one cursor address per token the run covers, so a click between two digits of the same number
-        // lands between them rather than at one end of the whole run
+        // one cursor address per token, so a click between two digits lands between them
         public IReadOnlyList<string> TokenAddresses { get; internal set; }
 
-        // how far into the run each of those tokens begins, measured rather than spread evenly over the
-        // width: these are the very numbers the caret is placed at, so a click answers with the position
-        // the caret would be drawn in instead of with one a few pixels off
-        //
-        // written in the same step as the addresses; neither is ever set without the other
+        // where each token begins in the run, measured, the same numbers the caret is placed at
+        // (set together with the addresses)
         public IReadOnlyList<double> TokenOffsets { get; internal set; }
 
         public TextRunBox(string text, double fontSize, TextMetrics metrics, IReadOnlyList<MathToken> tokens)
@@ -92,10 +74,7 @@ namespace FluentMath.Models.Layout
 
 
     // a left to right sequence sharing one baseline
-    //
-    // a power, a logarithm, a function and a scientific token are all rows rather than boxes of their own:
-    // an exponent is a child with a positive raise and a logarithm base one with a negative raise, which
-    // is the whole of what those constructions need
+    // (a power, a logarithm and a function are rows too; an exponent is a raised child, a log base a lowered one)
     public sealed class RowBox : MathBox
     {
         public IReadOnlyList<MathBox> Children { get; }
@@ -103,11 +82,7 @@ namespace FluentMath.Models.Layout
         // the position after the last token, which no child stands in front of
         public string EndAddress { get; internal set; }
 
-        // the size a caret standing in this row is drawn at
-        //
-        // a row is the thing that owns a baseline, so it is also the thing that knows how tall the bar
-        // in it should be; only a row the cursor can stand in carries it, which is the same set that
-        // carries an EndAddress
+        // the size of a caret in this row; (only on a row with an EndAddress)
         public double FontSize { get; internal set; }
 
         public RowBox(IReadOnlyList<MathBox> children)
@@ -124,8 +99,7 @@ namespace FluentMath.Models.Layout
             }
         }
 
-        // an empty row still has to stand as tall as the text that would fill it, or the display collapses
-        // to nothing and a caret has nowhere to be
+        // an empty row stands as tall as the text that would fill it
         public static RowBox Empty(TextMetrics strut)
         {
             RowBox row = new RowBox(new List<MathBox>());
@@ -149,10 +123,7 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // a numerator over a denominator with a bar between them
-    //
-    // the bar rests on the math axis rather than on the baseline, which is what keeps a fraction level
-    // with the operators beside it however tall its two halves turn out
+    // a numerator over a denominator, the bar on the math axis, level with the operators beside it
     public sealed class FractionBox : MathBox
     {
         public MathBox Numerator { get; }
@@ -207,7 +178,7 @@ namespace FluentMath.Models.Layout
     // it encloses
     public sealed class RootBox : MathBox
     {
-        public MathBox Index { get; }  // null when the root carries none, which is the usual case
+        public MathBox Index { get; }  // null without an index
         public MathBox Radicand { get; }
 
         public double HookWidth { get; }
@@ -240,17 +211,13 @@ namespace FluentMath.Models.Layout
             SignAscent = radicand.Ascent + verticalGap + ruleThickness;
             SignDescent = signDescent;
 
-            // the bar runs the full width of the box, so it covers both pads: the one that keeps the
-            // radicand off the sign and the one that carries the bar past its last glyph
+            // the bar runs the full width, over both pads
             _leadingPad = leadingPad;
             Width = IndexWidth + hookWidth + leadingPad + radicand.Width + trailingPad;
             Descent = Math.Max(radicand.Descent, signDescent);
 
-            // the box reaches at least as high as the radicand, even though the bar is pulled down into the
-            // empty room above its digits; cut to the bar, a root would be shorter than the digits beside
-            // it, and a fraction or an exponent would place it differently once anything else joins it
-            //
-            // the index may stand higher than the sign it sits on, and then it is what sets the height
+            // at least as high as the radicand, though the bar is pulled down into the room above its
+            // digits; an index standing higher sets the height
             double indexTop = index == null ? 0 : SignAscent * indexRaise + index.Height;
             Ascent = Math.Max(Math.Max(SignAscent, radicand.Ascent), indexTop);
 
@@ -270,12 +237,8 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // boxes drawn above each other instead of side by side: the bounds of Σ and Π above and below their
-    // sign, and the bounds of an integral at the top right and the bottom right of its sign
-    //
-    // each child has its own LeadingGap, how far it stands from the left edge, and its own Raise, how far
-    // it sits above the baseline; the layout engine sets both, so this box only adds them up and draws
-    // nothing itself
+    // boxes above each other rather than side by side: the bounds of Σ, Π and ∫ around their sign
+    // (the engine sets LeadingGap and Raise of each child; this box only adds them up)
     public sealed class StackBox : MathBox
     {
         public IReadOnlyList<MathBox> Children { get; }
@@ -304,10 +267,7 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // a bar drawn over what it stands on, which is the period of a recurring decimal
-    //
-    // the bar is drawn rather than set as an accent, the way the rule over a radicand is, so it spans
-    // exactly the digits under it; it hangs off the top of their line box by the same kind of gap
+    // a bar over the period of a recurring decimal, drawn like the rule of a root to span exactly its digits
     public sealed class OverlineBox : MathBox
     {
         public MathBox Content { get; }
@@ -364,11 +324,8 @@ namespace FluentMath.Models.Layout
             Descent = descent;
         }
 
-        // a typed bracket is built before the row around it is, since only the row knows what stands
-        // between it and its partner; the reach is filled in once that is known
-        //
-        // a delimiter belonging to a function needs none of this, because there the content is built
-        // first and handed over whole
+        // a typed bracket gets its reach once the row knows what stands between it and its partner
+        // (a function delimiter is built around finished content and needs none of this)
         internal void Stretch(double ascent, double descent)
         {
             Ascent = ascent;
@@ -383,16 +340,12 @@ namespace FluentMath.Models.Layout
         public double Side { get; }
         public double Thickness { get; }
 
-        // a slot is a line of its own with one position in it, so it carries the caret size the same
-        // way a row does
+        // the caret size, like a row; a slot is a line with one position
         public double FontSize { get; internal set; }
 
         private readonly double _squareRaise;
 
-        // the two reaches are those of the text that would fill the slot, not those of the square
-        //
-        // an empty slot has to occupy exactly what a filled one does, or a fraction is half height until
-        // the first digit arrives and jumps the moment it does
+        // the reaches of the text that would fill the slot, so a fraction does not jump on the first digit
         public PlaceholderBox(double side, double thickness, double squareRaise, TextMetrics strut)
         {
             Side = side;
@@ -404,11 +357,7 @@ namespace FluentMath.Models.Layout
             Descent = strut.Descent;
         }
 
-        // where the square is drawn, once the box has been placed: its middle squareRaise above the
-        // baseline, where the middle of a digit is
-        //
-        // it used to sit in the middle of the box, and the box reaches far above the digits, so the square
-        // stood a few pixels higher than the digit that replaces it; beside x= under a Σ that showed
+        // where the square is drawn: its middle squareRaise above the baseline, where the middle of a digit is
         public double SquareTop => Baseline - _squareRaise - Side / 2;
     }
 }

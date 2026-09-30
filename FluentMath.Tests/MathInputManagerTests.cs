@@ -33,9 +33,7 @@ namespace FluentMath.Tests
             Assert.Equal(3, Keys.Press("125").RootTokens.Count);
         }
 
-        // the input is a sandbox: every one of these used to be refused at the keypress, which threw the
-        // key away with nothing on screen saying why
-        // now it all goes in as typed and the formula is judged once, on =
+        // the input is a sandbox: all of these go in as typed, and the formula is judged once, on =
 
         [Fact]
         public void TakesASecondDecimalPointInTheSameNumber()
@@ -51,14 +49,14 @@ namespace FluentMath.Tests
             Assert.Single(Keys.Press("*").RootTokens);
             Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("*", "5")));
 
-            // a leading minus still reads as a sign, and now it needs no special case to get in
+            // a leading minus still reads as a sign
             Assert.Equal(-5, Value(Keys.Press("-", "5")));
         }
 
         [Fact]
         public void TakesAsManyOperatorsInARowAsAreTyped()
         {
-            // the newer one used to overwrite the older, so a mistyped plus could never be seen again
+            // both stay, so a mistyped plus can be seen
             Assert.Equal(4, Keys.Press("6", "+", "*", "3").RootTokens.Count);
             Assert.Equal(EvaluationError.Syntax, ErrorOf(Keys.Press("6", "+", "*", "3")));
 
@@ -97,8 +95,7 @@ namespace FluentMath.Tests
         [Fact]
         public void PutsTheTimesTenBackWhenAScientificTokenDissolves()
         {
-            // the times sign and the ten are drawn by the token rather than typed, so dropping them
-            // would turn 3x10^5 into 35, a different number with nothing on screen saying so
+            // the power dissolves and its ten stays, so 3x10^5 becomes 3×105 rather than 35
             MathInputManager manager = Keys.Press("3", "exp", "5", "left", "back");
 
             Assert.Equal(3.0 * 105.0, Value(manager));
@@ -109,10 +106,6 @@ namespace FluentMath.Tests
         }
 
         // every caret position in 3x10^5 and what Backspace does from it, as one table
-        //
-        // the trap the old table warned about is gone with the token: the ten is typed rather than drawn,
-        // so every place the caret appears to stand is a place it really stands, and Backspace does there
-        // what the picture says it will
         [Fact]
         public void BackspacesOutOfATimesTenPowerFromEveryCaretPosition()
         {
@@ -139,9 +132,7 @@ namespace FluentMath.Tests
         [Fact]
         public void LeavesTheTimesTenBehindWhenAnUntouchedExponentIsDeleted()
         {
-            // the EXP key is four keystrokes taken off you, so undoing it takes four too; it used to be
-            // one token that vanished in one press, and that was the special case that cost a cursor
-            // position between the ten and the exponent
+            // the EXP key is four keystrokes taken off you, so undoing it takes four too
             MathInputManager manager = Keys.Press("3", "exp", "back");
 
             Assert.Equal(4, manager.RootTokens.Count);
@@ -365,8 +356,7 @@ namespace FluentMath.Tests
         [Fact]
         public void WalksBetweenTheTenAndItsExponentWithUpAndDown()
         {
-            // the exponent is an ordinary power now, so Down reaches the ten it stands on, landing at
-            // its start; Up from the exponent does nothing, since that is already the upper slot
+            // Down reaches the ten the exponent stands on, at its start; Up does nothing, it is the upper slot
             MathInputManager manager = Keys.Press("3", "exp", "5", "up", "down", "9");
 
             Assert.Equal(3 * Math.Pow(910, 5), Value(manager), 0);
@@ -388,7 +378,7 @@ namespace FluentMath.Tests
             root.AddNumber("3");
             Assert.Equal(2, Value(root), 10);
 
-            // three tokens now: the 3, the times, and the power whose base holds the ten
+            // three tokens: the 3, the times, and the power whose base holds the ten
             MathInputManager scientific = Keys.Press("3", "exp", "5");
             Assert.True(scientific.SetCursorPosition("2.1@0"));
             scientific.AddNumber("1");

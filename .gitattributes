@@ -1,5 +1,3 @@
-# git for windows ships core.autocrlf=true in its system config, so a checkout hands out a crlf
-# working tree while the blobs themselves are lf; that made every line of every file violate
-# end_of_line = lf from the .editorconfig, locally and on the windows CI runner alike
-# pinning eol=lf here changes no blob, it only makes the checkout match what is stored
+# git for windows checks out crlf (core.autocrlf=true), against end_of_line = lf in the .editorconfig;
+# eol=lf changes no blob, only the checkout
 * text=auto eol=lf

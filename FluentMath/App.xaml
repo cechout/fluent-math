@@ -12,11 +12,9 @@
             </ResourceDictionary.MergedDictionaries>
 
             <!--
-                every fill and every border is alpha over the Mica backdrop, so a key tracks whatever
-                shows through instead of pinning a color
-                base is the Mica tint, #F3F3F3 in light and #202020 in dark
-                white on a dark base is alpha = 255 * (target - base) / (255 - base)
-                black on a light base is alpha = 255 * (base - target) / base
+                every fill and border is alpha over the Mica tint (#F3F3F3 light, #202020 dark)
+                white on dark: alpha = 255 * (target - base) / (255 - base)
+                black on light: alpha = 255 * (base - target) / base
             -->
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Default">
@@ -53,9 +51,8 @@
                     <!--  === fill colors ===  -->
                     <!--  number pad  -->
                     <!--
-                        NumPadNormal and OpHover aim at #FCFCFC and not at the #FFFFFF they used to
-                        be: pure white over a base of 243 needs alpha 255 and would stop tracking the
-                        backdrop, and three levels buy the translucency back
+                        (NumPadNormal and OpHover aim at #FCFCFC; pure white needs alpha 255 and
+                        stops tracking the backdrop)
                     -->
                     <SolidColorBrush x:Key="NumPadNormal" Color="#BFFFFFFF" />
                     <SolidColorBrush x:Key="NumPadHover" Color="#80FFFFFF" />
@@ -85,7 +82,7 @@
             </ResourceDictionary.ThemeDictionaries>
 
             <!--  number pad key  -->
-            <!--  brighter fill, used for digits and the decimal point  -->
+            <!--  brighter fill; digits and the decimal point  -->
             <Style x:Key="NumberPadButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{ThemeResource NumPadNormal}" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -152,7 +149,7 @@
             </Style>
 
             <!--  operator key  -->
-            <!--  quieter fill, used for everything that is not a digit  -->
+            <!--  quieter fill; every key but the digits  -->
             <Style x:Key="OperatorButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{ThemeResource OpNormal}" />
                 <Setter Property="Foreground" Value="{ThemeResource TextFillColorPrimaryBrush}" />
@@ -215,54 +212,35 @@
             </Style>
 
             <!--  bar key height  -->
-            <!--
-                the caret bar and the panel bar carry the same key height, so the two read as one
-                block between the display and the pad; it is one number rather than two so they
-                cannot drift apart
-            -->
+            <!--  (shared by the caret bar and the panel bar, so the two read as one block)  -->
             <x:Double x:Key="BarKeyHeight">32</x:Double>
 
             <!--  key spacing  -->
-            <!--
-                the one gap between two keys, on the pad and inside every panel alike; a panel is
-                meant to read as a piece of the pad that happens to float, and that only holds while
-                the two are spaced the same
-            -->
+            <!--  (the one gap between two keys, on the pad and in every panel)  -->
             <x:Double x:Key="KeySpacing">2.5</x:Double>
 
             <!--  panel key size  -->
             <!--
-                a panel key runs the keypad styles, which carry no size because a key on the pad takes
-                the star sized cell it sits in; a panel grid has no such cell, so every key in a panel
-                carries these two instead
-                they sit on the key and not on the Row and ColumnDefinitions, because those take a
-                GridLength and a Double resource cannot be assigned to one; that mistake builds clean
-                and throws a XamlParseException the first time the page is loaded
+                a panel has no star cell to size its keys, so every panel key carries these
+                (on the key, not on the definitions: a Double in a GridLength builds clean and
+                throws a XamlParseException on the first load)
             -->
             <x:Double x:Key="PanelKeyWidth">56</x:Double>
             <x:Double x:Key="PanelKeyHeight">40</x:Double>
 
             <!--  panel offset  -->
             <!--
-                how far a panel stands off the button that opened it, counted from where the
-                placement drops it; negative lifts it toward the button
-                it moves through a render transform rather than a margin because a margin is
-                measured, and the popup is sized to what it measures: the panel would be shifted out
-                of its own window and lose the edge it was shifted past. A transform moves the
-                drawing and nothing else, so the window stays the size it always was
-                a Flyout carries no offset of its own. The gap is decided in the placement code
-                behind FlyoutBase and there is no resource anywhere that reaches it
+                how far a panel stands off its button, from where the placement drops it; negative lifts it
+                (a render transform, not a margin, which would be measured and clip the panel in its popup;
+                a Flyout has no offset of its own)
             -->
             <x:Double x:Key="PanelFlyoutOffset">-5</x:Double>
 
             <!--  subtle button  -->
             <!--
-                the platform SubtleButtonStyle fades its fill in over 83 ms but swaps the border
-                brush in the frame the state changes, and both resolve to the same brush; a hover
-                therefore starts as a 1px outline in the final color around a still empty button
-                every state brush below is the one the platform style uses, the border just stays
-                transparent in all of them, and the fill is sized to the outer border edge so it
-                still covers the full box
+                the platform subtle button with a border that stays transparent; the original swaps
+                its border in at once while the fill fades, so a hover starts as a bare 1px outline
+                (the fill is sized to the outer border edge, so it still covers the full box)
             -->
             <Style x:Key="SubtleBarButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="{ThemeResource SubtleButtonBackground}" />
@@ -271,7 +249,7 @@
                 <Setter Property="BorderBrush" Value="{ThemeResource SubtleButtonBorderBrush}" />
                 <Setter Property="BorderThickness" Value="{ThemeResource ButtonBorderThemeThickness}" />
                 <Setter Property="Padding" Value="{StaticResource ButtonPadding}" />
-                <!--  the style carries its own template and no BasedOn, so the two content alignments the platform button relies on are set here rather than inherited  -->
+                <!--  (set here, not inherited; the style has its own template and no BasedOn)  -->
                 <Setter Property="HorizontalContentAlignment" Value="Center" />
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="FontFamily" Value="{ThemeResource ContentControlThemeFontFamily}" />
@@ -299,12 +277,8 @@
                                 ContentTransitions="{TemplateBinding ContentTransitions}"
                                 CornerRadius="{TemplateBinding CornerRadius}"
                                 Foreground="{TemplateBinding Foreground}">
-                                <!--  the value of ControlFasterAnimationDuration  -->
-                                <!--
-                                    (spelled out because BrushTransition.Duration is a TimeSpan and
-                                    the platform keys are strings; the platform button hardcodes it
-                                    the same way)
-                                -->
+                                <!--  ControlFasterAnimationDuration  -->
+                                <!--  (spelled out; the platform key is a string, Duration a TimeSpan)  -->
                                 <ContentPresenter.BackgroundTransition>
                                     <BrushTransition Duration="0:0:0.083" />
                                 </ContentPresenter.BackgroundTransition>
@@ -353,17 +327,9 @@
                                     </VisualStateGroup>
 
                                     <!--
-                                        a Button raises no visual state for the flyout it carries
-                                        being open; the platform only tracks it for automation, and
-                                        DropDownButton does the same and no more, so a bar button is
-                                        told by the page that opened it
-                                        it is a group of its own and not a state in CommonStates,
-                                        because the pointer states go on being driven by the button
-                                        underneath; an open flyout takes the pointer with it, so the
-                                        two never reach for the foreground in the same frame
-                                        every bar button carries the group and only the ones with a
-                                        panel ever enter it, which is cheaper than a second copy of
-                                        the whole style
+                                        open while the panel of the button is; a Button raises no
+                                        state for its flyout, so the page sets it
+                                        (a group of its own, so the pointer states run on underneath)
                                     -->
                                     <VisualStateGroup x:Name="FlyoutStates">
 
@@ -387,11 +353,8 @@
 
             <!--  text button  -->
             <!--
-                a button that is only its text: no fill and no border in any state, the foreground
-                alone answers the pointer, secondary at rest, primary under it and tertiary while it
-                is pressed; the currency pickers wear it
-                the background is transparent rather than empty, so the gaps between the letters and
-                around the chevron still take the click, and the focus rectangle stays for the keyboard
+                a button that is only its text; the foreground alone answers the pointer (currency pickers)
+                (a transparent background, not none, so the gaps between the letters still take the click)
             -->
             <Style x:Key="TextButtonStyle" TargetType="Button">
                 <Setter Property="Background" Value="Transparent" />

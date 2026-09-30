@@ -61,8 +61,7 @@ namespace FluentMath.Models
             return new Rational(left.Numerator * right.Denominator, left.Denominator * right.Numerator);
         }
 
-        // each side is cut to its leading 64 bits before it becomes a double and the power of two that cost
-        // is put back afterwards, so neither side overflows on the way however large it is
+        // each side cut to its leading 64 bits and the power of two put back after, so neither overflows
         public double ToDouble()
         {
             int numeratorShift = Math.Max(0, (int)BigInteger.Abs(Numerator).GetBitLength() - 64);
@@ -100,21 +99,15 @@ namespace FluentMath.Models
 
     // a real number known exactly: a sum of rational multiples of square roots, or a rational multiple of π
     //
-    // the exact path the evaluator carries beside every double, so √2×√2 is 2 and 1÷3×3 is 1 rather than
-    // the doubles nearest to them; a step that has no exact answer, a logarithm or e say, hands back null,
-    // and from there on only the double is left. Every operation takes and returns null for that reason
-    //
-    // every root is of a square free number and every coefficient is rational, so two values are the same
-    // number exactly when they have the same terms, which is what lets the inverse functions look their
-    // argument up in a table
-    // π stands only on its own, times a rational: π+1 and π√2 have no exact value here, and a Casio shows
-    // both as a decimal
+    // carried beside every double, so √2×√2 is 2; a step with no exact answer (a logarithm, e) gives null,
+    // which every operation takes and returns
+    // (square free roots and rational coefficients, so equal numbers have equal terms; π+1 and π√2 have no
+    // exact value, a Casio shows both as a decimal)
     public sealed class ExactValue : IEquatable<ExactValue>
     {
         // === limits ===
 
-        // past these a value drops the exact path and keeps the double; they bound the work a key can cost,
-        // and a value that large is shown as a decimal anyway
+        // past these a value keeps only the double; they bound the work a key can cost
         private const int MaxTerms = 2;                 // the forms a Casio shows have two terms at most
         private const int MaxBits = 1024;               // of a numerator or a denominator; 170! still fits
         private const long MaxRadicand = 1000000000000; // what a square factor is still searched for in
@@ -208,8 +201,8 @@ namespace FluentMath.Models
             return TimesPi ? sum * Math.PI : sum;
         }
 
-        // one term decides its own sign; two are compared as doubles, which only a value within rounding
-        // of zero could get wrong, and a nonzero value that close takes a twenty digit number to type
+        // one term decides its own sign; two are compared as doubles (only a value within rounding of
+        // zero could fool that)
         public int Sign
         {
             get

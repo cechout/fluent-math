@@ -3,8 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "Fluent Math"
-; overridable so CI can pass the version from FluentMath.csproj via /DMyAppVersion
-; local manual compiles keep using this fallback untouched
+; CI passes the csproj version through /DMyAppVersion; a local compile uses this fallback
 #ifndef MyAppVersion
   #define MyAppVersion "2.0.0"
 #endif
@@ -14,8 +13,8 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-; a new id since the rename, so Fluent Math installs next to Simple Calculator instead of taking over its
-; uninstall entry; the old app keeps {1F029C99-A212-4D50-B14C-BA0B0C9965FA} and is uninstalled on its own
+; a new id since the rename, so Fluent Math installs next to Simple Calculator, which keeps
+; {1F029C99-A212-4D50-B14C-BA0B0C9965FA}
 AppId={{086FECEC-9D29-4431-BC15-F487C0FDE333}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}

@@ -3,10 +3,7 @@ using System.Windows.Input;
 
 namespace FluentMath.ViewModels
 {
-    // minimal ICommand used by every button binding
-    //
-    // no button in the app is ever disabled, so CanExecute is hardwired to true and CanExecuteChanged
-    // is never raised; the event only exists because ICommand requires it
+    // the ICommand behind every key binding; CanExecute is always true and CanExecuteChanged never fires
     public class RelayCommand<T> : ICommand
     {
         private readonly Action<T> _execute;

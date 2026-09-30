@@ -4,10 +4,7 @@ using System.Globalization;
 
 namespace FluentMath.Models
 {
-    // converts between any two currencies in the ECB rate table
-    //
-    // the table is EUR-based, so every conversion goes through the euro; there is no direct rate for
-    // a pair like USD to JPY and none is needed
+    // converts between any two currencies in the ECB rate table, always through the euro
     class ConvertCurrency
     {
         public Dictionary<string, double> ExchangeRates { get; private set; }
@@ -32,8 +29,7 @@ namespace FluentMath.Models
             return result.ToString(CultureInfo.InvariantCulture);
         }
 
-        // what a single unit of currency1 is worth in currency2; shown as the small rate line under
-        // the converter, so it carries more decimals than a converted amount
+        // one unit of currency1 in currency2, for the rate line; (more decimals than an amount)
         public string GetCurrencyRate(string currency1, string currency2)
         {
             if (!ExchangeRates.ContainsKey(currency1) || !ExchangeRates.ContainsKey(currency2))

@@ -3,11 +3,7 @@ using Xunit;
 
 namespace FluentMath.Tests
 {
-    // the shape of the LaTeX the tokens hand to KaTeX
-    //
-    // these are not cosmetic: every one of them is a command KaTeX either knows or does not, and a
-    // malformed one renders as nothing at all rather than as an error, which is invisible until someone
-    // presses the key in the running app
+    // the shape of the LaTeX the tokens write, command by command
     public class LatexOutputTests
     {
         private static string Latex(params string[] keys)
@@ -64,7 +60,7 @@ namespace FluentMath.Tests
         [Fact]
         public void WritesAnInverseHyperbolicAsARaisedMinusOne()
         {
-            // KaTeX has no arsinh command, so the Casio spelling is the one that renders at all
+            // LaTeX has no arsinh command, so the Casio spelling is written
             Assert.Contains("\\sinh^{-1}(", Latex("fn:arsinh", "1"));
             Assert.DoesNotContain("\\arsinh", Latex("fn:arsinh", "1"));
         }
@@ -85,7 +81,7 @@ namespace FluentMath.Tests
             Assert.Contains("\\text{Ans}", Latex("ans"));
         }
 
-        // KaTeX has a command for sec but none for sech or GCD, which go through operatorname instead
+        // LaTeX has a command for sec but none for sech or GCD, which go through operatorname
         [Fact]
         public void WritesAPanelFunctionThroughOperatornameWhereKaTeXHasNoCommand()
         {
@@ -123,8 +119,7 @@ namespace FluentMath.Tests
         [Fact]
         public void BracesThePowerBaseSoTheExponentCannotSlipOff()
         {
-            // an unbraced base hands the exponent only the last atom in it, which is what used to drop
-            // the exponent onto the height of a caret standing at the end of the base
+            // an unbraced base would hand the exponent only its last atom
             Assert.Contains("{\\mathord{1}\\mathord{0}}^{", Latex("10", "pow", "3"));
         }
 
