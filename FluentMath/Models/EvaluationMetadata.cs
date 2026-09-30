@@ -3,14 +3,10 @@ using System.Numerics;
 
 namespace FluentMath.Models
 {
-    // what went wrong, in the categories a calculator display can actually name
-    // Syntax means the formula does not parse, everything else means it parses but has no real result
-    //
-    // Argument is the one a Casio names on its own: a pair of bounds that is the wrong way round or not
-    // made of whole numbers, as in RanInt#(6,1)
-    //
-    // TimeOut is the other one: a calculus structure that ran out of the work it may do before its answer
-    // was good enough
+    // what went wrong, in the categories a calculator display names
+    // Syntax does not parse; the rest parse but have no real result
+    // Argument: bounds the wrong way round or not whole, as in RanInt#(6,1)
+    // TimeOut: a calculus structure that ran out of work before its answer was good enough
     public enum EvaluationError
     {
         None,
@@ -23,8 +19,7 @@ namespace FluentMath.Models
     }
 
 
-    // whether the trigonometric functions read their argument as degrees, radians or gradians
-    // Degrees is the default, same as a Casio out of the box
+    // the unit the trigonometric functions read; degrees by default, as on a Casio
     public enum AngleMode
     {
         Degrees,
@@ -33,14 +28,10 @@ namespace FluentMath.Models
     }
 
 
-    // which shape a finished result is shown in; the S to D key cycles the exact form, the recurring
-    // decimal and the decimal, and its shift swaps the exact form between improper and mixed
-    // the exact form is a fraction for a rational and a form with roots or π otherwise, drawn the same
-    // under both names, since only a fraction has a whole part to split off
-    // a value only has a form when one was found for it at all, and the prime factors only when it is a
-    // whole number above zero, which the FACT key asks for; the ENG keys ask for the engineering form, a
-    // mantissa over a power of ten that is a multiple of three, and the °′″ key for degrees, minutes and
-    // seconds
+    // the shape a finished result is shown in; S⇔D cycles exact, recurring and decimal, its shift swaps
+    // improper and mixed
+    // (the exact form is a fraction, or roots and π, drawn alike under both names; PrimeFactors is FACT,
+    // Engineering the ENG keys, Sexagesimal the °′″ key)
     public enum AnswerForm
     {
         Decimal,
@@ -53,10 +44,8 @@ namespace FluentMath.Models
     }
 
 
-    // a result is one value, or the pair a Casio shows for a division with remainder and for Pol and Rec
-    //
-    // the pair only exists when that operation is the whole calculation; anywhere inside one it hands on
-    // its first value, and so does Ans
+    // one value, or the pair a Casio shows for a division with remainder and for Pol and Rec
+    // (only as the whole calculation; inside one, and in Ans, the pair hands on its first value)
     public enum ResultKind
     {
         Single,
@@ -66,21 +55,16 @@ namespace FluentMath.Models
     }
 
 
-    // a number as the evaluator carries it: the double every calculation has, and beside it the exact
-    // value, for as long as every step that led to it was exact
+    // a number as the evaluator carries it: the double, and the exact value while every step was exact
     //
-    // when the exact value is known the double is read off it, so the two never disagree about a zero or
-    // a whole number: √2×√2 is 2 in both, and 1÷(√2×√2−2) is the Math ERROR it is on a Casio
-    // a double on its own converts into one without an exact value, so a constant written into the
-    // arithmetic below as a plain number has to be made exact on purpose, see Whole
+    // with an exact value the double is read off it, so √2×√2 is 2 in both and 1÷(√2×√2−2) a Math ERROR
+    // (a plain double converts without an exact value; a constant is made exact on purpose, see Whole)
     public readonly struct MathValue
     {
         public double Value { get; }
         public ExactValue? Exact { get; }
 
-        // whether the value is an angle in degrees, minutes and seconds, which a result is shown as; the
-        // evaluator decides which operations keep it one, and every operation below drops it except a
-        // sign, since −2°30′ is still an angle
+        // an angle in degrees, minutes and seconds; every operation below drops it but the sign (−2°30′)
         public bool IsSexagesimal { get; }
 
         public MathValue(double value, ExactValue? exact = null) : this(value, exact, false) { }
@@ -94,8 +78,7 @@ namespace FluentMath.Models
 
         public MathValue AsSexagesimal(bool sexagesimal) => new MathValue(Value, Exact, sexagesimal);
 
-        // a whole number with its exact value, for the functions whose answer is always whole; past the
-        // range a double holds every whole number in, the digits are no longer the value
+        // a whole number with its exact value; past 2^53 the digits are no longer the value
         public static MathValue Whole(double value)
         {
             if (Math.Abs(value) >= 9007199254740992) return new MathValue(value);
@@ -133,10 +116,8 @@ namespace FluentMath.Models
     }
 
 
-    // the outcome of one evaluation; a failure carries no value, so IsSuccess has to be checked first
-    //
-    // deliberately not an exception: half-typed input is the normal state here rather than an
-    // exceptional one, and the display has to survive being asked to evaluate it
+    // the outcome of one evaluation; check IsSuccess first, a failure carries no value
+    // (not an exception; half-typed input is the normal state here)
     public readonly struct EvaluationResult
     {
         public bool IsSuccess { get; }

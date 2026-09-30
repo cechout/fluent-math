@@ -2,11 +2,7 @@ using System.Collections.Generic;
 
 namespace FluentMath.Models.Layout
 {
-    // what one run of text occupies, split at the baseline rather than given as a single height
-    //
-    // that split is the whole reason a fraction, a root and a plain digit can sit in one row without a
-    // special case for every pairing: a row takes the largest reach in each direction and knows where the
-    // common baseline runs
+    // what one run of text occupies, split at the baseline, so any boxes line up in a row
     public readonly struct TextMetrics
     {
         public double Width { get; }
@@ -22,10 +18,8 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // where the caret stands: the token list being written into, and the index inside it
-    //
-    // the list is matched by identity rather than by contents, which is what tells one empty slot from
-    // another
+    // where the caret stands: the token list and the index in it
+    // (matched by identity, which tells two empty slots apart)
     public readonly struct CaretTarget
     {
         public IReadOnlyList<MathToken> Tokens { get; }
@@ -39,19 +33,8 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // where the caret ended up, once the layout knows
-    //
-    // it is not a box and never becomes one: it hangs off the box it stands in front of or inside, and
-    // the visible bar is drawn on top of that point
-    //
-    // anything the caret contributes to the layout moves its neighbours as it travels, and it does not
-    // take a box to do that; two halves of one number measured apart are already enough, because each
-    // half is set by the text stack with its own side bearings
-    // the box says where it stands sideways, the line how high it stands
-    //
-    // those are two different boxes as soon as the caret stands in front of an operator, because an
-    // operator rides above the baseline of its row; a caret that took its baseline from the box it hangs
-    // off would ride up with it and stand higher in front of a plus than in front of a digit
+    // where the caret ended up, once the layout knows; not a box, it hangs off the box it stands at
+    // (the box says where it stands sideways, the line how high, since an operator rides above its baseline)
     public readonly struct CaretPlacement
     {
         public MathBox Box { get; }      // what it hangs off
@@ -69,11 +52,8 @@ namespace FluentMath.Models.Layout
     }
 
 
-    // the one thing the layout cannot work out by itself, and the reason it is an interface at all:
-    // measuring real glyphs needs a text stack, while a test needs numbers it chose itself
-    //
-    // the font family is not a parameter because a whole formula is set in one family; an implementation
-    // carries it
+    // measures a run of text; an interface, so a test can hand in numbers of its own
+    // (the font family is carried by the implementation)
     public interface ITextMeasurer
     {
         TextMetrics Measure(string text, double fontSizePx);

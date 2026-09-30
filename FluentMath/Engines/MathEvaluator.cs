@@ -7,11 +7,9 @@ using FluentMath.Models;
 
 namespace FluentMath.Engines
 {
-    // turns the token tree MathInputManager owns into an actual number
-    //
-    // recursive descent straight over the token lists, with no string in between; a structured token is
-    // just an atom that evaluates its own child lists through the same entry point, which is what lets a
-    // fraction inside an exponent inside a root work without a single special case
+    // the evaluator:
+    // recursive descent straight over the token lists; a structured token is an atom that evaluates its
+    // own child lists through the same entry point
     //
     // the grammar is the usual precedence ladder:
     //   expression  := term (plus or minus, term)*
@@ -21,35 +19,23 @@ namespace FluentMath.Engines
     //   unary       := sign* postfix
     //   postfix     := atom (factorial or reciprocal or percent or prefix or sexagesimal marker)*
     //   atom        := number | constant | Ans | Ran# | x | bracketed expression | fraction | mixed fraction
-    //                   | power | root | function | logarithm | Σ | Π | integral | derivative
+    //                  | power | root | function | logarithm | Σ | Π | integral | derivative
     //
-    // every value carries its exact value beside the double, see MathValue; a step with no exact answer,
-    // a logarithm, e or a sine of 18°, drops it and the rest of the calculation goes on with the double
-    //
-    // an angle in degrees, minutes and seconds stays one through the operations the Casio manual names:
-    // plus and minus between two of them, times and divided by a plain number, and a sign; the display
-    // opens such a result in the same form
-    //
-    // x is the variable of Σ, Π, the integral and the derivative, which set it while they evaluate their
-    // body over and over; anywhere else it is 0
-    //
-    // nothing here throws; a failure sets _error and the recursion unwinds on its own, because a
-    // half-typed formula is the normal state of the input rather than an exceptional one
+    // every value carries its exact value while every step was exact, see MathValue; an angle in degrees,
+    // minutes and seconds stays one through the operations the Casio manual names
+    // x is the variable of Σ, Π, the integral and the derivative, and 0 anywhere else
+    // (nothing throws; a failure sets _error and the recursion unwinds)
     public class MathEvaluator
     {
         // === fields ===
 
-        // settable so one evaluator can follow the mode the user picks without being rebuilt; the
-        // constructor argument stays for callers that only ever want one unit
+        // settable, so one evaluator follows the mode the user picks
         public AngleMode AngleMode { get; set; }
 
         // set the moment any sub-expression fails; every loop checks it so the parse stops early
         private EvaluationError _error;
 
-        // what an Ans token resolves to; the caller sets it after every successful evaluation, so a
-        // formula continuing from the previous result carries the full double rather than the digits
-        // the display happened to show
-        // the exact value comes along with it, so Ans+√2 on a result of √2 is 2√2 as on a Casio
+        // what Ans resolves to, the full previous result with its exact value (Ans+√2 on √2 is 2√2)
         public MathValue LastAnswer { get; set; }
 
         // what Ran# and RanInt# draw from; settable so a test can hand in a seeded one
@@ -59,32 +45,30 @@ namespace FluentMath.Engines
         public NumberFormat NumberFormat { get; set; } = NumberFormat.Default;
 
         // --- the second value of a pair ---
-        // the remainder of a division with remainder that was the last operation at the top level, and
-        // the angle or y of the last Pol or Rec; Evaluate makes a pair of them only when that operation is
-        // the whole calculation
+        // the remainder of a top level division with remainder, and the angle or y of the last Pol or Rec
+        // (a pair only when that operation is the whole calculation)
         private MathValue? _topLevelRemainder;
         private MathValue _coordinateSecond;
 
         // --- trigonometric results ---
         private const double TrigNoisePerRadian = 1e-14; // the most a zero of sin or cos comes out as, per radian of angle
-        private const int TrigDigits = 15;               // significant digits a trigonometric result is kept to
+        private const int TrigDigits = 15; // significant digits a trigonometric result is kept to
 
         // --- whole numbers ---
-        private const int WholeNumberDigits = 15;        // the digits a Casio computes with, at which a value is judged whole
-        private const double WholeNumberLimit = 1e15;    // above this a double no longer holds every whole number exactly
+        private const int WholeNumberDigits = 15; // the digits a Casio computes with, at which a value is judged whole
+        private const double WholeNumberLimit = 1e15; // above this a double no longer holds every whole number exactly
 
         // --- calculus ---
-        // what x stands for while a calculus structure evaluates its body, and 0 outside one; no calculus
-        // structure can stand inside another, so one value is all there ever is
+        // x while a calculus structure evaluates its body, 0 outside one; (they cannot nest)
         private MathValue _variable = MathValue.Whole(0);
 
         private const int MaxCalculusEvaluations = 100000; // the most times one structure evaluates its body before it is a Time Out
-        private const double IntegralTolerance = 1e-11;   // relative, what the integral is refined to
-        private const double IntegralNoise = 1e-12;       // of the integral of the absolute value, what a body that cancels itself out is refined to
-        private const double DerivativeTolerance = 1e-9;  // relative, what the derivative has to settle to
-        private const double DerivativeNoise = 1e-13;     // of the size of a difference quotient, the rounding a slope of 0 comes out as
-        private const double RiddersShrink = 1.4;         // what each step of the derivative divides the step by
-        private const int RiddersSteps = 10;              // the most steps it takes from one starting step
+        private const double IntegralTolerance = 1e-11; // relative, what the integral is refined to
+        private const double IntegralNoise = 1e-12; // of the integral of the absolute value, what a body that cancels itself out is refined to
+        private const double DerivativeTolerance = 1e-9; // relative, what the derivative has to settle to
+        private const double DerivativeNoise = 1e-13; // of the size of a difference quotient, the rounding a slope of 0 comes out as
+        private const double RiddersShrink = 1.4; // what each step of the derivative divides the step by
+        private const int RiddersSteps = 10; // the most steps it takes from one starting step
 
 
         // === constructor ===
@@ -134,8 +118,7 @@ namespace FluentMath.Engines
 
         // === grammar ===
 
-        // topLevel is set for the formula itself and for nothing nested in it, a bracket or a slot, which is
-        // the only level a division with remainder shows its remainder from
+        // topLevel only for the formula itself, the one level a division with remainder shows its remainder from
         private MathValue ParseExpression(IReadOnlyList<MathToken> tokens, ref int position, bool topLevel = false)
         {
             MathValue value = ParseTerm(tokens, ref position, topLevel);
@@ -251,13 +234,7 @@ namespace FluentMath.Engines
         {
             MathValue value = ParseUnary(tokens, ref position);
 
-            // no operator but something that can start an atom: implicit multiplication, so that
-            // 3(4+5) and 2sin(30) work the way they do on paper
-            //
-            // through the postfix level rather than straight to the atom, the same way the explicit
-            // times and divided by reach it; going to the atom left the factorial in 2(3)!
-            // lying in the list with nothing to consume it, and the formula came back as a syntax
-            // error instead of 12
+            // implicit multiplication, 3(4+5) and 2sin(30); through the postfix level, so 2(3)! is 12
             while (_error == EvaluationError.None && position < tokens.Count && StartsAtom(tokens[position]))
             {
                 MathValue factor = ParsePostfix(tokens, ref position);
@@ -267,8 +244,7 @@ namespace FluentMath.Engines
             return value;
         }
 
-        // a leading minus is a sign rather than a subtraction, which is the only reason a formula is
-        // allowed to start with one at all
+        // a leading minus is a sign rather than a subtraction
         private MathValue ParseUnary(IReadOnlyList<MathToken> tokens, ref int position)
         {
             if (position < tokens.Count && tokens[position].Type == TokenType.Operator)
@@ -290,8 +266,8 @@ namespace FluentMath.Engines
             return ParsePostfix(tokens, ref position);
         }
 
-        // a postfix key binds tighter than a sign standing in front of it, so -5! is the negative of
-        // 5 factorial rather than the factorial of -5, which has none
+        // a postfix key binds tighter than a sign standing in front of it;
+        // so -5! is the negative of 5 factorial rather than the factorial of -5, which has none
         private MathValue ParsePostfix(IReadOnlyList<MathToken> tokens, ref int position)
         {
             int start = position;
@@ -376,9 +352,7 @@ namespace FluentMath.Engines
 
             if (token.Type == TokenType.Number)
             {
-                // the input keeps one token per character, so the whole run is what makes up one value
-                // reading it greedily is also what stops the implicit multiplication above from turning
-                // 45 into 4 times 5
+                // a run of digit tokens is one value, read greedily so 45 is not 4 times 5
                 int start = position;
                 var literal = new StringBuilder();
                 while (position < tokens.Count && tokens[position].Type == TokenType.Number)
@@ -396,10 +370,6 @@ namespace FluentMath.Engines
                     return Fail(EvaluationError.Syntax); // a lone decimal point is the realistic case
                 }
 
-                // the EXP key belongs to the number it follows rather than to the expression around it,
-                // so it is consumed here inside the atom; that is what makes 1 / 3 EXP 5 one over three
-                // hundred thousand instead of a third of a hundred thousand
-                //
                 // a typed number is exact as it stands, 0.1 is a tenth and not the double nearest to one
                 return new MathValue(number, ExactValue.FromDecimal(literal.ToString()));
             }
@@ -454,12 +424,9 @@ namespace FluentMath.Engines
 
         // === reading ===
 
-        // a copy of the formula with a bracket pair around every operand that binds tighter than the
-        // divided by in front of it, which is how the history line shows the way the formula was read
-        //
-        // a Casio rewrites the input itself on =, 6÷2(1+2) into 6÷(2(1+2)); here the tree stays exactly as
-        // it was typed and only the copy the history line draws carries the brackets
-        // the scan below follows ParseCombination and ParseProduct and has to move with them
+        // a copy with brackets around every operand that binds tighter than the division before it, for the
+        // history line, as a Casio rewrites 6÷2(1+2) into 6÷(2(1+2)); the tree itself stays as typed
+        // (the scan follows ParseCombination and ParseProduct and has to move with them)
         public static List<MathToken> CloneWithImpliedBrackets(IReadOnlyList<MathToken> tokens)
         {
             List<MathToken> copy = MathTokenCloner.CloneList(tokens);
@@ -579,10 +546,7 @@ namespace FluentMath.Engines
         // === sexagesimal ===
 
         // the minutes and seconds behind a marker belong to the same angle, so 2°30′ is two and a half
-        // degrees rather than the product the implicit multiplication would make of 2° and 30′
-        //
-        // the value is an angle from here on; a result carried on in this form is its full value for as
-        // long as the whole group is what it was seeded as, the same as a run of digits
+        // degrees, not a product (a seeded group is its full value, like a run of digits)
         private MathValue ContinueSexagesimal(IReadOnlyList<MathToken> tokens, int start, ref int position,
             MathValue value, int divisor)
         {
@@ -649,9 +613,7 @@ namespace FluentMath.Engines
                     if (value.Value == 0) return Fail(EvaluationError.DivideByZero);
                     return MathValue.Whole(1) / value;
 
-                // plain division by a hundred, which is the meaning the FX-991 gives the key; the add-on
-                // percent of a business calculator, where 200 + 10% comes out as 220, is deliberately
-                // not what this does
+                // plain division by a hundred, as on an FX-991; not the add-on percent of a business calculator
                 case "%":
                     return value / MathValue.Whole(100);
             }
@@ -672,8 +634,7 @@ namespace FluentMath.Engines
             return Fail(EvaluationError.Syntax);
         }
 
-        // only a whole count that is not negative has one, and 171! is already past the range of a
-        // double, so the ceiling is checked here rather than left to come back as an infinity
+        // only for a whole count that is not negative; past 170 an Overflow
         private MathValue Factorial(MathValue value)
         {
             double count = value.Value;
@@ -694,10 +655,8 @@ namespace FluentMath.Engines
 
         // === structured tokens ===
 
-        // every slot of a structured token is a complete expression of its own
-        //
-        // an empty slot is a syntax error here; the two slots that have a sensible default instead, the
-        // root index and the logarithm base, are checked by their caller before it ever gets this far
+        // every slot is a complete expression; an empty one is a Syntax ERROR (the root index and the log
+        // base default in their callers)
         private MathValue EvaluateSlot(List<MathToken> tokens)
         {
             if (tokens.Count == 0) return Fail(EvaluationError.Syntax);
@@ -719,12 +678,8 @@ namespace FluentMath.Engines
             return numerator / denominator;
         }
 
-        // every part has to be a whole number, the one input rule a Casio has for it, which it enforces by
-        // not taking a decimal point there; here anything goes in and the check happens on =
-        //
-        // the magnitudes add and the signs multiply: a minus on any one part makes the whole number
-        // negative, so a whole part of 1 with −1 over 2 is −3/2, as on the Casio. Two negative parts
-        // cancel, which is the same rule carried on; nothing measured that case
+        // every part has to be whole, checked on =; the magnitudes add and the signs multiply, so 1 with
+        // −1 over 2 is −3/2, as on a Casio
         private MathValue EvaluateMixedFraction(MixedFractionToken mixed)
         {
             MathValue wholeValue = EvaluateSlot(mixed.WholeTokens);
@@ -758,8 +713,7 @@ namespace FluentMath.Engines
             MathValue exponent = EvaluateSlot(power.ExponentTokens);
             if (_error != EvaluationError.None) return 0;
 
-            // zero to the zero and zero to a negative power are both Math ERROR on an FX-991; Math.Pow
-            // answers 1 and an infinity instead, neither of which a calculator should show
+            // zero to the zero or to a negative power is a Math ERROR, as on an FX-991
             if (baseValue.Value == 0 && exponent.Value <= 0) return Fail(EvaluationError.Domain);
 
             double result = Math.Pow(baseValue.Value, exponent.Value);
@@ -844,10 +798,8 @@ namespace FluentMath.Engines
                 case "arctan":
                     return new MathValue(FromRadians(Math.Atan(parameter)), ExactAngle(TangentSteps(argument.Exact)));
 
-                // the inverse of a reciprocal is the inverse of its partner taken at the reciprocal
-                //
-                // cot⁻¹ answers between 0° and 180° rather than between −90° and 90°, which keeps it
-                // continuous through zero and is the range a German formula collection gives it
+                // the inverse of a reciprocal is the inverse of its partner at the reciprocal
+                // (cot⁻¹ answers from 0° to 180°, continuous through zero)
                 case "arcsec":
                     if (Math.Abs(parameter) < 1) return Fail(EvaluationError.Domain);
                     return new MathValue(FromRadians(Math.Acos(1 / parameter)),
@@ -865,9 +817,7 @@ namespace FluentMath.Engines
                     if (parameter <= 0) return Fail(EvaluationError.Domain);
                     return Math.Log(parameter);
 
-                // the hyperbolic family reads a plain real rather than an angle, so none of it goes
-                // through ToRadians the way the trigonometric functions above do; routing it through the
-                // angle mode would silently change every result as soon as the mode is switched
+                // the hyperbolic family reads a plain real, not an angle, so none of it goes through ToRadians
                 case "sinh":
                     return Math.Sinh(parameter);
 
@@ -957,11 +907,8 @@ namespace FluentMath.Engines
 
         // === coordinates ===
 
-        // r of the point (x, y), with θ left in _coordinateSecond for the pair; θ is in the angle unit
-        // selected and runs up to and including a half turn, so Pol(−1, 0) is π as on the Casio
-        //
-        // the origin has no angle, which the Casio answers with a Math ERROR
-        // both are exact where they can be, so Pol(1, 1) is r = √2 and θ = 45
+        // r of the point (x, y), θ left in _coordinateSecond, up to and including a half turn
+        // (the origin is a Math ERROR; Pol(1, 1) is exactly r = √2 and θ = 45)
         private MathValue Polar(MathValue x, MathValue y)
         {
             if (x.Value == 0 && y.Value == 0) return Fail(EvaluationError.Domain);
@@ -1030,12 +977,8 @@ namespace FluentMath.Engines
             return value;
         }
 
-        // x runs through every whole number from the lower bound to the upper one, both included, and the
-        // terms are added up or multiplied out; exact wherever every term is, so Σ(1/x) from 1 to 3 is 11/6
-        // as on the Casio
-        //
-        // bounds that are not whole or the wrong way round are the Argument ERROR a Casio gives, and more
-        // terms than the work allows are a Time Out before the first one is evaluated
+        // x runs through every whole number from the lower to the upper bound, the terms added or multiplied
+        // (Σ(1/x) from 1 to 3 is 11/6; bad bounds are an Argument ERROR, too many terms a Time Out)
         private MathValue Series(List<MathToken> body, MathValue lower, MathValue upper, bool product)
         {
             if (!TryWholeNumber(lower.Value, out double from) || !TryWholeNumber(upper.Value, out double to) || from > to)
@@ -1092,15 +1035,9 @@ namespace FluentMath.Engines
         private const int KronrodPoints = 15;
         private const double MachineEpsilon = 2.220446049250313e-16; // the gap between 1 and the next double
 
-        // adaptive Gauss-Kronrod: the range starts as one piece, and the piece that may be furthest off is
-        // halved until the whole is good enough, the way QUADPACK integrates
-        //
-        // good enough is eleven digits of the value, or twelve of the integral of the absolute value where
-        // the body cancels itself out; a value smaller than what it may be off is noise around 0, which is
-        // what ∫ sin x from 0 to 2π leaves in radians
-        // running out of work, or of room to halve a piece in, is a Time Out, and so is a piece that runs
-        // out of the range of a double on the way to an end the body has no value at, 1/x towards 0; the
-        // answer is a double only, and a fraction is found for it the way it is for a logarithm
+        // adaptive Gauss-Kronrod as in QUADPACK: the piece that may be furthest off is halved until the whole
+        // is good enough, eleven digits of the value or twelve of the integral of the absolute value
+        // (a value below its error is 0; out of work, room or range is a Time Out; a double only)
         private MathValue Integrate(List<MathToken> body, double from, double to)
         {
             var pieces = new List<(double From, double To, double Value, double Error, double Magnitude)>
@@ -1110,8 +1047,7 @@ namespace FluentMath.Engines
 
             if (_error != EvaluationError.None) return 0;
 
-            // a body out of range across the whole of it, which the caller reports the way it reports any
-            // other value out of range
+            // out of range across the whole of it, reported like any value out of range
             if (!double.IsFinite(pieces[0].Value)) return pieces[0].Value;
 
             int evaluations = KronrodPoints;
@@ -1212,14 +1148,9 @@ namespace FluentMath.Engines
 
         // --- the derivative ---
 
-        // Ridders extrapolation from up to three starting steps: the first scaled to the point, so a
-        // polynomial far out is still differentiated at a step that means something there, then fixed
-        // ones, for a function with no value a whole step away from the point or one that turns faster than
-        // the point is large, a sine far out in radians
-        //
-        // the function needs a value at the point itself, and without one the derivative is the error it
-        // has there, the way d/dx of 1/x at 0 is a Math ERROR; a starting step whose samples have no value
-        // gives way to the next smaller one, and when none of them settles the derivative is a Time Out
+        // Ridders extrapolation from up to three starting steps, the first scaled to the point, then fixed
+        // ones for a function without a value a step away or one that turns fast
+        // (no value at the point is its error, d/dx 1/x at 0 a Math ERROR; none settling is a Time Out)
         private MathValue EvaluateDerivative(DerivativeToken derivative)
         {
             if (ContainsCalculus(derivative)) return Fail(EvaluationError.Syntax);
@@ -1260,13 +1191,9 @@ namespace FluentMath.Engines
             return Fail(sampled ? EvaluationError.TimeOut : sampleError);
         }
 
-        // central differences at a step that shrinks by RiddersShrink every time, extrapolated towards a step
-        // of 0 in a Neville tableau; the answer is the entry that differs least from its neighbours, by how
-        // much it differs, and it stops once a higher order comes out clearly worse, which is rounding
-        // taking over
-        //
-        // first is the plain difference quotient at the starting step; false when the function has no
-        // value at one of the points it samples
+        // central differences at a shrinking step, extrapolated to 0 in a Neville tableau; the answer is the
+        // entry that differs least from its neighbours, until rounding takes over
+        // (first is the plain quotient at the starting step; false when a sample has no value)
         private bool TryRidders(List<MathToken> function, double x, double step,
             out double slope, out double error, out double first)
         {
@@ -1323,10 +1250,7 @@ namespace FluentMath.Engines
 
         // === whole numbers ===
 
-        // the value at the fifteen digits a Casio computes with
-        //
-        // 0.1×30 is 3.0000000000000004 as a double and a plain 3 on a Casio, and 1−0.9 is 0.09999999999999998;
-        // without this, Int(10(1−0.9)) would be 0 and GCD(0.1×30, 6) a Math ERROR
+        // the value at the fifteen digits a Casio computes with, so 0.1×30 is a plain 3
         private static double AtCasioPrecision(double value)
         {
             return ResultFormatter.RoundToSignificantDigits(value, WholeNumberDigits);
@@ -1384,10 +1308,7 @@ namespace FluentMath.Engines
             return whole && count >= 0 && chosen >= 0 && chosen <= count;
         }
 
-        // the loop stops at the first overflow, which a large n reaches within a few hundred factors, so a
-        // count near the whole number limit cannot keep it running
-        //
-        // the exact count is multiplied up beside it, since the double loses digits long before it overflows
+        // stops at the first overflow, so a large n cannot keep it running; the exact count is kept beside it
         private MathValue Permutations(MathValue n, MathValue r)
         {
             if (!TryCountPair(n.Value, r.Value, out double count, out double chosen)) return Fail(EvaluationError.Domain);
@@ -1439,10 +1360,7 @@ namespace FluentMath.Engines
             return MathValue.Whole(RandomSource.NextInt64((long)from, (long)to + 1));
         }
 
-        // the value rounded to a whole number of decimals from 0 to 9, the range Fix takes
-        //
-        // rounded as a decimal from the fifteen digits a Casio holds, so 2.675 rounds up to 2.68 the way
-        // it reads, where the double just below 2.675 would round down
+        // rounded to 0 to 9 decimals, as a decimal from the fifteen digits a Casio holds, so 2.675 is 2.68
         private MathValue RoundToDecimals(double value, double decimals)
         {
             if (!TryWholeNumber(decimals, out double places) || places < 0 || places > 9)
@@ -1471,8 +1389,7 @@ namespace FluentMath.Engines
             return 180.0;
         }
 
-        // radians are returned unchanged rather than scaled by one, which also keeps an angle near the
-        // top of the double range from overflowing on a conversion that would not move it
+        // radians unchanged, so an angle near the top of the double range does not overflow
         private double ToRadians(double angle)
         {
             if (AngleMode == AngleMode.Radians) return angle;
@@ -1487,13 +1404,8 @@ namespace FluentMath.Engines
             return angle * HalfTurn() / Math.PI;
         }
 
-        // tan is a pole wherever the cosine is an exact zero, which CleanTrigResult makes it at every odd
-        // quarter turn; that holds in radians too, where no double lands on pi/2 itself, and it is what
-        // makes tan(pi/2) the Math ERROR a Casio gives
-        //
-        // sec shares those poles, csc and cot have theirs wherever the sine is zero, and cot is an exact 0
-        // wherever the cosine is
-        // at a multiple of 15° the exact values come out of the table below as well, cos 30 as √3/2
+        // the six trigonometric functions; a pole wherever the cleaned denominator is an exact 0, so tan(π/2)
+        // is a Math ERROR; at a multiple of 15° with exact values from the table below, cos 30 as √3/2
         private MathValue Trigonometric(string name, MathValue angle)
         {
             double radians = ToRadians(angle.Value);
@@ -1517,9 +1429,7 @@ namespace FluentMath.Engines
             return TrigRatio(cosine, sine, radians, exactCosine, exactSine);
         }
 
-        // where the exact values are known they decide, pole included: at an angle as large as 10²² degrees
-        // the double only sees noise, cleans both the sine and the cosine to 0 and would report a pole at
-        // every angle
+        // known exact values decide, pole included; (at 10²² degrees the doubles are only noise)
         private MathValue TrigRatio(double numerator, double denominator, double radians,
             ExactValue? exactNumerator, ExactValue? exactDenominator)
         {
@@ -1534,14 +1444,8 @@ namespace FluentMath.Engines
             return CleanTrigResult(numerator / denominator, radians);
         }
 
-        // sin(180) comes out as 1.2e-16 rather than 0, because the degree to radian conversion can never
-        // be exact; rounding the result is what makes the display agree with the textbook
-        //
-        // only that noise is snapped to 0, and it grows with the angle; a result above it is real however
-        // small it is, where rounding to twelve decimals turned sin of a ten-millionth of a degree into
-        // 1.745e-9
-        // the rest is cut to fifteen significant digits, about what a Casio computes with, which is what
-        // lets sin 30 compare equal to 0.5 inside a formula
+        // snaps the noise of the angle conversion to 0 (sin 180 is 1.2e-16 otherwise), and cuts the rest to
+        // fifteen significant digits, so sin 30 equals 0.5 inside a formula
         private static double CleanTrigResult(double value, double radians)
         {
             if (Math.Abs(value) <= Math.Abs(radians) * TrigNoisePerRadian) return 0;
@@ -1552,9 +1456,8 @@ namespace FluentMath.Engines
 
         // === exact angles ===
 
-        // a Casio knows the exact values of every multiple of 15° and of nothing in between: sin 15 is
-        // (√6−√2)/4, while sin 18 is a decimal although (√5−1)/4 would fit its forms; an angle is therefore
-        // counted in steps of 15°, a quarter turn being six of them
+        // a Casio knows the exact values of every multiple of 15° and nothing in between (sin 18 is a
+        // decimal), so an angle is counted in steps of 15°, six to a quarter turn
 
         // sin 0°, 15°, 30° up to 90°; every other multiple of 15° has one of these, or its negative
         private static readonly ExactValue[] QuarterSines = BuildQuarterSines();

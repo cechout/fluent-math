@@ -6,23 +6,17 @@ using System.Text;
 
 namespace FluentMath.Models
 {
-    // turns an evaluated double into something the display can show
-    //
-    // the rounding is not cosmetic; a double cannot hold 0.1 + 0.2 exactly, so without cutting the
-    // result back to the digits a calculator claims to have, every second sum ends in a tail of noise
-    // twelve significant digits is roughly what the Casio the app is modelled on shows
-    //
-    // everything here formats with InvariantCulture on purpose, a German system would otherwise put a
-    // comma into a number that then no longer parses back; a decimal comma is only ever drawn, the layout
-    // swaps it in
+    // the result formatter:
+    // turns an evaluated value into what the display shows, rounded to the twelve digits of a Casio, so
+    // 0.1 + 0.2 has no tail of noise
+    // (InvariantCulture throughout, so a number parses back; a decimal comma is only drawn by the layout)
     public static class ResultFormatter
     {
         // === constants ===
 
         private const int SignificantDigits = 12;
 
-        // outside this window a plain decimal is a wall of zeros, so the output switches to a power of ten
-        // the lower bound is the one of Norm 2, which is what the display did before it had a setting
+        // outside this window the output switches to a power of ten; (the lower bounds of Norm 2 and Norm 1)
         private const double ScientificUpperBound = 1e12;
         private const double ScientificLowerBound = 1e-9;
         private const double Norm1LowerBound = 1e-2;
@@ -33,37 +27,28 @@ namespace FluentMath.Models
         // Math.Round refuses more than 15 decimals
         private const int MaxRoundingDecimals = 15;
 
-        // largest denominator a result may come back as
-        //
-        // this is what keeps an irrational out: with four digits to work with, the best fraction for a
-        // root or a pi is still a good 1e-7 away from it and gets rejected below, while one further
-        // digit of room already lets the square root of two through as 1217471/860882
+        // the largest denominator the numeric search returns, which is what keeps an irrational out
         private const long MaxFractionDenominator = 10000;
 
-        // ceiling on the whole part, so a value big enough to be read as a decimal anyway is not turned
-        // into a fraction; it also keeps the expansion below inside a long
+        // the ceiling on the whole part; (also keeps the expansion inside a long)
         private const long MaxFractionNumerator = 10000000000;
 
-        // the largest number FACT takes apart: every whole number the display shows without a power of
-        // ten, which trial division up to a million covers completely
-        //
-        // the Casio gives up on a prime factor above 1000 and shows it in brackets; covering the whole
-        // range instead costs nothing noticeable
+        // the largest number FACT takes apart, every whole number shown without a power of ten
+        // (a Casio gives up on a prime factor above 1000; trial division up to a million costs nothing)
         private const long MaxFactorised = 999999999999;
 
         // --- exact forms ---
-        // a fraction, and the coefficient of π, is shown when it fits this many characters written as a
-        // mixed number, sign and separators included, 13871 48/89 being eleven; the Casio takes ten, here
-        // it follows the twelve digits
+        // a fraction or π coefficient is shown when it fits this many characters as a mixed number, sign
+        // and separators included (13871 48/89 is eleven; a Casio takes ten)
         private const int FractionBudget = 12;
 
-        // a form with roots is shown with every coefficient and its denominator below this, the ranges the
-        // Casio manual gives; √997 is exact on the Casio and √1003 a decimal, 99√2 exact and 100√2 not
+        // a form with roots is shown with every coefficient, denominator and radicand below these, the
+        // ranges of the Casio manual (99√2 exact, 100√2 a decimal)
         private const long MaxFormCoefficient = 100;
         private const long MaxFormRadicand = 1000;
 
-        // a recurring decimal is shown when its digits up to the end of the first period are no more than
-        // this, a leading 0 not counted: 1÷17 has all sixteen under its bar, 1÷97 has no bar at all
+        // a recurring decimal is shown when its digits up to the end of the first period fit this, a
+        // leading 0 not counted (1÷17 fits, 1÷97 does not)
         private const int MaxRecurringDigits = 16;
 
         // --- sexagesimal ---
@@ -90,8 +75,7 @@ namespace FluentMath.Models
             if (written.Prefix != null) return written.Digits + new PostfixToken(written.Prefix).ToLatex(null!);
             if (written.Exponent is not int exponent) return written.Digits;
 
-            // the times sign goes through the same helper the input line uses, so a result is not spaced
-            // differently from the formula that produced it
+            // the times sign through the helper of the input line, so both are spaced alike
             return $"{written.Digits}{LatexHelper.TaggedOperator("\\times")}10^{{{exponent}}}";
         }
 
@@ -100,11 +84,8 @@ namespace FluentMath.Models
             return ToLatex(value, form, displayFractions, NumberFormat.Default);
         }
 
-        // the same value in the shape the S to D key currently has selected; a form this value does not
-        // have falls back to the decimal rather than to nothing
-        //
-        // the improper and the mixed form are the exact form: a fraction for a rational, and for anything
-        // else the form with roots or π, which has no whole part to split off and is the same under both
+        // the value in the shape S⇔D has selected; a form it lacks falls back to the decimal
+        // (improper and mixed are the exact form; roots or π have no whole part and are the same under both)
         public static string ToLatex(MathValue value, AnswerForm form, bool displayFractions, NumberFormat format)
         {
             if (form == AnswerForm.Decimal) return ToLatex(value.Value, format);
@@ -152,8 +133,7 @@ namespace FluentMath.Models
             return $"\\{command}{{{top}}}{{{bottom}}}";
         }
 
-        // the same rounding as ToLatex but always as plain digits, without the switch to scientific
-        // notation ToLatex makes outside its window
+        // the same rounding as ToLatex, always as plain digits
         public static string ToPlainString(double value)
         {
             double rounded = RoundToSignificantDigits(value, SignificantDigits);
@@ -197,7 +177,7 @@ namespace FluentMath.Models
             return string.Join(LatexHelper.TaggedOperator("\\times"), parts);
         }
 
-        // the wording is the one a Casio uses, short enough to still fit the display at full size
+        // the wording of a Casio
         public static string ErrorToText(EvaluationError error)
         {
             if (error == EvaluationError.Syntax) return "Syntax ERROR";
@@ -220,8 +200,7 @@ namespace FluentMath.Models
             return ToTokens(result, form, displayFractions, NumberFormat.Default);
         }
 
-        // what the native display draws, mirroring ToLatex arm for arm rather than parsing what that
-        // produces, so the two shapes cannot drift apart; a change to either belongs in both
+        // what the display draws, mirroring ToLatex arm for arm; a change to either belongs in both
         public static List<MathToken> ToTokens(EvaluationResult result, AnswerForm form, bool displayFractions, NumberFormat format)
         {
             if (form == AnswerForm.PrimeFactors && TryPrimeFactors(result.Value, out List<(long Prime, int Exponent)> factors))
@@ -231,8 +210,7 @@ namespace FluentMath.Models
 
             if (result.Kind == ResultKind.Single) return ToTokens(result.FirstValue, form, displayFractions, format);
 
-            // the names are drawn as text beside the digits rather than typed as anything, the same as the
-            // minus of a negative result below
+            // the names are drawn as text beside the digits, like the minus of a negative result
             (string first, string second) = PairNames(result.Kind);
 
             List<MathToken> tokens = DigitTokens(first + "=");
@@ -270,8 +248,8 @@ namespace FluentMath.Models
                 long whole = form == AnswerForm.Mixed ? numerator / denominator : 0;
                 if (whole == 0) return new List<MathToken> { FractionTokens(numerator, denominator) };
 
-                // the sign rides on the whole part, so the remainder is always written positive; it is the
-                // structure the mixed fraction key types, so seeding it puts back exactly what is drawn
+                // the sign rides on the whole part; the structure the mixed fraction key types, so a seed
+                // puts back what is drawn
                 MixedFractionToken mixed = new MixedFractionToken();
                 mixed.WholeTokens.AddRange(DigitTokens(whole.ToString(CultureInfo.InvariantCulture)));
                 mixed.NumeratorTokens.AddRange(DigitTokens(Math.Abs(numerator % denominator).ToString(CultureInfo.InvariantCulture)));
@@ -305,8 +283,7 @@ namespace FluentMath.Models
 
             if (written.Exponent is not int exponent) return tokens;
 
-            // spelled out the same way the EXP key spells it, so a result and a typed formula are
-            // the same shape rather than two that happen to look alike
+            // spelled out the way the EXP key spells it, so a result has the shape of a typed formula
             tokens.Add(new MathToken(TokenType.Operator, "*"));
 
             PowerToken power = new PowerToken();
@@ -326,9 +303,8 @@ namespace FluentMath.Models
             return fraction;
         }
 
-        // a leading minus goes in as part of the number rather than as an operator token: these tokens are
-        // only ever drawn and never evaluated, and an operator would take the spacing that belongs between
-        // two operands
+        // a leading minus is part of the number, not an operator, which would take the spacing of one
+        // (these tokens are only drawn, never evaluated)
         private static List<MathToken> DigitTokens(string text)
         {
             List<MathToken> tokens = new List<MathToken>();
@@ -343,10 +319,10 @@ namespace FluentMath.Models
 
         // === pairs ===
 
-        // what a Casio calls the two values; with a decimal comma the layout draws the separator as a
-        // semicolon, the way it draws the one between two arguments
+        // with a decimal comma the layout draws it as a semicolon, like the one between two arguments
         private const string PairSeparator = ", ";
 
+        // what a Casio calls the two values
         private static (string First, string Second) PairNames(ResultKind kind)
         {
             return kind switch
@@ -383,9 +359,7 @@ namespace FluentMath.Models
         }
 
         // every significant digit up to twelve, and a power of ten outside the window
-        //
-        // the window is judged on the rounded value, so a number that rounds up to 1e12 is not written as
-        // thirteen digits
+        // (judged on the rounded value, so a number that rounds up to 1e12 is not thirteen digits)
         private static WrittenDecimal WriteNormal(double value, double lowerBound)
         {
             double rounded = RoundToSignificantDigits(value, SignificantDigits);
@@ -400,18 +374,14 @@ namespace FluentMath.Models
             return new WrittenDecimal(ToPlainString(value));
         }
 
-        // exactly this many decimals; a number too large for the display is written with a power of ten
-        // whose mantissa keeps them
-        //
-        // a negative number that rounds to nothing keeps its minus, since the digits carry the value on
-        // into the next calculation and the sign would otherwise be lost there
+        // exactly this many decimals; a number too large gets a power of ten whose mantissa keeps them
+        // (a negative number that rounds to nothing keeps its minus for the next calculation)
         private static WrittenDecimal WriteFixed(double value, int decimals)
         {
             (decimal mantissa, int exponent) = Decompose(value);
             if (exponent >= 12) return WriteScientific(value, decimals + 1);
 
-            // below half the last decimal the value rounds to zero, and scaling it would leave the range
-            // a decimal holds
+            // below half the last decimal it rounds to zero; scaling it would leave the decimal range
             decimal plain = exponent < -decimals - 1 ? 0m : Scale(mantissa, exponent);
             decimal rounded = Math.Round(plain, decimals, MidpointRounding.AwayFromZero);
 
@@ -446,9 +416,8 @@ namespace FluentMath.Models
             return value < 0 ? "-" + digits : digits;
         }
 
-        // the value as a mantissa from 1 to below 10 and its power of ten, read off the fifteen digits a
-        // Casio holds, so it rounds the way it reads: 2.675 goes to 2.68 where the double just below it
-        // would round down
+        // a mantissa from 1 to below 10 and its power of ten, read off the fifteen digits a Casio holds,
+        // so 2.675 rounds to 2.68
         private static (decimal Mantissa, int Exponent) Decompose(double value)
         {
             string text = value.ToString("E14", CultureInfo.InvariantCulture);
@@ -482,9 +451,8 @@ namespace FluentMath.Models
             return (int)Math.Floor(magnitude / 3.0) * 3;
         }
 
-        // whether the ENG view can write the value over this power of ten: the mantissa has to stay a
-        // number the display writes without a power of its own, from 1e-9 up to below 1e12, which is
-        // where ENG and its shift stop stepping
+        // whether ENG can write the value over this power of ten: the mantissa has to stay from 1e-9 up
+        // to below 1e12, where ENG and its shift stop stepping
         public static bool CanWriteEngineering(double value, int exponent)
         {
             double rounded = RoundToSignificantDigits(value, SignificantDigits);
@@ -494,11 +462,9 @@ namespace FluentMath.Models
             return magnitude >= -9 && magnitude < 12;
         }
 
-        // the value over that power of ten, the mantissa written the way the number format writes
-        // digits: up to twelve significant ones in Norm, n decimals in Fix and n significant digits in Sci
-        //
-        // with the prefixes on, a power that has one is written as it, 1.234k, and the power 0 as nothing
-        // at all; without them the power is always written, 1234×10⁰, as on a Casio
+        // the value over that power of ten, the mantissa in the number format (Norm twelve significant
+        // digits, Fix n decimals, Sci n significant digits)
+        // (with prefixes 1.234k, and nothing for the power 0; without them always the power, 1234×10⁰)
         public static WrittenDecimal Engineering(double value, int exponent, NumberFormat format, bool usePrefixes)
         {
             (decimal mantissa, int magnitude) = Decompose(value);
@@ -537,10 +503,8 @@ namespace FluentMath.Models
 
         // === prime factors ===
 
-        // the primes of the value with their exponents, smallest first, for a whole number from 1 to
-        // MaxFactorised as the display shows it; 1 has none and comes back as an empty list
-        //
-        // anything else has no prime factors, which the Casio answers with a Math ERROR
+        // the primes of a whole number from 1 to MaxFactorised with their exponents, smallest first
+        // (1 gives an empty list, anything else false)
         public static bool TryPrimeFactors(double value, out List<(long Prime, int Exponent)> factors)
         {
             factors = new List<(long Prime, int Exponent)>();
@@ -569,8 +533,7 @@ namespace FluentMath.Models
             return true;
         }
 
-        // real powers and real times signs, so the shown factors carry on into the next calculation as
-        // the product they are
+        // real powers and times signs, so the factors carry on as the product they are
         public static List<MathToken> PrimeFactorTokens(List<(long Prime, int Exponent)> factors)
         {
             if (factors.Count == 0) return DigitTokens("1");
@@ -599,11 +562,8 @@ namespace FluentMath.Models
 
         // === exact forms ===
 
-        // the fraction a value is shown as: its exact value when that is a rational, the numeric search
-        // below when it has none, and nothing at all for a value known to be irrational; a whole number is
-        // its own simplest form and has none either
-        //
-        // only a fraction that fits the budget counts, so 1÷12345 is 1/12345 and a longer one a decimal
+        // the fraction a value is shown as: its exact rational, else the numeric search; none for an
+        // irrational or a whole number, and none past the budget (1÷12345 is 1/12345, a longer one a decimal)
         public static bool TryFraction(MathValue value, out long numerator, out long denominator)
         {
             numerator = 0;
@@ -673,10 +633,8 @@ namespace FluentMath.Models
 
         // === recurring decimals ===
 
-        // the fraction written out by long division, split into the digits in front of the period and the
-        // period itself: 7/3 is 2. and 3, 5/12 is 0.41 and 6
-        //
-        // a fraction that ends has no period, and one whose period ends too late has none shown
+        // the fraction by long division, split into the digits before the period and the period: 7/3 is
+        // 2. and 3, 5/12 is 0.41 and 6 (none for a fraction that ends or whose period ends too late)
         public static bool TryRecurring(MathValue value, out string leading, out string period)
         {
             leading = "";
@@ -692,8 +650,7 @@ namespace FluentMath.Models
             StringBuilder digits = new StringBuilder();
             Dictionary<long, int> seen = new Dictionary<long, int>();
 
-            // a remainder that comes round again starts the same digits again, and the period is what
-            // lies between its two appearances
+            // a remainder that comes round again repeats the digits; the period lies between its appearances
             while (remainder != 0)
             {
                 if (seen.TryGetValue(remainder, out int start))
@@ -718,12 +675,9 @@ namespace FluentMath.Models
 
         // === sexagesimal ===
 
-        // the value as degrees, minutes and seconds, the seconds to two decimals and without the zeros
-        // behind them: 2.2583 is 2°15′29.88″ and 2.5 is 2°30′0″; a second that rounds up to sixty carries
-        // on into the minutes and the degrees
-        //
-        // read off the fifteen digits a Casio holds, the way the fixed decimals are; a negative value that
-        // rounds to nothing keeps its minus, as it does there
+        // the value as degrees, minutes and seconds, the seconds to two decimals without trailing zeros:
+        // 2.2583 is 2°15′29.88″, 2.5 is 2°30′0″
+        // (read off the fifteen digits a Casio holds; a negative value that rounds to nothing keeps its minus)
         public static bool TrySexagesimal(double value, out bool negative, out long degrees, out long minutes, out string seconds)
         {
             negative = value < 0;
@@ -774,12 +728,8 @@ namespace FluentMath.Models
 
         // === roots and π ===
 
-        // an irrational exact value the way a Casio writes it: up to two terms with roots over one
-        // denominator, the rational term first, (√6−√2)/4 or 5+2√6; or a rational times π, with the
-        // coefficient as a fraction in front, 1/6π
-        //
-        // null when there is no such value, or when it does not fit the ranges a Casio shows it in; the
-        // caller writes the decimal then
+        // an irrational exact value the way a Casio writes it: up to two terms of roots over one
+        // denominator, (√6−√2)/4 or 5+2√6, or a rational times π, 1/6π; null outside the Casio ranges
         private static string? ExactFormLatex(ExactValue? exact, string command)
         {
             if (TryPiForm(exact, out long piNumerator, out long piDenominator))
@@ -823,11 +773,8 @@ namespace FluentMath.Models
             return latex.ToString();
         }
 
-        // the same form as tokens, mirroring ExactFormLatex; asInput writes a leading minus as the sign the
-        // evaluator reads rather than as part of a number, which is the one difference between what is
-        // drawn and what a continuing calculation is seeded with
-        //
-        // the roots are real roots and π is the real constant, so the seed evaluates back to the exact value
+        // the same form as tokens, mirroring ExactFormLatex, with real roots and π so a seed evaluates
+        // back exactly; asInput writes a leading minus as the sign the evaluator reads
         public static List<MathToken>? ExactFormTokens(MathValue value, bool asInput)
         {
             if (TryPiForm(value.Exact, out long piNumerator, out long piDenominator))
@@ -885,8 +832,7 @@ namespace FluentMath.Models
             return tokens;
         }
 
-        // a minus that stands for the whole value: drawn as part of the number the way a negative decimal
-        // is, and typed as the sign the evaluator reads in front of its operand
+        // a minus for the whole value: drawn as part of the number, typed as the sign
         private static List<MathToken> LeadingSign(bool negative, bool asInput)
         {
             if (!negative) return new List<MathToken>();
@@ -943,13 +889,8 @@ namespace FluentMath.Models
 
         // === fractions ===
 
-        // the simplest fraction that still hits the value, found by continued-fraction expansion, which
-        // is what lets 0.333333333333 come back as a third
-        //
-        // this is numeric and nothing else: a result that came out of a root or a pi has no fraction to
-        // find here, and the caller leaves it as a decimal
-        // it only runs for a value that has no exact one, a logarithm or e say, since an exact value
-        // knows its fraction; its caps are what keep an irrational out there
+        // the simplest fraction that still hits the value, by continued fraction expansion (0.333333333333
+        // is a third); only for a value without an exact one, whose caps keep an irrational out
         public static bool TryToFraction(double value, out long numerator, out long denominator)
         {
             numerator = 0;
@@ -978,8 +919,7 @@ namespace FluentMath.Models
 
                 remaining = 1.0 / fraction;
 
-                // a term past the cap can only ever produce a denominator past it as well, and checking
-                // it here is also what keeps the multiplication below inside a long
+                // a term past the cap gives a denominator past it too; (also keeps the product inside a long)
                 long term = (long)Math.Floor(remaining);
                 if (term > MaxFractionDenominator) break;
 
@@ -995,9 +935,7 @@ namespace FluentMath.Models
 
             if (currentDenominator <= 0) return false;
 
-            // the fraction is the same number when it shows the same twelve digits; a fixed distance of
-            // 1e-12 times the value was tighter than the rounding itself once a whole part took a digit,
-            // and turned 7/3 away because 2.33333333333 is 3.3e-12 short of it
+            // the fraction is the same number when it shows the same twelve digits
             double candidate = (double)currentNumerator / currentDenominator;
             if (RoundToSignificantDigits(candidate, SignificantDigits) != Math.Abs(rounded)) return false;
 
@@ -1009,7 +947,7 @@ namespace FluentMath.Models
 
         // === helpers ===
 
-        // shared by both output shapes, so a rounding carry is handled in one place rather than two
+        // shared by both output shapes, so a rounding carry is handled once
         private static (string Mantissa, int Exponent) SplitScientific(double value)
         {
             int exponent = (int)Math.Floor(Math.Log10(Math.Abs(value)));
@@ -1033,8 +971,7 @@ namespace FluentMath.Models
             int magnitude = (int)Math.Floor(Math.Log10(Math.Abs(value)));
             int decimals = digits - 1 - magnitude;
 
-            // a number far above the significant digits gets rounded on the other side of the point,
-            // which Math.Round cannot express, so it is scaled down and back up instead
+            // rounding left of the point, which Math.Round cannot express, by scaling down and back up
             if (decimals < 0)
             {
                 double scale = Math.Pow(10, -decimals);
@@ -1044,18 +981,15 @@ namespace FluentMath.Models
             if (decimals <= MaxRoundingDecimals) return Math.Round(value, decimals, MidpointRounding.AwayFromZero);
 
             // a small number needs more decimals than Math.Round takes, so its mantissa is rounded and
-            // scaled back; capping the decimals instead cost 1.2345678901234e-8 four of its twelve digits
+            // scaled back
             double unit = Math.Pow(10, magnitude);
             return Math.Round(value / unit, digits - 1, MidpointRounding.AwayFromZero) * unit;
         }
     }
 
 
-    // a decimal the way the display writes it: the digits, and behind them a power of ten, a decimal
-    // prefix or nothing
-    //
-    // the one shape both outputs and the seed of the next calculation are built from, so what is drawn,
-    // what is carried on and what Rnd returns are the same number
+    // a decimal the way the display writes it: the digits, and behind them a power of ten, a prefix or
+    // nothing; (what is drawn, carried on and returned by Rnd is built from this one shape)
     public readonly struct WrittenDecimal
     {
         public string Digits { get; } // a negative number starts with a plain minus

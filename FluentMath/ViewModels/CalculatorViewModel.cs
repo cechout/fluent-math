@@ -8,11 +8,9 @@ using System.Windows.Input;
 
 namespace FluentMath.ViewModels
 {
-    // the only translator between the keypad and the input engine
-    //
-    // every button on the standard and the scientific page is bound to the same InputCommand and
-    // identifies itself through its CommandParameter, so adding a key is a XAML change plus one arm in
-    // the switch below; the pages themselves stay free of input logic, and each has a ViewModel of its own
+    // the calculator ViewModel:
+    // the only translator between the keypad and the input engine; every key sends its CommandParameter
+    // through InputCommand, so a new key is a XAML change plus one arm in the switch below
     public class CalculatorViewModel : INotifyPropertyChanged
     {
         // === fields ===
@@ -20,20 +18,16 @@ namespace FluentMath.ViewModels
         private readonly MathInputManager _inputManager = new MathInputManager();
         private readonly MathEvaluator _evaluator = new MathEvaluator();
 
-        // the calculator setup; shared with the settings page, which is why it is handed in rather than
-        // owned, and read at the moment it matters rather than copied
+        // shared with the settings page, so handed in and read when it matters, never copied
         private readonly CalculatorSettings _settings;
 
-        // true while the display shows a result instead of the formula being typed; the next keypress
-        // decides whether that result is dropped or carried into the next calculation
+        // the display shows a result; the next key drops it or carries it on
         private bool _isShowingResult;
 
-        // which shape the shown result is in; the S to D key cycles it, every = starts over at the form the
-        // settings open a result in
+        // the shape of the shown result; S⇔D cycles it, every = starts at the settings form
         private AnswerForm _answerForm;
 
-        // whether a fraction is shown mixed rather than improper; every = starts over at the settings, and
-        // the shift of S to D swaps it
+        // a fraction shown mixed rather than improper; SHIFT S⇔D swaps it, every = starts at the settings
         private bool _mixedFraction;
 
         // the result on screen, a pair included; LastAnswer on the evaluator only keeps its first value
@@ -45,7 +39,7 @@ namespace FluentMath.ViewModels
 
         // === display properties ===
 
-        // both hold LaTeX, not plain text; ScientificPage feeds them straight to KaTeX
+        // both hold LaTeX; (only the tests read it, the display draws the tokens)
         private string _inputAndResultText = "0";
         public string InputAndResultText
         {
@@ -61,10 +55,7 @@ namespace FluentMath.ViewModels
         }
 
         // the same snapshot as CalculationText, as tokens
-        //
-        // it has to be a copy: = deliberately leaves the tree alone so a Math ERROR can be corrected, and
-        // MathInputManager clears its root list in place, so a reference would come back empty the moment
-        // the next calculation starts
+        // (a copy; the manager clears its root list in place when the next calculation starts)
         private IReadOnlyList<MathToken> _calculationTokens = new List<MathToken>();
         public IReadOnlyList<MathToken> CalculationTokens
         {
@@ -77,13 +68,8 @@ namespace FluentMath.ViewModels
         }
 
         // what the input line draws, and where the caret stands in it
-        //
-        // while a formula is being typed these are the live tree and the live cursor rather than a copy:
-        // the display is rebuilt on every keystroke anyway, and the caret is matched by list identity,
-        // which is the only thing that tells one empty slot from another
-        //
-        // a result replaces the tokens and drops the caret; a failed evaluation replaces both with a line
-        // of text, because an error message is not a formula
+        // while typing, the live tree and cursor (the caret is matched by list identity, which tells two
+        // empty slots apart); a result drops the caret, an error replaces both with a line of text
         private IReadOnlyList<MathToken> _inputTokens = new List<MathToken>();
         public IReadOnlyList<MathToken> InputTokens => _inputTokens;
 
@@ -99,8 +85,7 @@ namespace FluentMath.ViewModels
             CaretIndex = caretIndex;
             InputErrorText = errorText;
 
-            // always raised, never guarded on a change: while typing the list is the same object every
-            // time and only its contents move
+            // always raised; while typing the list is the same object and only its contents move
             OnPropertyChanged(nameof(InputTokens));
         }
 
@@ -121,8 +106,7 @@ namespace FluentMath.ViewModels
 
         // === angle mode ===
 
-        // the settings own the mode, so it survives a trip to another page; this pair exists so the keypad
-        // can set it and the indicator above the display can follow it
+        // the settings own the mode; this lets the keypad set it and the selector follow it
         public AngleMode CurrentAngleMode
         {
             get => _settings.AngleMode;
@@ -136,8 +120,7 @@ namespace FluentMath.ViewModels
             }
         }
 
-        // the three letters a Casio prints for the unit; the selector in the caret bar carries them, so
-        // the label is what the user reads off the selector rather than an indicator next to it
+        // the three letters a Casio prints for the unit, on the selector in the caret bar
         public string AngleModeLabel
         {
             get
@@ -149,9 +132,7 @@ namespace FluentMath.ViewModels
             }
         }
 
-        // cycle is what the single selector button sends, since a button that shows the current unit can
-        // only offer the next one; the three direct keys stay handled for the tests that press them, the
-        // settings page writes the unit into the settings itself
+        // the selector sends cycle; the three direct keys stay for the tests that press them
         private void SetAngleMode(string sign)
         {
             if (sign == "cmd_angle_cycle") { CurrentAngleMode = NextAngleMode(CurrentAngleMode); }
@@ -160,7 +141,7 @@ namespace FluentMath.ViewModels
             else { CurrentAngleMode = AngleMode.Degrees; }
         }
 
-        // degrees, radians, gradians and round again, the order the units are listed in on a Casio setup
+        // degrees, radians, gradians and round again, the Casio setup order
         private static AngleMode NextAngleMode(AngleMode current)
         {
             if (current == AngleMode.Degrees) return AngleMode.Radians;
@@ -172,11 +153,8 @@ namespace FluentMath.ViewModels
 
         // === shift layer ===
 
-        // the second keyboard layer is not a separate panel; each shiftable key is two buttons stacked in
-        // the same grid cell, and these two flags swap which of them is visible
-        //
-        // plain bools rather than Visibility, which x:Bind converts on its own; that keeps the whole
-        // ViewModel free of WinUI and is what lets it be tested without the Windows App SDK
+        // each shiftable key is two buttons in one cell; these flags swap which is visible
+        // (plain bools, x:Bind converts them, so the ViewModel stays free of WinUI and testable)
         private bool _isShiftLayer;
 
         public bool IsNormalLayer => !_isShiftLayer;
@@ -186,12 +164,10 @@ namespace FluentMath.ViewModels
 
         // === trig panel layers ===
 
-        // the trig panel carries four grids of the same six keys and shows one of them; these two latches
-        // pick which, exactly the way the shift key picks a keypad layer, and they are plain bools for
-        // the same reason
+        // the two latches pick which of the four grids of the trig panel is up, like shift picks a layer
         //
         // --- latches ---
-        private bool _isTrigInverseLatched;      // sin becomes sin to the minus one
+        private bool _isTrigInverseLatched;      // sin becomes sin⁻¹
         private bool _isTrigHyperbolicLatched;   // sin becomes sinh
 
         public bool IsTrigInverseLatched => _isTrigInverseLatched;
@@ -203,8 +179,7 @@ namespace FluentMath.ViewModels
         public bool IsTrigHyperbolicUnlatched => !_isTrigHyperbolicLatched;
 
         // --- which grid is up ---
-        // one property per grid rather than one binding that reads both latches, because a function
-        // binding does not reliably re-evaluate when the second property it reads is the one that moved
+        // one property per grid; a function binding does not reliably re-evaluate on its second argument
         public bool ShowTrigPlain => !_isTrigInverseLatched && !_isTrigHyperbolicLatched;
 
         public bool ShowTrigInverse => _isTrigInverseLatched && !_isTrigHyperbolicLatched;
@@ -213,8 +188,7 @@ namespace FluentMath.ViewModels
 
         public bool ShowTrigInverseHyperbolic => _isTrigInverseLatched && _isTrigHyperbolicLatched;
 
-        // the page calls this when the panel closes, whether a function was pressed or the panel was
-        // dismissed; a latch that outlived its panel would open the next one on a layer nobody chose
+        // called when the panel closes, so the next one opens on the plain layer
         public void ResetTrigLatches()
         {
             if (!_isTrigInverseLatched && !_isTrigHyperbolicLatched) return;
@@ -258,7 +232,7 @@ namespace FluentMath.ViewModels
 
         // === constructor ===
 
-        // a setup of its own with every setting at its default, for a caller that has no shared one
+        // a setup of its own at the defaults, for a caller without a shared one
         public CalculatorViewModel() : this(new CalculatorSettings()) { }
 
         public CalculatorViewModel(CalculatorSettings settings)
@@ -271,37 +245,32 @@ namespace FluentMath.ViewModels
             BackspaceCommand = new RelayCommand<object>(_ => Backspace());
             ToggleAnswerFormCommand = new RelayCommand<object>(_ => ToggleAnswerForm());
 
-            // the starting display comes from the engine rather than a literal, so the cursor is already
-            // where it belongs before the first key is pressed
+            // the starting display from the engine, so the cursor stands right before the first key
             PublishInput();
         }
 
 
         // === input handling ===
 
-        // three kinds of parameter arrive here: a "cmd_" keyword for anything structural, a bare operator,
-        // and anything else, which is treated as a digit or a decimal point
-        //
-        // the panels send the same parameters as the keys below them, so nothing about a key being in a
-        // panel rather than on the pad reaches this far
+        // three kinds of parameter: a "cmd_" keyword for anything structural, a bare operator, and a digit
+        // or decimal point; (a panel key sends the same as a pad key)
         private void AddToTextBox(string sign)
         {
-            // shift only swaps the keyboard layer, it must never disturb the input or a shown result
+            // shift only swaps the layer and never touches the input or a shown result
             if (sign == "cmd_shift")
             {
                 ToggleShift();
                 return;
             }
 
-            // the same holds for the two latches inside the trig panel
+            // the same for the two trig latches
             if (sign == "cmd_trig_inv" || sign == "cmd_trig_hyp")
             {
                 ToggleTrigLatch(sign);
                 return;
             }
 
-            // the angle unit is a mode rather than an input, so like shift it must leave both the
-            // formula and a shown result exactly where they are
+            // and for the angle unit, a mode rather than an input
             if (sign.StartsWith("cmd_angle_"))
             {
                 SetAngleMode(sign);
@@ -309,17 +278,12 @@ namespace FluentMath.ViewModels
             }
 
             // --- revisit: keys drawn before they compute ---
-            // the history and memory keys in the header are drawn ahead of the history list and the
-            // variable store they need
-            // they return here rather than falling out of the switch below, because the fall-through
-            // reaches BeginInputAfterResult first, which clears a shown result and leaves the display as
-            // a bare 0 with the formula gone
-            // the trigger is the branch that implements them; a name leaves this set as it lands, and
-            // Vocabulary.NotImplemented in the test project is held against it
+            // the history and memory keys wait on the history list and the variable store
+            // they return here, since the fall-through would clear a shown result to a bare 0
+            // trigger: the branch that implements one takes it out of this set and Vocabulary.NotImplemented
             if (NotImplementedKeys.Contains(sign)) return;
 
-            // a view key changes how the result is shown and leaves the formula behind it alone, so it is
-            // handled before BeginInputAfterResult the way the mode keys are
+            // a view key changes how the result is shown and leaves the formula alone, like the mode keys
             if (sign == "cmd_prime")
             {
                 ShowPrimeFactors();
@@ -353,14 +317,9 @@ namespace FluentMath.ViewModels
 
             if (_isShowingResult) BeginInputAfterResult(sign);
 
-            // an empty formula is shown as a 0, so a key that reads an operand has to find one standing
-            // there; without this the 0 on screen has nothing behind it and x squared opens on an empty
-            // box instead, which reads as the 0 having been deleted
-            // only at the root, since an empty slot shows a box rather than a 0 and promises nothing
-            //
-            // the mixed fraction is the exception: its empty template is what the key is there for, and a
-            // 0 lifted into the whole part would put the cursor past the slot that is typed first
-            // a marker of the °′″ key stands behind the 0 the same way, which is how 0°39′ is typed
+            // an empty formula shows a 0, so a key that reads an operand finds it standing there (only at
+            // the root; an empty slot shows a box); not the mixed fraction, whose empty template is the point
+            // a °′″ marker stands behind the 0 the same way, which is how 0°39′ is typed
             if (((ContinuesFromResult(sign) && sign != "cmd_frac_mixed") || sign == "cmd_dms")
                 && _inputManager.RootTokens.Count == 0)
             {
@@ -396,8 +355,7 @@ namespace FluentMath.ViewModels
                         _inputManager.StartPower();
                         break;
 
-                    // x squared is the generic power with the exponent prefilled; the Right afterwards
-                    // steps back out so typing continues after the power instead of inside it
+                    // the power with 2 prefilled; Right steps back out, so typing continues after it
                     case "cmd_pow_2":
                         _inputManager.StartPower();
                         _inputManager.AddNumber("2");
@@ -647,8 +605,7 @@ namespace FluentMath.ViewModels
                         _inputManager.StartPowerOfE();
                         break;
 
-                    // the log key is the common logarithm, the way it is on an FX-991; a chosen base is
-                    // its own key, so an untouched log never opens an empty box for one
+                    // log is the common logarithm, as on an FX-991; a chosen base is its own key
                     case "cmd_log":
                         _inputManager.StartLogarithm(customBase: false);
                         break;
@@ -671,20 +628,17 @@ namespace FluentMath.ViewModels
                 _inputManager.AddNumber(sign);
             }
 
-            // the engine has no change notification of its own, so the display is republished after
-            // every single keypress
+            // the engine has no change notification, so the display is republished after every key
             PublishInput();
         }
 
-        // set from the page out of MathDisplayStyle, since the engine has no idea a display exists
+        // set by the display from its layout style; the engine knows no display
         public bool UseDisplayFractions { get; set; }
 
-        // what the decimal point key is labelled with; the key always types a dot, which the display draws
-        // as the mark the settings ask for
+        // the decimal key label; the key always types a dot, drawn as the mark the settings ask for
         public string DecimalMarkLabel => _settings.DecimalMarkText;
 
-        // the settings page writes into the settings directly, while a page kept alive across the visit
-        // still shows the labels it read before it; the page calls this on its way back into view
+        // a cached page calls this on its way back, since the settings page writes the settings directly
         public void RefreshSettingLabels()
         {
             OnPropertyChanged(nameof(CurrentAngleMode));
@@ -692,15 +646,13 @@ namespace FluentMath.ViewModels
             OnPropertyChanged(nameof(DecimalMarkLabel));
         }
 
-        // the input line is the only one that can be clicked, so it is the only one that asks for the
-        // addresses that make a click resolvable back into a cursor position
+        // the input line is the only clickable one, so only it asks for addresses
         private void PublishInput()
         {
             InputAndResultText = _inputManager.GetLatexString(withCursor: true, withAddresses: true,
                 displayFractions: UseDisplayFractions);
 
-            // an empty formula shows a zero rather than nothing, so the display is never blank; the caret
-            // then stands behind that zero the same way it stands behind a typed digit
+            // an empty formula shows a 0 with the caret behind it, so the display is never blank
             if (_inputManager.RootTokens.Count == 0)
             {
                 List<MathToken> zero = new List<MathToken> { new MathToken(TokenType.Number, "0") };
@@ -712,26 +664,16 @@ namespace FluentMath.ViewModels
                 _inputManager.ActiveTokens, _inputManager.ActiveCursorIndex, null);
         }
 
-        // whether a point in the display is a place the cursor can be aimed at
-        //
-        // the zero on an empty formula is drawn and not typed: it holds one position rather than two,
-        // so a click on either side of it would leave the cursor exactly where it already stands, and a
-        // preview of that click would be promising a move that cannot happen
+        // whether the display is worth aiming at; the drawn 0 of an empty formula holds one position only
         public bool CanPlaceCursor => _inputManager.RootTokens.Count > 0;
 
-        // a click in the display rather than a keypress; the address is written by the renderer and
-        // checked by the input manager, so an unusable one simply changes nothing
+        // a click in the display; an address the input manager cannot use changes nothing
         public void PlaceCursor(string address)
         {
             if (!CanPlaceCursor) return;
 
-            // after = the display holds the result and not the formula that produced it, so the address
-            // was worked out against the result; seeding it is what puts those very tokens into the
-            // manager and makes the address mean the place it looked like it meant
-            //
-            // a result whose seeded shape is not the one that was drawn, a scientific form against the
-            // plain string it is seeded from, keeps the cursor where the seed left it rather than
-            // dropping the click on the floor
+            // after = the address was worked out against the result, so the result is seeded first
+            // (a seed shaped unlike the drawing keeps the cursor where the seed left it)
             bool seeded = false;
             if (_isShowingResult)
             {
@@ -746,9 +688,8 @@ namespace FluentMath.ViewModels
             PublishInput();
         }
 
-        // after = the display holds a result rather than the formula that produced it, so the next key
-        // has to say what happens to it: an operator carries it into the next calculation, an arrow key
-        // goes back to editing the old formula, anything else starts over
+        // the key after =: an operator carries the result on, an arrow key edits the old formula,
+        // anything else starts over
         private void BeginInputAfterResult(string sign)
         {
             _isShowingResult = false;
@@ -765,24 +706,17 @@ namespace FluentMath.ViewModels
             _inputManager.Clear();
         }
 
-        // the keys that take the operand on their left as a whole, where a result written as more than one
-        // operand has to go in brackets to stay one; EXP is a times sign and does not
+        // the keys that take the operand on their left as a whole, so a compound result goes in brackets
+        // (not EXP, a times sign)
         private static bool TakesTheOperandBefore(string sign)
         {
             return (ContinuesFromResult(sign) && sign != "cmd_exp") || sign == "cmd_npr" || sign == "cmd_ncr";
         }
 
-        // the next calculation continues from exactly what the display is showing, digits or fraction,
-        // rather than from an Ans token; watching the number stay put is what makes it read as the same
-        // calculation carrying on instead of a new one
+        // the next calculation continues from exactly what the display shows, not from an Ans token
         //
-        // a pair carries on as its first value, the one Ans holds as well; a decimal carries on as the
-        // digits the number format wrote, with the full value behind them
-        //
-        // an exact form carries on as real roots and a real π, so the next calculation is exact again, and
-        // a recurring decimal, which cannot be typed, as the fraction it stands for
-        // an angle in degrees, minutes and seconds carries on as real markers and stays an angle, with the
-        // full value behind the rounded seconds
+        // a pair as its first value; a decimal as the written digits with the full value behind them; an
+        // exact form as real roots and π; a recurring decimal as its fraction; an angle as real markers
         private void SeedWithShownResult()
         {
             MathValue value = _result.FirstValue;
@@ -847,14 +781,9 @@ namespace FluentMath.ViewModels
             else _inputManager.SeedWithScientific(written.Digits, mantissa, exponent);
         }
 
-        // the keys that read an operand to their left instead of opening a new one; pressing one of
-        // them on a shown result continues from it, the way 5 = followed by x squared carries on with
-        // the 5 on a Casio rather than starting over
-        //
-        // a key missing from this list is not merely inconvenient: the result is cleared first, the key
-        // then finds nothing to work on and refuses, and the display is left showing a bare 0 with the
-        // formula gone
-        // CommandVocabularyTests presses every key in the vocabulary on a result to catch exactly that
+        // the keys that read an operand to their left; on a shown result they carry it on, as 5 = x²
+        // does on a Casio
+        // (a key missing here clears the result to a bare 0; CommandVocabularyTests presses every key on one)
         private static bool ContinuesFromResult(string sign)
         {
             return sign == "cmd_fact"
@@ -871,25 +800,19 @@ namespace FluentMath.ViewModels
         // what every decimal prefix key sends, followed by the name of its prefix
         private const string PrefixCommand = "cmd_prefix_";
 
-        // nPr, nCr and the division with remainder stand between two operands the way the arithmetic
-        // signs do, so a shown result is carried on as their left one, the way a Casio writes AnsC
+        // nPr, nCr and the division with remainder stand between two operands like the arithmetic signs
         private static bool IsOperator(string sign)
         {
             return sign == "+" || sign == "-" || sign == "*" || sign == "/"
                 || sign == "cmd_npr" || sign == "cmd_ncr" || sign == "cmd_div_r";
         }
 
-        // the keys that are drawn but compute nothing, see the revisit tag in AddToTextBox
-        //
-        // the two header keys, which are waiting on a history list and a variable store rather than on a
-        // token
+        // the keys drawn but computing nothing, see the revisit tag in AddToTextBox
         private static readonly HashSet<string> NotImplementedKeys = new HashSet<string>
         {
             "cmd_history", "cmd_memory"
         };
 
-        // the second keyboard layer is two buttons stacked in the same cell, so switching layers is
-        // purely a matter of which of the two is visible
         private void ToggleShift()
         {
             _isShiftLayer = !_isShiftLayer;
@@ -898,14 +821,12 @@ namespace FluentMath.ViewModels
             OnPropertyChanged(nameof(IsShiftLayer));
         }
 
-        // = deliberately leaves the tree alone; only the display switches over to the result, so a
-        // Math ERROR can be corrected instead of retyped from scratch
-        //
-        // says whether there is a result, which a view key pressed during input needs to know
+        // = leaves the tree alone, so a Math ERROR can be corrected rather than retyped
+        // (returns whether there is a result, for a view key pressed during input)
         private bool CalculateResult()
         {
-            // the history line shows the formula the way it was read, with a bracket pair around a product
-            // that binds tighter than the division in front of it; the tree itself stays as it was typed
+            // the history line shows the formula as read, with brackets around a product that binds
+            // tighter than the division before it
             List<MathToken> asRead = MathEvaluator.CloneWithImpliedBrackets(_inputManager.RootTokens);
 
             string readLatex = asRead.Count == 0
@@ -966,11 +887,8 @@ namespace FluentMath.ViewModels
             PublishInputDisplay(new List<MathToken>(), null, 0, ResultFormatter.ErrorToText(error));
         }
 
-        // FACT, the result as a product of prime powers; pressed again it goes back to the decimal
-        //
-        // pressed during input it evaluates first, which saves the = a Casio needs there; a result with no
-        // prime factors, a fraction, a negative number or 0, is the Math ERROR the Casio manual names
-        // a pair has none either and is factorised by its first value, the one it carries on as
+        // FACT, the result as a product of prime powers; pressed again, back to the decimal
+        // (during input it evaluates first; no prime factors is a Math ERROR, a pair uses its first value)
         private void ShowPrimeFactors()
         {
             if (!_isShowingResult && !CalculateResult()) return;
@@ -995,10 +913,9 @@ namespace FluentMath.ViewModels
 
         // ENG and its shift, the result over a power of ten that is a multiple of three
         //
-        // the first press of ENG writes the power that leaves one to three digits in front of the point,
-        // the first press of the shift one power further up, 0.123×10³ for 123; every press after that
-        // steps three powers down or up, until the mantissa would need a power of its own
-        // pressed during input it evaluates first; a pair turns into its first value, as it does for FACT
+        // the first ENG leaves one to three digits before the point, the first shift one power further up
+        // (0.123×10³ for 123); every press after steps three powers, until the mantissa needs a power itself
+        // (during input it evaluates first; a pair uses its first value)
         private void ShowEngineering(bool towardsSmallerPowers)
         {
             if (!_isShowingResult && !CalculateResult()) return;
@@ -1024,11 +941,8 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // the °′″ key on a result, which switches between degrees, minutes and seconds and the decimal the
-        // way it does on a Casio; during input it types a marker instead, see AddSexagesimalMarker
-        //
-        // a pair turns into its first value, as it does for FACT and ENG, and a value past the largest
-        // angle the form writes is left as it is
+        // the °′″ key on a result, between degrees, minutes and seconds and the decimal
+        // (a pair uses its first value; a value past the largest angle the form writes stays as it is)
         private void ToggleSexagesimal()
         {
             if (_answerForm == AnswerForm.Sexagesimal)
@@ -1045,8 +959,7 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // deg, the shown result back in decimal degrees from whichever view it was in; pressed during input
-        // it evaluates first
+        // deg, the result back in decimal degrees from any view; during input it evaluates first
         private void ShowDecimalDegrees()
         {
             if (!_isShowingResult && !CalculateResult()) return;
@@ -1055,14 +968,10 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // cycles the shown result through its exact form, its recurring decimal and its decimal, the way
-        // S⇔D does on a Casio: 7/3, 2.3 with a bar, 2.333333333; skipping whichever this value does not
-        // have, so √2/2 only switches with its decimal; a pair switches both values together, and has a
-        // form when either of them does
-        //
-        // the exact form comes from the exact value, so a result that came out of a logarithm or e has only
-        // the fraction the numeric search finds for it, if any
-        // pressed during input it evaluates first and then switches, which saves the = a Casio needs
+        // S⇔D: cycles the result through its exact form, recurring decimal and decimal (7/3, 2.3 with a
+        // bar, 2.333333333), skipping a form it lacks; a pair switches both values together
+        // (a result of a logarithm or e has only the fraction the numeric search finds; during input it
+        // evaluates first)
         private void ToggleAnswerForm()
         {
             if (!_isShowingResult && !CalculateResult()) return;
@@ -1072,8 +981,7 @@ namespace FluentMath.ViewModels
                 ? 0
                 : Array.IndexOf(cycle, _answerForm);
 
-            // the prime factors, the ENG view and degrees, minutes and seconds are left for the decimal, from
-            // where the cycle starts over
+            // the other views go to the decimal, where the cycle starts over
             if (at < 0)
             {
                 _answerForm = AnswerForm.Decimal;
@@ -1092,11 +1000,8 @@ namespace FluentMath.ViewModels
             }
         }
 
-        // the shift of S⇔D, which a Casio labels a b/c ⇔ d/c: the fraction swaps between improper and mixed,
-        // and is shown in the new form from whichever view the result was in
-        //
-        // a result without a fraction is left alone, and a proper fraction has no mixed form and stays as
-        // it is; pressed during input it evaluates first, like the key it is the shift of
+        // SHIFT S⇔D, a b/c ⇔ d/c on a Casio: swaps the fraction between improper and mixed, from any view
+        // (no fraction, or a proper one, stays as it is; during input it evaluates first)
         private void SwapFractionForm()
         {
             if (!_isShowingResult && !CalculateResult()) return;
@@ -1107,15 +1012,14 @@ namespace FluentMath.ViewModels
             PublishResult();
         }
 
-        // the exact form in the fraction form currently chosen; a value with no mixed form, a proper
-        // fraction or a root, is shown improper, which is the one form it has
+        // the exact form in the chosen fraction form; without a mixed form it is improper
         private AnswerForm ExactForm()
         {
             return _mixedFraction && HasForm(AnswerForm.Mixed) ? AnswerForm.Mixed : AnswerForm.Improper;
         }
 
-        // the form a new result opens in: an angle in degrees, minutes and seconds as one; otherwise, with
-        // exact first, the exact form when the value has one, and the decimal when it has none
+        // the form a new result opens in: an angle as one; with exact first the exact form if any, else
+        // the decimal
         private AnswerForm FirstAnswerForm()
         {
             if (_result.Kind == ResultKind.Single && _result.FirstValue.IsSexagesimal

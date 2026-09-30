@@ -3,17 +3,10 @@ using System.Collections.Generic;
 
 namespace FluentMath.Models.Layout
 {
-    // turns a point in the display back into a place in the token tree
-    //
-    // it walks the boxes rather than the tokens, because only the boxes know where anything ended up, and
-    // it answers with the address MathInputManager.SetCursorPosition already parses; that is the whole
-    // reason the layout carries addresses at all
-    //
-    // the line the point fell in is picked first and the position inside it second, rather than scoring
-    // every position in the formula against each other. A numerator and the row the fraction stands in
-    // cover the same piece of screen, and so do the base of a power and the row around it; scored
-    // together, a click on the base answers with the position in front of the whole power whenever that
-    // one happens to be a few pixels nearer sideways, which is a click that did nothing a reader can see
+    // turns a point in the display back into a place in the token tree, as the address
+    // MathInputManager.SetCursorPosition parses
+    // (the line first, then the position in it; scored together, a click on the base of a power could
+    // land in front of the whole power)
     public static class MathHitTest
     {
         // one token list as it was laid out: the box that holds it, how many lists it sits inside, and
@@ -45,16 +38,7 @@ namespace FluentMath.Models.Layout
         }
 
         // two lines that end within this much of each other end in the same place
-        //
-        // a slot and the row around it often share an edge exactly, and the two coordinates are sums of
-        // the same lengths added in a different order, so one of them can come out a rounding step short;
-        // without the slack, a click on the bottom edge of a denominator would answer above the fraction
-        //
-        // it is a floating point epsilon and not a fraction of a pixel, which is what it used to be: the
-        // gaps it is weighed against are em of a font size, so half a pixel is a real distance inside a
-        // script and swallowing it hands the click to the wrong line. At a fraction side padding of
-        // 0.05 em the two met exactly at a 10px font, and a click on the caret in front of a fraction
-        // answered with the position inside its numerator
+        // (a floating point epsilon; the edges are sums of the same lengths in a different order)
         private const double SamePlace = 1e-9;
 
         public static string NearestAddress(MathBox root, double x, double y)
@@ -64,11 +48,7 @@ namespace FluentMath.Models.Layout
             return line == null ? null : NearestStop(line, x)?.Address;
         }
 
-        // the same walk, answering with where the caret would be drawn rather than with where it would
-        // be put
-        //
-        // it reports a CaretPlacement, the very type the layout reports the real caret in, so a preview
-        // and the caret it previews are drawn by one piece of geometry and cannot drift apart
+        // the same walk, answering with where the caret would be drawn, as the CaretPlacement of the real one
         public static CaretPlacement? NearestCaret(MathBox root, double x, double y)
         {
             Line line = Target(root, ref x, ref y);
@@ -91,28 +71,22 @@ namespace FluentMath.Models.Layout
         {
             if (root == null) return null;
 
-            // a point outside the formula aims at the edge nearest to it: the display is wider and taller
-            // than what is drawn in it, and a click in that air is still a click at a place
+            // a point outside the formula aims at the nearest edge
             x = Math.Clamp(x, root.X, root.X + root.Width);
             y = Math.Clamp(y, root.Top, root.Bottom);
 
             List<Line> lines = new List<Line>();
             Collect(root, 0, lines);
 
-            // the root covers the whole formula and the point was just clamped into it, so the nearest
-            // miss is zero and only the lines the point really fell in are still in the running
+            // clamped into the root, so only the lines the point fell in stay in the running
             double nearest = double.MaxValue;
             foreach (Line line in lines)
             {
                 nearest = Math.Min(nearest, Misses(line.Box, x, y));
             }
 
-            // the innermost of them: a numerator sits inside the row the fraction stands in, and a point
-            // in both of them was aimed at the numerator
-            //
-            // two slots of one token are equally deep and can share an edge, which a base and its exponent
-            // always do; a point on that edge falls in both, and the one whose baseline it is nearer to is
-            // the one it was aimed at
+            // the innermost of them, a numerator over the row of its fraction
+            // (on an edge two slots share, a base and its exponent, the nearer baseline wins)
             Line target = null;
             double targetGap = 0;
 
@@ -162,9 +136,8 @@ namespace FluentMath.Models.Layout
             }
         }
 
-        // a row that carries an end address is a token list the cursor can stand in; one without it is a
-        // construction the engine built out of several boxes, such as a power or a logarithm, and it holds
-        // no position of its own
+        // a row with an end address is a token list the cursor can stand in; one without is a construction
+        // such as a power, with no position of its own
         private static Line LineOf(MathBox box, int depth)
         {
             if (box is PlaceholderBox placeholder)
@@ -180,8 +153,7 @@ namespace FluentMath.Models.Layout
             Line line = new Line(row, depth);
             foreach (MathBox child in row.Children)
             {
-                // a run covers several tokens and therefore several positions, each at the width that was
-                // measured for what precedes it
+                // a run covers several positions, each at its measured offset
                 if (child is TextRunBox run && run.TokenAddresses != null && run.TokenOffsets != null)
                 {
                     for (int offset = 0; offset < run.TokenAddresses.Count; offset++)

@@ -26,21 +26,14 @@ namespace FluentMath.Models
     }
 
 
-    // what a ToLatex call needs to know besides the token itself: which list the cursor is in, and the
-    // address of the list being rendered, so that a click in the display can be resolved back into a
-    // cursor position
-    //
-    // the address is built as the walk descends rather than stored on the tokens, because only the walk
-    // knows which token and which slot it is currently inside; a token never has to know its own place
-    //
-    // a step is written tokenIndex.slotIndex, and the slot index is the position in the list
-    // MathInputManager.GetSlots returns; the two have to stay in the same order, the address means
-    // nothing otherwise
+    // what a ToLatex call needs besides the token: the list the cursor is in, and the address of the list
+    // being rendered, built as the walk descends
+    // (a step is tokenIndex.slotIndex; the slot index has to match the order of MathInputManager.GetSlots)
     public class LatexRenderContext
     {
         public ScopeContext? ActiveScope { get; }
         public bool EmitAddresses { get; } // off for the history line, nothing there is clickable
-        public bool DisplayFractions { get; } // MathDisplayStyle.UseDisplayFractions, passed through
+        public bool DisplayFractions { get; } // MathLayoutStyle.UseDisplayFractions, passed through
 
         private readonly string _path; // address of the list being rendered, empty at the root
         private readonly int _tokenIndex; // the token in that list whose slots come next
@@ -81,19 +74,10 @@ namespace FluentMath.Models
     }
 
 
-    // one node of the input tree; a plain MathToken is a leaf carrying its own text (a number or an
-    // operator), the subclasses below add child token lists and become the branches
-    //
-    // ToLatex is the single place a token turns into something renderable, so a new token kind needs
-    // exactly one override here and no change anywhere else
-    //
-    // an empty child list falls back to an empty-slot box so a half-typed structure still draws instead
-    // of collapsing; a cursor standing in that slot does not replace the box, it sits beside it, because
-    // the box is the only thing holding the slot open
-    //
-    // ToLatex takes a render context because the cursor is drawn into the LaTeX itself, and because a
-    // token has to hand its slots their own address; everything else about the context is passed down
-    // untouched until the one list it belongs to renders it
+    // one node of the input tree:
+    // a plain MathToken is a leaf with its own text (a number or an operator); the subclasses below add
+    // child token lists and become the branches
+    // (ToLatex writes the LaTeX the tests read; an empty slot is a box, a cursor in it stands beside it)
     public class MathToken
     {
         public TokenType Type { get; set; }
@@ -111,15 +95,11 @@ namespace FluentMath.Models
         public virtual string ToLatex(LatexRenderContext context) { return Value; }
     }
 
-    // the full value behind the digits a shown result is carried on as
+    // the full value behind the digits a shown result is carried on as, so 1÷3 = ×3 is 1, not 0.999999999999
     //
-    // the display shows twelve significant digits and the next calculation starts from those digits, so
-    // without this 1÷3 followed by ×3 comes out as 0.999999999999; every digit of the run shares one of
-    // these, and the evaluator reads the full value for as long as the run is exactly those digits
-    // an edit inside the run adds a digit without one or takes one away, and the run reads as typed
-    //
-    // the magnitude only, since a minus in front is a sign token of its own; its exact value rides along,
-    // so √2 carried on as its decimal digits is still √2 in the next calculation, the way Ans is on a Casio
+    // every digit of the run shares one; the evaluator reads it while the run is exactly those digits,
+    // an edit makes the run read as typed
+    // (the magnitude only, a minus is a token of its own; the exact value rides along, so √2 stays √2)
     public sealed class SeededValue
     {
         public MathValue Magnitude { get; }
@@ -133,8 +113,7 @@ namespace FluentMath.Models
     }
 
 
-    // pi and e; both the numeric value and the symbol hang off the token, so a further constant is one
-    // entry here and no change in the evaluator or the renderer
+    // pi and e, with their value and symbol
     public class ConstantToken : MathToken
     {
         public double NumericValue { get; }
@@ -169,8 +148,7 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return _latex; }
     }
 
-    // the previous result, carried as a token rather than as its digits, so the whole double survives
-    // into the next calculation instead of only the twelve significant digits the display showed
+    // the previous result as a token, so the whole double survives, not only the twelve digits shown
     public class AnsToken : MathToken
     {
         public AnsToken() : base(TokenType.Answer, "Ans") { }
@@ -178,8 +156,7 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return "\\text{Ans}"; }
     }
 
-    // Ran#, a new random number every time the formula is evaluated; a leaf like Ans, since it takes no
-    // argument
+    // Ran#, a new random number on every evaluation
     public class RandomToken : MathToken
     {
         public RandomToken() : base(TokenType.Random, "Ran#") { }
@@ -187,8 +164,7 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return "\\text{Ran\\#}"; }
     }
 
-    // x, the variable a calculus structure runs over; anywhere else it is 0, the way an empty variable is
-    // on a Casio, until there is a variable store to give it a value
+    // x, the variable a calculus structure runs over; 0 anywhere else, as an empty variable on a Casio
     public class VariableToken : MathToken
     {
         public VariableToken() : base(TokenType.Variable, "x") { }
@@ -196,8 +172,7 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return "x"; }
     }
 
-    // the period of a recurring decimal, drawn under a bar the way a Casio draws 1÷3 as 0.3 with a bar
-    // over the 3; it only ever stands in a result and is never typed or evaluated
+    // the period of a recurring decimal, drawn under a bar (0.3 with a bar for 1÷3); only in a result
     public class RecurringToken : MathToken
     {
         public RecurringToken(string digits) : base(TokenType.Recurring, digits) { }
@@ -205,17 +180,11 @@ namespace FluentMath.Models
         public override string ToLatex(LatexRenderContext context) { return $"\\overline{{{Value}}}"; }
     }
 
-    // x!, the reciprocal, percent, the decimal prefixes and the markers of the °′″ key; all of them
-    // stand behind their operand instead of in front of it, which is the whole reason the evaluator has a
-    // postfix level at all
-    //
-    // the reciprocal is a bare superscript rather than a named call, so it sits on the operand the same
-    // way a Casio prints it
+    // x!, the reciprocal, percent, the decimal prefixes and the °′″ markers, all behind their operand
+    // (the reciprocal is a bare raised minus one, the way a Casio prints it)
     public class PostfixToken : MathToken
     {
-        // the three markers of an angle in degrees, minutes and seconds, with what the number in front of
-        // each is divided by and the sign it is written as; the order of the divisors is the order they
-        // follow each other in
+        // the three angle markers, with the divisor of the number in front and the sign; in writing order
         private static readonly Dictionary<string, (int Divisor, string Symbol, string Latex)> SexagesimalMarkers =
             new Dictionary<string, (int Divisor, string Symbol, string Latex)>
             {
@@ -224,12 +193,8 @@ namespace FluentMath.Models
                 ["seconds"] = (3600, "″", "{}''")
             };
 
-        // the decimal prefixes by name, with the power of ten each one stands for and the symbol it is
-        // written as
-        //
-        // 5k is 5000, a factor written behind a number that binds exactly as tightly as a factorial, so a
-        // prefix is a postfix like one; exa stays in, since the display writes a power of ten as ×10ⁿ and
-        // an E never stands for the exponent here
+        // the decimal prefixes by name, with their power of ten and symbol; 5k binds as tightly as 5!
+        // (exa stays in, since an E never stands for the exponent here)
         private static readonly Dictionary<string, (int Exponent, string Symbol)> Prefixes =
             new Dictionary<string, (int Exponent, string Symbol)>
             {
@@ -248,8 +213,7 @@ namespace FluentMath.Models
 
         private readonly string _latex;
 
-        // what the display writes behind the operand; the reciprocal is drawn as a raised minus one
-        // instead and does not read it
+        // what the display writes behind the operand; (not read for the reciprocal)
         public string Symbol { get; }
 
         public PostfixToken(string kind) : base(TokenType.Postfix, kind)
@@ -323,31 +287,25 @@ namespace FluentMath.Models
         Ceiling
     }
 
-    // sin, cos, tan, ln, the hyperbolic family and the named functions of the panels; renders as sin(x)
-    //
-    // the name the evaluator switches on is not always the name that is drawn, so the two are kept
-    // apart: Value stays the plain function name, DisplayName is what draws it
-    //
-    // a function takes one argument or two, fixed by its name; the second is a slot of its own beside the
-    // first, and the separator between them is drawn rather than typed, which is why no comma key is needed
+    // sin, cos, tan, ln, the hyperbolic family and the named functions of the panels, as sin(x)
+    // Value is the name the evaluator switches on, DisplayName the one drawn
+    // (one argument or two, fixed by the name; the separator is drawn, so no comma key is needed)
     public class FunctionToken : MathToken
     {
         public IReadOnlyList<List<MathToken>> Arguments { get; }
 
-        // the first argument, and for everything but the two argument functions the only one
+        // the first argument, for most functions the only one
         public List<MathToken> ParameterTokens => Arguments[0];
 
-        // what the display writes in front of the bracket, and whether it carries a raised minus one; a
-        // fact about the token rather than about either output format, so ToLatex and the layout both read
-        // it here and cannot drift apart
+        // the name in front of the bracket, and whether it carries a raised minus one
+        // (ToLatex and the layout both read it here)
         public string DisplayName { get; }
         public bool IsInverse { get; }
 
-        // whether this one draws as a pair of delimiters instead of a named call, which is a fact about
-        // the shape of the token rather than about either output format, so both renderers read it here
+        // a pair of delimiters instead of a named call
         public FunctionShape Shape { get; }
 
-        // the names KaTeX has a command of its own for; everything else goes through \operatorname
+        // the names LaTeX has a command for; everything else goes through \operatorname
         private static readonly HashSet<string> LatexCommands = new HashSet<string>
         {
             "sin", "cos", "tan", "cot", "sec", "csc", "sinh", "cosh", "tanh", "coth", "ln"
@@ -364,8 +322,8 @@ namespace FluentMath.Models
             Arguments = arguments;
         }
 
-        // every inverse prints the way a Casio does and the way its key is labelled, as the plain function
-        // carrying a raised minus one; the functions of the panels print the way a Casio spells them
+        // every inverse prints as the plain function with a raised minus one, the panel functions the way
+        // a Casio spells them
         private static (string Name, bool Inverse) NameOf(string functionName)
         {
             return functionName switch
@@ -395,9 +353,8 @@ namespace FluentMath.Models
             };
         }
 
-        // the absolute value is a pair of bars rather than a named call, and floor and ceiling are pairs
-        // of their own; keeping them FunctionTokens is what lets slots, navigation and Backspace stay
-        // untouched
+        // abs, floor and ceiling are pairs of delimiters; (still FunctionTokens, so slots, navigation and
+        // Backspace need nothing new)
         private static FunctionShape ShapeOf(string functionName)
         {
             return functionName switch
@@ -464,10 +421,7 @@ namespace FluentMath.Models
             string baseStr = LatexHelper.GetSlotLatex(BaseTokens, context, 0);
             string expStr = LatexHelper.GetSlotLatex(ExponentTokens, context, 1);
 
-            // the base is braced because ^ raises whatever single atom stands in front of it, not the
-            // whole slot; an unbraced base handed the exponent only the last thing in it, so a cursor
-            // at the end of the base became the base, and KaTeX dropped the exponent onto the height
-            // of a caret that has none
+            // braced, since ^ raises only the single atom in front of it
             return LatexHelper.Tagged("m-pow", $"{{{baseStr}}}^{{{expStr}}}");
         }
     }
@@ -484,8 +438,7 @@ namespace FluentMath.Models
         {
             string radStr = LatexHelper.GetSlotLatex(RadicandTokens, context, 1);
 
-            // an empty index is a plain square root rather than an empty slot, so it gets no box; a
-            // cursor standing in it still renders, which is what keeps the slot reachable while typing
+            // an empty index gets no box; a cursor in it still renders
             string indexStr = LatexHelper.GetListLatex(IndexTokens, context.Slot(0));
             if (indexStr.Length > 0) return LatexHelper.Tagged("m-root", $"\\sqrt[{indexStr}]{{{radStr}}}");
 
@@ -505,8 +458,7 @@ namespace FluentMath.Models
         {
             string paramStr = LatexHelper.GetSlotLatex(ParameterTokens, context, 1);
 
-            // no base written out means the common logarithm, the same default the evaluator applies, so
-            // an untouched base slot disappears instead of showing an empty box
+            // no base is the common logarithm, so an untouched base slot shows no box
             string baseStr = LatexHelper.GetListLatex(BaseTokens, context.Slot(0));
             if (baseStr.Length > 0) return LatexHelper.Tagged("m-log", $"\\log_{{{baseStr}}}({paramStr})");
 
@@ -534,10 +486,8 @@ namespace FluentMath.Models
         }
     }
 
-    // the mixed number of the Casio key: a whole part, a numerator and a denominator in one token
-    //
-    // a number followed by a plain fraction reads as their product, which is why the whole part is a
-    // slot of this token rather than the digits standing in front of it
+    // the mixed number of the Casio key: whole part, numerator and denominator in one token
+    // (a number before a plain fraction reads as their product, hence the whole part slot)
     public class MixedFractionToken : MathToken
     {
         public List<MathToken> WholeTokens { get; } = new List<MathToken>();
@@ -567,11 +517,8 @@ namespace FluentMath.Models
         Integral
     }
 
-    // Σ, Π and the integral: a lower bound, an upper bound, and the body x runs through between them
-    //
-    // the slots are walked lower, upper, body, the order the structure is typed in; a Casio walks Σ body
-    // first, but every structure here walks the way it is drawn, so Σ from 1 to 10 of x² is typed with
-    // Right alone
+    // Σ, Π and the integral: a lower bound, an upper bound, and the body x runs through
+    // (walked lower, upper, body, as drawn; a Casio walks Σ body first)
     public class LargeOperatorToken : MathToken
     {
         public LargeOperatorKind Kind { get; }
@@ -621,63 +568,29 @@ namespace FluentMath.Models
     }
 
 
-    // walks a token list and concatenates the LaTeX of every node; the recursion into nested lists
-    // happens through the ToLatex overrides above, which call back in here
-    //
-    // the cursor is drawn here rather than by the caller, because only this loop knows where one token
-    // ends and the next begins; activeScope names the single list it belongs to, every other list is
-    // rendered without a cursor
+    // walks a token list and concatenates the LaTeX of every node, recursing through the ToLatex overrides
+    // (the cursor is drawn here, in the one list activeScope names)
     public static class LatexHelper
     {
-        // an anchor of no size at all, in either direction; the visible bar is a css border on the
-        // tagged span, and the class only survives when the render call runs with trust enabled
-        //
-        // giving it any extent in the LaTeX has gone wrong twice, because KaTeX measures the slot the
-        // cursor stands in and lays the structure around it out from that measurement
-        //
-        // a height made a denominator report itself taller than its own digits, so KaTeX pushed the
-        // denominator further down and the whole fraction climbed as the display recentred it
-        //
-        // \vphantom{0} reads as the natural way to reserve a height and is worse: KaTeX builds it as
-        // an rlap, whose inner box is absolutely positioned inside a zero-width parent and hangs a
-        // digits width out to the right, which counts towards the scrollable area and left the
-        // horizontal scrollbar showing permanently with nothing to scroll to
-        //
-        // an empty slot keeps its height from its box instead, see GetSlotLatex
+        // the cursor, an anchor of no size; (an empty slot keeps its height from its box, see GetSlotLatex)
         public const string CursorLatex = "\\htmlClass{cursor}{\\rule{0em}{0em}}";
 
         // the box a Casio shows for a slot that still has to be filled
         private const string EmptySlotLatex = "\\square";
 
-        // hands a whole structured token to the display under a css class, which is what lets the size
-        // of a fraction or a root be set from C# without touching the LaTeX around it
-        //
-        // the tag always goes around the whole structure and never around one of its slots: KaTeX writes
-        // the offsets inside a fraction or a superscript as inline em values, so a size set on the
-        // wrapper carries content and alignment with it, while one set on a numerator alone would leave
-        // those offsets sized for the old em and drag the content away from the bar
+        // wraps a whole structured token in a class, never one of its slots
         public static string Tagged(string cssClass, string latex)
         {
             return $"\\htmlClass{{{cssClass}}}{{{latex}}}";
         }
 
-        // every token goes to the display as an ordinary atom, which is what puts the whole of the
-        // spacing between tokens under our control
-        //
-        // KaTeX spaces adjacent atoms by their class pair: a binary operator carries a fixed medium
-        // space on either side, and an ordinary atom before an operator name such as sin or cos gets
-        // a thin space between them, neither of which any stylesheet can reach
-        //
-        // measured on 1 + cos: without this the plus sat 2.15px from what precedes it and 8.16px from
-        // what follows, and the difference vanished as soon as anything untyped stood between them,
-        // which is exactly what a caret is; with every token an ord the pair is always ord to ord,
-        // the spacing is always zero, and a caret between two tokens can no longer change anything
+        // every token as an ordinary atom, so no class pair adds spacing between tokens
         public static string Atomic(string latex)
         {
             return $"\\mathord{{{latex}}}";
         }
 
-        // an operator under the class the display sizes and spaces it with
+        // an operator, tagged as one
         public static string TaggedOperator(string symbol)
         {
             return Atomic(Tagged("m-op", symbol));
@@ -696,8 +609,7 @@ namespace FluentMath.Models
                 MathToken currentToken = tokens[i];
                 string tokenLatex;
 
-                // operators are the one kind that does not render as its own value; * and / get proper
-                // math symbols, and the size and spacing of all of them comes from the display
+                // operators do not render as their own value; * and / get proper math symbols
                 if (currentToken.Type == TokenType.Operator)
                 {
                     string symbol = currentToken.Value switch
@@ -722,11 +634,8 @@ namespace FluentMath.Models
             return latex;
         }
 
-        // hands a token to the display carrying the cursor position it begins at, which is what lets a
-        // click on it be turned back into a place in the tree
-        //
-        // which side of the token was hit decides whether the cursor goes before or after it, so one
-        // address per token is enough and the end of a list needs no marker of its own
+        // tags a token with the cursor position it begins at; one per token is enough, the side hit picks
+        // before or after
         private static string Addressed(string latex, LatexRenderContext context, int cursorIndex)
         {
             if (!context.EmitAddresses) return latex;
@@ -734,8 +643,7 @@ namespace FluentMath.Models
             return $"\\htmlData{{p={context.Address(cursorIndex)}}}{{{latex}}}";
         }
 
-        // a slot of a structured token, where nothing at all would let the structure collapse; the box
-        // only appears when the slot is truly empty, a cursor standing in it counts as content
+        // a slot of a structured token; an empty one shows a box, a cursor in it stands beside the box
         public static string GetSlotLatex(List<MathToken> tokens, LatexRenderContext context, int slotIndex)
         {
             LatexRenderContext slotContext = context.Slot(slotIndex);
@@ -743,26 +651,14 @@ namespace FluentMath.Models
             string latex = GetListLatex(tokens, slotContext);
             if (tokens.Count > 0) return latex;
 
-            // a cursor standing in the slot does not count as content, so the box stays underneath it
-            // rather than being replaced by it; that is what holds the slot open, and it is why the
-            // caret itself can be given no size at all, see CursorLatex
-            //
-            // the box is also all there is to aim at in an empty slot, so it carries the address of
-            // the one position inside it; without that an empty numerator could never be clicked into
+            // the box carries the address of the one position inside, so an empty slot can be clicked into
             return latex + Addressed(EmptySlotLatex, slotContext, 0);
         }
     }
 
 
-    // a detached deep copy of a token list
-    //
-    // the display needs one the moment = is pressed: the tree carries on being edited afterwards, since
-    // = deliberately leaves it alone so a Math ERROR can be corrected, and the history line therefore
-    // cannot simply hold a reference to it; MathInputManager clears its root list in place
-    //
-    // it sits beside the token classes rather than as a virtual on each of them, so the whole of the
-    // copying is one thing to read and a token type added later fails loudly here instead of losing a
-    // slot quietly
+    // a detached deep copy of a token list, for the history line, since the tree is edited on after =
+    // (one switch rather than a virtual per token, so a new token type fails loudly here)
     public static class MathTokenCloner
     {
         public static List<MathToken> CloneList(IReadOnlyList<MathToken> tokens)
@@ -829,8 +725,7 @@ namespace FluentMath.Models
                     derivativeCopy.PointTokens.AddRange(CloneList(derivative.PointTokens));
                     return derivativeCopy;
 
-                // the leaves rebuild themselves from their own name, which is what fills the private
-                // fields a constant, a postfix and a function keep beside Value
+                // the leaves rebuild from their name, which fills their private fields
                 case ConstantToken constant: return new ConstantToken(constant.Value);
                 case PostfixToken postfix: return new PostfixToken(postfix.Value);
                 case AnsToken: return new AnsToken();

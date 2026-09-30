@@ -9,10 +9,9 @@ using FluentMath.Models;
 
 namespace FluentMath.ViewModels
 {
-    // drives the currency page: the two pickers, the amount typed in, and the converted result
-    //
-    // input stays a plain string here rather than going through MathInputManager; the converter only
-    // ever takes one number, so there is nothing structural to build
+    // the currency converter:
+    // the two pickers, the amount typed in and the converted result;
+    // the input is a plain string, since the converter only ever takes one number
     public class CurrencyViewModel : INotifyPropertyChanged
     {
         // === fields ===
@@ -24,8 +23,7 @@ namespace FluentMath.ViewModels
 
         public List<CurrencyInfo> AvailableCurrencies { get; set; }
 
-        // the two-way binding on the picker writes back during resynchronization and not only on a real
-        // selection, so the equality guard is what stops UpdateRateText from bouncing between them
+        // the equality guard keeps a resync of the two-way binding from bouncing UpdateRateText
         private CurrencyInfo _selectedCurrency1;
         public CurrencyInfo SelectedCurrency1
         {
@@ -86,8 +84,7 @@ namespace FluentMath.ViewModels
 
         // === constructor ===
 
-        // the picker list is whatever the ECB feed happened to contain, so it is built from the fetched
-        // rates rather than from a fixed list of currencies
+        // the picker list is whatever the ECB feed contains
         public CurrencyViewModel()
         {
             _converter = new ConvertCurrency();
@@ -109,8 +106,7 @@ namespace FluentMath.ViewModels
 
         // === input handling ===
 
-        // the leading zero is a placeholder, so the first digit replaces it; a decimal point has to keep
-        // it so the input does not start with a bare dot
+        // the first digit replaces the placeholder zero; a decimal point keeps it
         private void AddInput(string sign)
         {
             if (InputText == "0" && sign != ".") InputText = "";
@@ -129,8 +125,7 @@ namespace FluentMath.ViewModels
             else InputText = InputText.Remove(InputText.Length - 1);
         }
 
-        // parsed invariant on purpose: the keypad always produces a dot as the decimal separator,
-        // regardless of what the users region setting would expect
+        // parsed invariant; the keypad always types a dot
         private void Calculate()
         {
             if (SelectedCurrency1 == null || SelectedCurrency2 == null) return;

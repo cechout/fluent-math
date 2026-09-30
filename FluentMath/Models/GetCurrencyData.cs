@@ -24,8 +24,7 @@ namespace FluentMath.Models
                 {
                     while (reader.Read())
                     {
-                        // the feed nests three levels of elements all named Cube; only the innermost
-                        // ones carry attributes, which is what separates a rate from a wrapper
+                        // three levels of Cube elements; only the innermost carry the attributes of a rate
                         if (reader.NodeType == XmlNodeType.Element && reader.Name == "Cube" && reader.HasAttributes)
                         {
                             string currency = reader.GetAttribute("currency");
