@@ -5,10 +5,9 @@ using System.Linq;
 
 namespace FluentMath.Views
 {
-    // draws the key labels of a keypad smaller once the keypad is shorter than a threshold, whatever made it
-    // short; one per page, like PadEntrance
-    //
-    // the sizes come from the markup, read on the first switch, and are written back as local values
+    // the small key labels:
+    // the labels of a keypad drop to a smaller size once the keypad is shorter than a threshold
+    // (the markup sizes are read on the first switch)
     internal sealed class SmallKeyLabels
     {
         private readonly Panel _keypad;

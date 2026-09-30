@@ -10,15 +10,9 @@ using Windows.Foundation;
 
 namespace FluentMath.Controls
 {
-    // draws a formula out of ordinary XAML elements: a TextBlock per run of glyphs, a Path for the marks
-    // that have to scale with what they enclose, a Rectangle for a fraction bar and for an empty slot
-    //
-    // that choice is the point of the whole renderer. These composite over the system backdrop exactly
-    // like the keypad does, while a WebView2 paints ApplicationPageBackgroundThemeBrush behind its page
-    // and can never be transparent, see https://github.com/microsoft/microsoft-ui-xaml/issues/6527
-    //
-    // the layout itself is none of this classes business; MathLayoutEngine turns tokens into boxes with
-    // no WinUI in sight, and what happens here is only realising those boxes into elements
+    // the formula renderer:
+    // draws the boxes of MathLayoutEngine as plain XAML elements, so they sit on the Mica like the keypad;
+    // a TextBlock per run, a Path per mark that scales, a Rectangle per bar and empty slot
     public sealed class MathPanel : Panel
     {
         // === fields ===
@@ -31,8 +25,7 @@ namespace FluentMath.Controls
         private CaretTarget _caret;
         private string _text;
 
-        // where the caret ended up in the space the scroller works in, so it can be kept in view; null
-        // when there is none
+        // the caret in scroller space, to keep it in view; null without one
         public Rect? CaretViewport { get; private set; }
 
         private Rect? _caretLocal;
@@ -59,11 +52,8 @@ namespace FluentMath.Controls
 
         public MathLayoutStyle LayoutStyle { get; set; } = new MathLayoutStyle();
 
-        // what everything is drawn in
-        //
-        // a dependency property rather than a plain one so the markup can hand it a ThemeResource: that
-        // re-resolves itself on a theme change, while reading a brush out of Application.Current.Resources
-        // from code comes back with the light value whatever the theme is
+        // what everything is drawn in; a dependency property, so the markup can hand it a ThemeResource
+        // (a brush read from Application.Current.Resources in code is always the light one)
         public static readonly DependencyProperty InkProperty = DependencyProperty.Register(
             nameof(Ink), typeof(Brush), typeof(MathPanel),
             new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).Rebuild()));
@@ -74,8 +64,7 @@ namespace FluentMath.Controls
             set => SetValue(InkProperty, value);
         }
 
-        // the caret is drawn in the system accent rather than in the text color, so it stays findable in a
-        // long formula
+        // the accent, so the caret stays findable in a long formula
         public static readonly DependencyProperty CaretInkProperty = DependencyProperty.Register(
             nameof(CaretInk), typeof(Brush), typeof(MathPanel),
             new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).Rebuild()));
@@ -86,8 +75,7 @@ namespace FluentMath.Controls
             set => SetValue(CaretInkProperty, value);
         }
 
-        // the caret a click would leave behind, one step down from the text rather than in the accent:
-        // it has to read as a promise and not as the thing itself
+        // the caret a click would leave; one step down from the text, a promise and not the thing itself
         public static readonly DependencyProperty PreviewCaretInkProperty = DependencyProperty.Register(
             nameof(PreviewCaretInk), typeof(Brush), typeof(MathPanel),
             new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
@@ -98,8 +86,7 @@ namespace FluentMath.Controls
             set => SetValue(PreviewCaretInkProperty, value);
         }
 
-        // and one step down again while the button is held, which is the direction a press takes
-        // everything else in this app: the keypad answers a press by fading rather than by brightening
+        // one step further down while the button is held; (a press fades, like on the keypad)
         public static readonly DependencyProperty PreviewCaretPressedInkProperty = DependencyProperty.Register(
             nameof(PreviewCaretPressedInk), typeof(Brush), typeof(MathPanel),
             new PropertyMetadata(null, (panel, e) => ((MathPanel)panel).RealizePreview()));
@@ -116,25 +103,16 @@ namespace FluentMath.Controls
             set => _measurer.FontFamily = value;
         }
 
-        // whether a point in this line is worth aiming at
-        //
-        // the display sometimes draws a formula the input manager does not hold. The zero on an empty
-        // line is one of those and holds a single position, so the hit test would happily answer with
-        // the other side of it while the caret stays put; the page turns this off for that state and
-        // neither the preview nor a tap offers a place that is not one
-        //
-        // it is off by default and the page turns it on for the line being typed in, which leaves the
-        // history line out of it without having to say so; the trailing room below is read from it at
-        // every rebuild, so it is set before the line is shown and not after
+        // whether a point in this line is worth aiming at; off for the history line and for the zero of
+        // an empty line, which the input manager does not hold
+        // (read at every rebuild, so it is set before the line is shown)
         public bool CaretIsPlaceable { get; set; }
 
 
         // === content ===
 
-        // rebuilds the display from a token list
-        //
-        // the whole tree is thrown away and made again rather than diffed, because a formula is a handful
-        // of elements and a keystroke can change any of them
+        // rebuilds the display from a token list; made again rather than diffed, a formula is a handful
+        // of elements
         public void Show(IReadOnlyList<MathToken> tokens, CaretTarget caret = default)
         {
             _text = null;
@@ -143,7 +121,7 @@ namespace FluentMath.Controls
             Rebuild();
         }
 
-        // a line of text rather than a formula, which is what an error message is
+        // a line of text, an error message
         public void ShowText(string text)
         {
             _text = text;
@@ -176,29 +154,21 @@ namespace FluentMath.Controls
                 caret = engine.Caret;
             }
 
-            // a line that can carry a caret keeps room for the half of one that stands right of the
-            // last position, or the edge of the display cuts it in two
-            //
-            // reserved for a line that could show a caret and not only for one that does: a result
-            // carries none and is still aimed at, and room that came and went with it would step the
-            // whole formula sideways the moment = replaced it. That is the very shift the trailing
-            // space exists to prevent, one state further out than it was written for
+            // room for the half caret right of the last position, or the display edge cuts it in two
+            // (for every line that could show one, so = does not step the formula sideways)
             _caretPad = caret != null || CaretIsPlaceable
                 ? LayoutStyle.FontSizePx * LayoutStyle.CursorTrailingSpace
                 : 0;
 
-            // placed against its own top edge, so every bound below is already in the space this panel
-            // arranges in
+            // placed against its own top edge, the space this panel arranges in
             _root.Place(0, _root.Ascent);
 
             Realize(_root);
 
-            // last, so the bar is drawn over its neighbours rather than under them; it is allowed to
-            // overlap the digit beside it and never to move it
+            // last, so the caret is drawn over its neighbours; it may overlap a digit, never move it
             RealizeCaret(caret);
 
-            // the tree it was aimed at is gone, so the preview is worked out again from the point the
-            // pointer is still resting on
+            // the preview again for the new tree under the resting pointer
             RealizePreview();
 
             InvalidateMeasure();
@@ -214,9 +184,7 @@ namespace FluentMath.Controls
                 placed.Element.Measure(new Size(placed.Bounds.Width, placed.Bounds.Height));
             }
 
-            // the preview is not one of the placed elements: it moves with the pointer rather than with
-            // the formula, and rebuilding the tree for a mouse move is what this whole arrangement is
-            // there to avoid
+            // the preview is not a placed element; it moves with the pointer, without a rebuild
             if (_preview != null && _previewLocal is Rect preview)
             {
                 _preview.Measure(new Size(preview.Width, preview.Height));
@@ -226,9 +194,7 @@ namespace FluentMath.Controls
 
             _fitScale = MathFit.ScaleFor(_root.Height, availableSize.Height, LayoutStyle.MinFitScale);
 
-            // the children stay in their own coordinates and the whole panel is scaled instead, which is
-            // why the size reported here is the scaled one: the scroller around it has to see the size it
-            // will actually occupy
+            // the panel is scaled, not the children, so the size reported is the scaled one
             RenderTransform = _fitScale < 1
                 ? new ScaleTransform { ScaleX = _fitScale, ScaleY = _fitScale }
                 : null;
@@ -240,13 +206,11 @@ namespace FluentMath.Controls
         {
             if (_root == null) return finalSize;
 
-            // the children are placed in their own unscaled coordinates, so the box they are fitted into
-            // has to be read back out of the scale the panel carries
+            // back into the unscaled space of the children
             double width = finalSize.Width / _fitScale;
             double height = finalSize.Height / _fitScale;
 
-            // a calculator display fills from the right and sits in the middle of its box; the caret room
-            // comes off the right, which is the only place it is needed
+            // right aligned and vertically centered; the caret room comes off the right
             double offsetX = Math.Max(0, width - _root.Width - _caretPad);
             double offsetY = Math.Max(0, (height - _root.Height) / 2);
 
@@ -283,21 +247,13 @@ namespace FluentMath.Controls
 
         // === hit testing ===
 
-        // the nearest place the caret could go to a point in this panel, or null when there is nothing
-        // to aim at
-        //
-        // the point arrives in this panels own coordinates, which is the unscaled space the boxes were
-        // placed in: a render transform belongs to the step from the panel into its parent, so anything
-        // that reports a point relative to the panel has already taken the fit scale back off and only
-        // the two arrange offsets are left to undo
+        // the nearest caret address to a point in this panel, or null with nothing to aim at
+        // (a point relative to the panel is already unscaled; only the arrange offsets are undone)
         public string AddressAt(Point point)
         {
             if (_root == null || _text != null || !CaretIsPlaceable) return null;
 
-            // a line drawn without a caret is still one that can be clicked into: after = the display
-            // holds the result rather than the formula that produced it, and the ViewModel answers that
-            // by seeding the result, which puts the very tokens the address was worked out against into
-            // the manager
+            // a result has no caret but takes a click; the ViewModel seeds it into the manager first
             return MathHitTest.NearestAddress(_root, point.X - _offsetX, point.Y - _offsetY);
         }
 
@@ -336,8 +292,7 @@ namespace FluentMath.Controls
                     RealizeDelimiter(delimiter);
                     break;
 
-                // the bounds and the sign they stand around are boxes of their own, so a stack has nothing
-                // to draw but them
+                // the bounds and the sign are boxes of their own
                 case StackBox stack:
                     foreach (MathBox child in stack.Children) Realize(child);
                     break;
@@ -350,17 +305,14 @@ namespace FluentMath.Controls
                     break;
 
                 case PlaceholderBox placeholder:
-                    // the box is as tall as the text that would fill the slot, the square is not, so it
-                    // stands where a digit would, see PlaceholderBox.SquareTop
+                    // the square stands where a digit would, see PlaceholderBox.SquareTop
                     Add(new Rectangle { Stroke = Ink, StrokeThickness = placeholder.Thickness },
                         new Rect(placeholder.X, placeholder.SquareTop, placeholder.Side, placeholder.Side));
                     break;
             }
         }
 
-        // the caret is no part of the layout at all; it hangs off a box that was placed without it and
-        // is straddled over the point it marks, half of it either side, the way a text caret sits in the
-        // gap between two glyphs rather than beside one
+        // the caret is no part of the layout; it straddles the point it marks, half either side
         private void RealizeCaret(CaretPlacement? placement)
         {
             if (placement is not CaretPlacement caret) return;
@@ -378,11 +330,8 @@ namespace FluentMath.Controls
             }, caretRect);
         }
 
-        // the box a caret fills, for the one being typed in and for a preview of one alike
-        //
-        // the baseline is the one of the line it stands in and never the one of the box it hangs off: an
-        // operator rides above the baseline of its row, and taking the height from it would stand the
-        // caret higher in front of a plus than in front of a digit
+        // the box a caret fills, the real one and the preview alike
+        // (on the baseline of the line, not of the box; an operator rides higher than a digit)
         private Rect CaretRect(CaretPlacement caret)
         {
             double size = caret.FontSize;
@@ -395,14 +344,9 @@ namespace FluentMath.Controls
 
         // === caret preview ===
 
-        // the caret a click would leave behind, drawn under the pointer rather than where the cursor is
-        //
-        // it goes through the hit test a tap goes through and comes back as the same CaretPlacement the
-        // layout reports the real caret in, so the two are drawn by one piece of geometry and the
-        // promise cannot drift away from what the click does
-        //
-        // what is kept is the pointer position and not the rectangle: a keystroke rebuilds the tree
-        // under a pointer that never moved, and the preview has to answer for the new one
+        // the caret a click would leave, under the pointer; the hit test and geometry of a tap, so the
+        // preview cannot drift from what the click does
+        // (the pointer is kept, not the rectangle, since a keystroke rebuilds the tree under it)
         private Rectangle _preview;
         private Point? _previewPoint;
         private bool _previewPressed;
@@ -424,9 +368,7 @@ namespace FluentMath.Controls
 
         private void RealizePreview()
         {
-            // an error message is a line of text rather than a formula, and there is nothing in it to
-            // aim at; a result carries no caret either and is still clickable, so the caret target is
-            // not what decides this
+            // nothing to aim at in an error message; a result has no caret but is still clickable
             if (_previewPoint is not Point point || _root == null || _text != null || !CaretIsPlaceable)
             {
                 CollapsePreview();
@@ -452,8 +394,7 @@ namespace FluentMath.Controls
             _preview.Height = rect.Height;
             _preview.Visibility = Visibility.Visible;
 
-            // added last, so it is drawn over the caret it is a preview of rather than under it; a
-            // rebuild empties the panel, which is what puts it back on top again afterwards
+            // added last, so it is drawn over the caret; a rebuild empties the panel and puts it back on top
             if (!Children.Contains(_preview)) Children.Add(_preview);
 
             _previewLocal = rect;
@@ -473,9 +414,7 @@ namespace FluentMath.Controls
 
         private void RealizeRun(TextRunBox run)
         {
-            // a TextBlock puts its baseline at BaselineOffset from its own top, and that is the number the
-            // run was measured with, so arranging it at the box top lands the baseline where the layout
-            // decided it goes
+            // measured with BaselineOffset, so at the box top the baseline lands where the layout put it
             Add(new TextBlock
             {
                 Text = run.Text,
@@ -485,8 +424,7 @@ namespace FluentMath.Controls
             }, BoundsOf(run));
         }
 
-        // the radical is drawn rather than set from a glyph, so it grows with its radicand instead of
-        // coming in the handful of sizes a font happens to carry
+        // drawn rather than a glyph, so it grows with its radicand
         private void RealizeRadical(RootBox root)
         {
             Rect bounds = BoundsOf(root);
@@ -496,11 +434,8 @@ namespace FluentMath.Controls
             double bottom = root.Ascent + root.SignDescent; // the radicand may reach lower than the sign
             double drop = bottom - ruleY;
 
-            // two strokes and not one: the sign is a letter stroke and the bar over the radicand is a
-            // rule, and they carry their own weights
-            //
-            // they meet at the top of the hook, which both figures name as the same point; the round
-            // joins StrokedPath draws with are what closes the step when the two weights differ
+            // two strokes with their own weights, the sign and the rule; they meet at the shoulder, where
+            // the round joins close the step between the two weights
             Point shoulder = new Point(hookLeft + root.HookWidth, ruleY);
 
             PathFigure hook = new PathFigure
@@ -548,8 +483,7 @@ namespace FluentMath.Controls
                     });
                     break;
 
-                // floor and ceiling are a stem with a foot, the foot at the bottom for the floor and at
-                // the top for the ceiling, always pointing in towards the content
+                // a stem with a foot pointing in, at the bottom for the floor and at the top for the ceiling
                 case DelimiterKind.FloorOpen:
                     AddCorner(figure, width * 0.35, 0, height, width * 0.95);
                     break;
@@ -602,8 +536,7 @@ namespace FluentMath.Controls
             };
         }
 
-        // every figure above is written in the space of its own box, so the panel can shift the whole
-        // formula by arranging each element at its bounds plus one offset
+        // every figure is drawn in the space of its own box; the arrange adds one offset to all
         private static Rect BoundsOf(MathBox box)
         {
             return new Rect(box.X, box.Top, box.Width, box.Height);

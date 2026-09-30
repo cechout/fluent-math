@@ -6,19 +6,14 @@ using Windows.Foundation;
 
 namespace FluentMath.Controls
 {
-    // measures with the same text stack the panel draws with, so a run takes up on screen exactly what
-    // the layout was told it would
-    //
-    // one TextBlock is reused rather than one per call, and every answer is kept: a formula asks for the
-    // same handful of runs again on every keystroke, and the measurement is the expensive half of a
-    // relayout
+    // measures with the text stack the panel draws with, so a run takes exactly what the layout was told
+    // (one reused TextBlock and a cache; every keystroke asks for the same few runs again)
     public sealed class XamlTextMeasurer : ITextMeasurer
     {
         private readonly TextBlock _probe = new TextBlock();
         private readonly Dictionary<(string Text, double Size), TextMetrics> _cache = new();
 
-        // upright sans digits, the way a pocket calculator draws them, and a family that carries every
-        // sign the display needs: the real minus, the dot operator, the division sign and pi
+        // upright sans digits, and every sign the display needs: minus, dot operator, division sign, pi
         private FontFamily _fontFamily = new FontFamily("Segoe UI");
 
         public FontFamily FontFamily
@@ -42,9 +37,7 @@ namespace FluentMath.Controls
             _probe.Text = text;
             _probe.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
 
-            // the split at the baseline is the whole reason this goes through a TextBlock rather than
-            // through a font table: BaselineOffset is measured in the same pass as the size, so the two
-            // can never disagree
+            // BaselineOffset comes from the same pass as the size, so the two never disagree
             Size size = _probe.DesiredSize;
             TextMetrics metrics = new TextMetrics(size.Width, _probe.BaselineOffset, size.Height - _probe.BaselineOffset);
 

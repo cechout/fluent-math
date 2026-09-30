@@ -52,10 +52,7 @@
             </StackPanel>
 
             <!--  history and memory  -->
-            <!--
-                the same two keys as on the scientific page, so the two calculators read alike, and
-                disabled there as well until the history list and the variable store exist
-            -->
+            <!--  (disabled until the history list and the variable store exist)  -->
             <StackPanel
                 HorizontalAlignment="Right"
                 Orientation="Horizontal"
@@ -99,9 +96,8 @@
 
             <!--  caret bar  -->
             <!--
-                only the arrow keys; the fraction, the root and the square open slots, and an arrow is
-                the way out of one besides a click into the display
-                nothing on this pad reads the angle unit, so its selector stays on the scientific page
+                only the arrow keys, the way out of a fraction, root or square slot
+                (no angle unit; nothing on this pad reads it)
             -->
             <StackPanel
                 Grid.Row="1"
@@ -143,10 +139,7 @@
 
 
         <!--  keypad  -->
-        <!--
-            the keys of a pocket calculator, bound to the same commands as the scientific pad
-            the whole pad grows in when the page is shown, see PadEntrance
-        -->
+        <!--  (the commands of the scientific pad; grows in through PadEntrance)  -->
         <Grid
             x:Name="Pad"
             Grid.Row="2"
@@ -218,7 +211,7 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="cmd_frac"
                 Style="{StaticResource OperatorButtonStyle}">
-                <!--  the stacked fraction it inserts, drawn the same way as on the scientific pad  -->
+                <!--  the stacked fraction it inserts  -->
                 <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
@@ -422,7 +415,7 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="."
                 Style="{StaticResource NumberPadButtonStyle}">
-                <!--  the key always types a dot; the label follows the decimal mark the display draws it as  -->
+                <!--  (always types a dot; the label follows the decimal mark of the display)  -->
                 <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="{x:Bind ViewModel.DecimalMarkLabel, Mode=OneWay}" />
             </Button>
             <Button

@@ -20,7 +20,7 @@
         </Grid.RowDefinitions>
 
         <!--  custom title bar  -->
-        <!--  (the window extends its content into the caption area, so the bar is drawn here)  -->
+        <!--  (the content extends into the caption area)  -->
         <TitleBar
             x:Name="AppTitleBar"
             Title="Fluent Math"
@@ -67,21 +67,16 @@
             PaneDisplayMode="LeftMinimal">
 
             <!--
-                the content area of a navigation view paints LayerFillColorDefaultBrush behind the
-                frame, which lifts the base from the #202020 Mica tint to #282828 and in light from
-                #F3F3F3 to #F9F9F9; both brushes go transparent so the pages sit on the bare backdrop
-                the keypad colors in App.xaml are calibrated against
-                the second one is the 1px line the view draws above its content, which the frame used
-                to hide behind a negative top margin
-                they sit on the control and not in the app theme dictionaries because a key put here
-                is found before anything merged from XamlControlsResources
+                the content fill and the 1px line above it, both transparent, so the pages sit on the
+                bare Mica the keypad colors are set against
+                (on the control, where a key wins over XamlControlsResources)
             -->
             <NavigationView.Resources>
                 <SolidColorBrush x:Key="NavigationViewContentBackground" Color="Transparent" />
                 <SolidColorBrush x:Key="NavigationViewContentGridBorderBrush" Color="Transparent" />
             </NavigationView.Resources>
 
-            <!--  menu items: the calculators and the converters, each group under a header  -->
+            <!--  menu items: calculators and converters, each under a header  -->
             <NavigationView.MenuItems>
                 <NavigationViewItemHeader Content="Calculator" />
 
@@ -91,10 +86,7 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
 
-                <!--
-                    the flask the Windows Calculator gives its scientific mode; the glyph is in Segoe
-                    Fluent Icons only, so Windows 10 draws nothing here
-                -->
+                <!--  the Windows Calculator scientific flask; (Segoe Fluent Icons only, blank on Windows 10)  -->
                 <NavigationViewItem Content="Scientific" Tag="Scientific">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xF196;" />
@@ -104,10 +96,8 @@
                 <NavigationViewItemHeader Content="Converter" />
 
                 <!--
-                    the three coins the Windows Calculator gives its currency converter; no Windows icon
-                    font has them, only the Windows Calculators own one does (EB0D, MIT licensed), so the
-                    outline is copied here as a path in the 16 by 16 box a FontIcon draws into
-                    the explicit size keeps the icon box from scaling the path up to fill it with ink
+                    the Windows Calculator currency coins, copied as a path from its own icon font (EB0D, MIT)
+                    (the explicit 16 by 16 keeps the icon box from scaling the path up)
                 -->
                 <NavigationViewItem Content="Currency" Tag="Currency">
                     <NavigationViewItem.Icon>

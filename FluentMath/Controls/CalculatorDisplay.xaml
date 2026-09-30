@@ -8,11 +8,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <!--
-        both lines are drawn by a MathPanel out of ordinary XAML elements
-        top is the previous calculation, bottom is what is being typed; content is pushed in from
-        the code-behind, since neither line can be bound to
-    -->
+    <!--  two MathPanels  -->
+    <!--  the previous calculation over the formula being typed  -->
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="2*" />
@@ -25,13 +22,10 @@
             Margin="4,4,4,0"
             Ink="{ThemeResource TextFillColorSecondaryBrush}" />
 
-        <!--  the input line scrolls sideways once the formula is wider than the display  -->
+        <!--  the input line, scrolling sideways once the formula is wider than the display  -->
         <!--
-            the tap is taken here rather than on the panel, and the transparent background is what
-            makes that work: the formula is only as wide as it is, and aiming at the air beside it
-            is how a short one is clicked into at all
-            the panel keeps a 4px strip free at the bottom for the scrollbar, which a ScrollViewer
-            draws inside its own bounds and so over the formula otherwise
+            (a transparent background, so the air beside a short formula takes the tap;
+            the panel keeps 4px free at the bottom for the scrollbar)
         -->
         <ScrollViewer
             x:Name="InputScroller"

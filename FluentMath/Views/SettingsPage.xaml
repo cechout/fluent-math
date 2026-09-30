@@ -10,9 +10,8 @@
     mc:Ignorable="d">
 
     <!--
-        no margin on the page itself, unlike the other pages: the scroll viewer runs to the edges of
-        the window, so the cards scroll out at the edge and the scroll bar sits on it; the header and
-        the cards carry the 4 the other pages put around everything in their own margins
+        no page margin, so the cards scroll out at the window edge and the scroll bar sits on it
+        (the header and the cards carry the 4 of the other pages themselves)
     -->
     <Grid>
         <Grid.RowDefinitions>
@@ -49,7 +48,7 @@
                     Text="Appearance" />
 
                 <!--  app theme  -->
-                <!--  (the selection is applied through MainWindow and is not persisted across restarts)  -->
+                <!--  (applied through MainWindow; not persisted)  -->
                 <controls:SettingsCard
                     Description="Light, dark, or match Windows"
                     Header="App Theme"
@@ -71,11 +70,7 @@
                     Style="{StaticResource BodyStrongTextBlockStyle}"
                     Text="Calculator" />
 
-                <!--
-                    the calculator setup, held by App.Settings for the session and read by the calculator
-                    pages whenever they come back into view; every combo box lists its options in the
-                    order of the values they stand for, which the code-behind relies on
-                -->
+                <!--  (App.Settings; every combo box lists its options in the order of their values)  -->
 
                 <!--  angle unit  -->
                 <controls:SettingsCard
@@ -93,10 +88,7 @@
                 </controls:SettingsCard>
 
                 <!--  result form  -->
-                <!--
-                    the form a result opens in sits in the header slot; the two inside decide which forms
-                    S⇔D and SHIFT S⇔D go through on the way from there
-                -->
+                <!--  (the opening form in the header slot; the two inside pick the forms S⇔D goes through)  -->
                 <controls:SettingsExpander
                     Description="The form a result opens in, and the forms S⇔D switches through"
                     Header="Result Form"
@@ -133,8 +125,7 @@
                 </controls:SettingsExpander>
 
                 <!--  number format  -->
-                <!--  (the notation sits in the header slot, the two inside refine it)  -->
-                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
+                <!--  (the notation in the header slot, the two inside refine it; the icon is text, see TextIcon)  -->
                 <controls:SettingsExpander
                     x:Name="NumberFormatExpander"
                     Description="Norm 1 and Norm 2 write a power of ten below 0.01 and 1e-9, Fix and Sci a set number of digits"
@@ -182,8 +173,7 @@
                 </controls:SettingsExpander>
 
                 <!--  separators  -->
-                <!--  (no control on the expander header itself, the two inside are independent of each other)  -->
-                <!--  (the header icon is text, the code-behind builds it, see TextIcon)  -->
+                <!--  (no header control, the two inside are independent; the icon is text, see TextIcon)  -->
                 <controls:SettingsExpander
                     x:Name="SeparatorsExpander"
                     Description="The marks inside a number, in the formula and in the result"
@@ -266,7 +256,7 @@
                 </controls:SettingsExpander>
 
                 <!--  feedback  -->
-                <!--  (opens the issue template picker, so a bug report and a blank issue are both one click away)  -->
+                <!--  (opens the issue template picker)  -->
                 <HyperlinkButton
                     Margin="0,4,0,8"
                     Content="Send Feedback"

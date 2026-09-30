@@ -11,13 +11,13 @@ namespace FluentMath.Views
 
         // --- row floors ---
         // in px; (the full window and compact mode each have their own pair)
-        private const double AmountFloor = 40; // each of the two amount lines, the display of this page
-        private const double PadFloor = 0; // the number pad, five rows of keys; 0 = no floor
+        private const double AmountFloor = 40; // each of the two amount lines
+        private const double PadFloor = 0; // the number pad, five rows of keys; (0 = no floor)
         private const double CompactAmountFloor = 40;
         private const double CompactPadFloor = 150;
 
         // --- compact mode ---
-        // sizes in px
+        // in px
         private const double CompactStartWidth = 320;
         private const double CompactStartHeight = 460;
         private const double CompactMinWidth = 200;
@@ -41,8 +41,7 @@ namespace FluentMath.Views
         }
 
 
-        // the number pad grows in the way it does on the two calculators; Loaded rather than
-        // OnNavigatedTo, since the page is cached and only back in the tree by then
+        // Loaded, not OnNavigatedTo; a cached page is only back in the tree by then
         private void CurrencyPage_Loaded(object sender, RoutedEventArgs e)
         {
             PadEntrance.Play(Pad);

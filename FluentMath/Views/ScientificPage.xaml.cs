@@ -11,16 +11,16 @@ using Windows.UI;
 
 namespace FluentMath.Views
 {
-    // the scientific calculator; the display is a CalculatorDisplay and every key is bound straight to the
-    // ViewModel, so what is left here is the panel bar and the way into compact mode
+    // the scientific calculator:
+    // every key binds straight to the ViewModel; what is left here is the panel bar and compact mode
     public sealed partial class ScientificPage : Page, ICompactPage
     {
         public CalculatorViewModel ViewModel { get; }
 
         // --- display ---
-        // font sizes in pixels; the standard page has its own pair
-        private const double InputLineFontSize = 30; // the lower line, the formula being typed and then its result (bigger = larger)
-        private const double HistoryLineFontSize = 16; // the upper line, the calculation that gave the result (bigger = larger)
+        // in px; (the standard page has its own pair)
+        private const double InputLineFontSize = 30; // the lower line; input
+        private const double HistoryLineFontSize = 16; // the upper line; output
 
         // --- row floors ---
         // in px; also how far the splitter goes; (the full window and compact mode each have their own pair)
@@ -31,10 +31,10 @@ namespace FluentMath.Views
         private const double PushBuffer = 4; // room the pad keeps over its floor when it pushes the splitter
 
         // --- compact mode ---
-        // sizes in px
+        // in px
         private const double CompactStartWidth = 340;
         private const double CompactStartHeight = 520;
-        private const double CompactMinWidth = 220; // the caret bar needs the angle key and four arrows
+        private const double CompactMinWidth = 220; // holds the caret bar
 
         // --- key labels ---
         // key font drops to smaller size once the keypad is shorter than this; (the panel bar keeps its size)
@@ -65,15 +65,13 @@ namespace FluentMath.Views
 
         // === navigation ===
 
-        // Loaded rather than OnNavigatedTo, since a cached page is only back in the tree by then; it fires
-        // on every way in, the first one included
+        // Loaded, not OnNavigatedTo; a cached page is only back in the tree by then
         private void ScientificPage_Loaded(object sender, RoutedEventArgs e)
         {
             PadEntrance.Play(Pad);
         }
 
-        // the page is cached and comes back with whatever it was left with, so the two labels the settings
-        // page can change are read again here; the display lines do the same when they are loaded
+        // the page is cached, so the labels the settings can change are read again on every way back
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
@@ -108,10 +106,8 @@ namespace FluentMath.Views
 
         // === display height ===
 
-        // a window too short for the pad pushes the splitter up, and it stays there until it is dragged
-        //
-        // done in the measure, where the real available height arrives; a Grid that does not fit is laid out
-        // at its own size, so its SizeChanged never reports the squeeze (header and divider by set height)
+        // a window too short for the pad pushes the splitter up, where it stays until dragged
+        // (in the measure; a Grid that does not fit is clipped, so its SizeChanged never reports the squeeze)
         protected override Size MeasureOverride(Size availableSize)
         {
             if (!double.IsInfinity(availableSize.Height))
@@ -133,16 +129,12 @@ namespace FluentMath.Views
 
         // === panel bar ===
 
-        // the bar holds more category buttons than any window width fits, so the side that runs off
-        // the edge gets a chevron; one click moves the strip by most of a viewport rather than by a
-        // button, which is what puts the far end of the bar two clicks away
+        // the share of the viewport one chevron click scrolls
         private const double PanelScrollRatio = 0.7;
 
         private void PanelScroller_Loaded(object sender, RoutedEventArgs e)
         {
-            // the strip is in the tree by now but has not been through a pass, so its extent is
-            // still zero and both chevrons would read as not needed; the same ordering the caret
-            // reveal needs, and for the same reason
+            // the strip has no extent before its first pass, so both chevrons would read as not needed
             PanelScroller.UpdateLayout();
 
             UpdatePanelChevrons();
@@ -168,9 +160,7 @@ namespace FluentMath.Views
             ScrollPanelBar(1);
         }
 
-        // an offset lands a fraction of a pixel short of its end often enough that both edges are
-        // read with a pixel of slack; ScrollableWidth is zero while the whole bar fits, which is
-        // what collapses both chevrons through the same two comparisons
+        // both edges read with a pixel of slack; an offset often lands a fraction short of its end
         private void UpdatePanelChevrons()
         {
             double offset = PanelScroller.HorizontalOffset;
@@ -181,7 +171,6 @@ namespace FluentMath.Views
             PanelScrollLeft.Visibility = left ? Visibility.Visible : Visibility.Collapsed;
             PanelScrollRight.Visibility = right ? Visibility.Visible : Visibility.Collapsed;
 
-            // a chevron and the fade under it answer the same question, so they are decided together
             UpdatePanelFade(left, right);
         }
 
@@ -195,25 +184,18 @@ namespace FluentMath.Views
 
         // === panel bar fade ===
 
-        // how far in from the edge the strip is back at full strength, chevron included, and what
-        // is left of it out there; a mask reads nothing but alpha, so the color is white throughout
-        // and only the alpha carries the ramp
+        // in px; how far in from the edge the strip is back at full strength, chevron included
         private const double PanelFadeWidth = 44;
 
+        // (a mask reads only alpha)
         private static readonly Color MaskKeep = Color.FromArgb(0xFF, 0xFF, 0xFF, 0xFF);
         private static readonly Color MaskDrop = Color.FromArgb(0x00, 0xFF, 0xFF, 0xFF);
 
-        // the strip fades out into the window edge, and nothing is painted over it to do that: a
-        // veil would be a color of its own over the backdrop, and the Mica would stop showing
-        // through exactly where the bar runs out
+        // fades the strip out into the window edge without painting over it, so the Mica still shows through
         //
-        // so the strip is redirected rather than covered. One CompositionVisualSurface captures the
-        // scrollers rendering, a second captures a Rectangle that is nothing but a gradient, and a
-        // CompositionMaskBrush takes the alpha of the second as the alpha of the first; a sprite
-        // over an empty host in the same place draws the result
-        //
-        // this is the shape of the Toolkit Labs OpacityMaskView, which is also what the WinUI
-        // Gallery ships its own opacity mask sample on
+        // one visual surface captures the scroller, a second the gradient Rectangle, and a mask brush takes
+        // the alpha of the second for the first; a sprite over an empty host draws the result
+        // (the shape of the Toolkit Labs OpacityMaskView)
         private void ApplyPanelBarFade()
         {
             Compositor compositor = ElementCompositionPreview.GetElementVisual(PanelStripFade).Compositor;
@@ -222,8 +204,7 @@ namespace FluentMath.Views
             mask.Source = RedirectOf(PanelScroller);
             mask.Mask = RedirectOf(PanelStripMask);
 
-            // the sprite is sized off the scroller rather than off the host it hangs on, so a copy
-            // can never end up scaled against the original by a pixel of rounding somewhere
+            // sized off the scroller, not the host, so no rounding pixel scales the copy
             SpriteVisual sprite = compositor.CreateSpriteVisual();
             sprite.Brush = mask;
             sprite.StartAnimation(nameof(sprite.Size), SizeOf(PanelScroller));
@@ -231,14 +212,10 @@ namespace FluentMath.Views
             ElementCompositionPreview.SetElementChildVisual(PanelStripFade, sprite);
         }
 
-        // the element is hidden through its composition visual and not through UIElement.Opacity,
-        // and that difference is the whole trick: a visual surface renders the subtree without the
-        // source visuals own opacity, so the capture survives while the original stops drawing, and
-        // XAML hit testing reads UIElement.Opacity rather than the visual, so every button in the
-        // strip stays clickable while a sprite is what is actually on screen
+        // captures the element and hides it through its visual, not UIElement.Opacity; the capture ignores
+        // the visual opacity and hit testing reads only UIElement.Opacity, so the strip stays clickable
         //
-        // the surface carries its own size rather than inheriting one, so it is bound to the visual
-        // instead of read once and left behind by the next window resize
+        // the surface size is bound to the visual, so it follows a window resize
         private static CompositionBrush RedirectOf(UIElement element)
         {
             Visual visual = ElementCompositionPreview.GetElementVisual(element);
@@ -253,7 +230,7 @@ namespace FluentMath.Views
             return compositor.CreateSurfaceBrush(surface);
         }
 
-        // a Vector2 expression that stays on the elements measured size for as long as it runs
+        // the live size of the element
         private static ExpressionAnimation SizeOf(UIElement element)
         {
             Visual visual = ElementCompositionPreview.GetElementVisual(element);
@@ -264,15 +241,11 @@ namespace FluentMath.Views
             return size;
         }
 
-        // the ramp is a share of the width and the width is not fixed, so every stop is placed from
-        // the measured viewport; a side with nothing behind it keeps its stops on the edge and at
-        // full alpha, which is a mask that changes nothing
+        // places the stops from the measured viewport; a side with nothing behind it keeps them on the edge
+        // at full alpha, a mask that changes nothing
         //
-        // the cut is where the strip ends: the outer stop is held flat from the edge to the inner
-        // side of the chevron, so a category button never passes under the one control covering it
-        // the chevron is asked for its own width rather than the number being repeated here, and
-        // Width answers where ActualWidth does not, since the button has not been through a layout
-        // pass yet on the frame it appears
+        // the strip is cut flat under the chevron, so no button shows through the control over it
+        // (the chevron Width, not ActualWidth, which is still zero on the frame it appears)
         private void UpdatePanelFade(bool fadeLeft, bool fadeRight)
         {
             double width = PanelScroller.ActualWidth;
@@ -292,11 +265,8 @@ namespace FluentMath.Views
             PanelFadeRightOuter.Color = fadeRight ? MaskDrop : MaskKeep;
         }
 
-        // the keys in both panels carry their own Command, so this only closes the panel behind them;
-        // without it it would stay open over the keypad after every function
-        //
-        // one handler for all of them, because a key only ever sits in the panel that is open and
-        // hiding the others costs nothing; a new panel adds its flyout here
+        // closes the open panel after one of its keys (the key carries its own Command)
+        // one handler for every panel, since hiding a closed one costs nothing; a new panel adds its flyout here
         private void FlyoutKey_Click(object sender, RoutedEventArgs e)
         {
             TrigonometryFlyout.Hide();
@@ -308,12 +278,8 @@ namespace FluentMath.Views
             PrefixesFlyout.Hide();
         }
 
-        // a button whose panel is open reads as the accent color, which is the only thing that says
-        // which of the seven is showing; a Button raises nothing for it, so the state is entered from
-        // here and the look of it lives in the FlyoutStates group of SubtleBarButtonStyle
-        //
-        // the handler closes over the button it belongs to rather than reading FlyoutBase.Target,
-        // which the framework fills in when it shows an attached flyout and is not ours to lean on
+        // accents a button while its panel is open; the look is the FlyoutStates group of SubtleBarButtonStyle
+        // (the handler closes over its button rather than reading FlyoutBase.Target, which is not ours to rely on)
         private void AccentPanelButtonsWhileOpen()
         {
             foreach (Button button in PanelStrip.Children.OfType<Button>())
@@ -325,9 +291,7 @@ namespace FluentMath.Views
             }
         }
 
-        // the two latches belong to the open panel and not to the app, so they come back to the plain
-        // grid with it; this fires for a function key and for a dismissal alike, since the key hides the
-        // panel rather than resetting anything itself
+        // the two latches belong to the open panel, so they reset with it, after a key or a dismissal alike
         private void TrigonometryFlyout_Closed(object sender, object e)
         {
             ViewModel.ResetTrigLatches();
