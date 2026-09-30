@@ -1,11 +1,7 @@
-# security scanning via CodeQL, advanced setup with manual build mode
-#
-# autobuild is not used here, WinUI3 needs the same explicit build pass release.yml documents
-# (MarkupCompilePass2 needs a full Build pass to resolve x:Bind LocalAssembly types)
+# CodeQL, advanced setup with a manual build (autobuild misses the full pass x:Bind needs)
 name: codeql
 
-# codeql is not a required status check, so path filtering is safe here; skipping it on a doc-only change
-# leaves nothing pending, unlike the build and format checks in pr-build.yml
+# not a required check, so path filtering is safe here
 on:
   push:
     branches: [main]
@@ -43,8 +39,7 @@ jobs:
         with:
           dotnet-version: "8.0.x"
 
-      # always the project, never FluentMath.slnx; the solution also contains the frozen
-      # WPF v1 (net472, packages.config) which does not build on a dotnet-only runner
+      # always the project, never FluentMath.slnx; the solution also holds WPF v1, which needs net472
       - name: restore
         run: dotnet restore FluentMath/FluentMath.csproj -p:Platform=x64 -r win-x64 -p:SelfContained=true
 

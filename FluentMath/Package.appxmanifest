@@ -7,11 +7,9 @@
   IgnorableNamespaces="uap rescap">
 
   <!--
-    only the store package reads this file, the installer build is unpackaged and never looks at it
-    Name, Publisher and PublisherDisplayName are dictated by partner center under product identity and have to
-    match it character for character, or the upload is rejected
-    Version stays at the placeholder; StampAppxManifestVersion in the csproj writes the csproj Version into the
-    package, so the csproj remains the only place a version is bumped by hand
+    only the store package reads this file
+    Name, Publisher and PublisherDisplayName have to match the partner center product identity exactly
+    (Version stays a placeholder; StampAppxManifestVersion in the csproj writes the real one)
   -->
   <Identity
     Name="cechout.FluentMath"
@@ -25,8 +23,8 @@
   </Properties>
 
   <!--
-    desktop only, a full trust win32 app cannot run on the other universal device families
-    the packaging tooling overwrites both versions from TargetPlatformMinVersion and the target framework
+    desktop only, as a full trust app
+    (the tooling overwrites both versions from TargetPlatformMinVersion and the target framework)
   -->
   <Dependencies>
     <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17763.0" MaxVersionTested="10.0.19041.0" />
@@ -52,7 +50,7 @@
     </Application>
   </Applications>
 
-  <!--  internetClient for the european central bank feed the currency converter reads its rates from  -->
+  <!--  internetClient for the ECB rate feed  -->
   <Capabilities>
     <Capability Name="internetClient" />
     <rescap:Capability Name="runFullTrust" />

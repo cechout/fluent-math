@@ -3,8 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
 
-    <!-- only place the version gets bumped, AssemblyVersion/FileVersion/InformationalVersion derive from this automatically -->
-    <!-- release.yml reads it from here and hands it to Inno Setup, so the installer can never drift out of sync -->
+    <!-- the only place the version is bumped; the assembly versions and release.yml (Inno Setup) derive from it -->
     <Version>2.3.0</Version>
 
     <Authors>Daniel Čech</Authors>
@@ -46,11 +45,7 @@
     <Manifest Include="$(ApplicationManifest)" />
   </ItemGroup>
 
-  <!--
-    Defining the "Msix" ProjectCapability here allows the Single-project MSIX Packaging
-    Tools extension to be activated for this project even if the Windows App SDK Nuget
-    package has not yet been restored.
-  -->
+  <!-- lets the MSIX tooling activate before the Windows App SDK package is restored -->
   <ItemGroup Condition="'$(DisableMsixProjectCapabilityAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <ProjectCapability Include="Msix" />
   </ItemGroup>
@@ -91,31 +86,24 @@
     </Page>
   </ItemGroup>
 
-  <!--
-    Defining the "HasPackageAndPublishMenuAddedByProject" property here allows the Solution
-    Explorer "Package and Publish" context menu entry to be enabled for this project even if
-    the Windows App SDK Nuget package has not yet been restored.
-  -->
+  <!-- enables the Package and Publish menu before the Windows App SDK package is restored -->
   <PropertyGroup Condition="'$(DisableHasPackageAndPublishMenuAddedByProject)'!='true' and '$(EnableMsixTooling)'=='true'">
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
 
-  <!-- Publish Properties -->
+  <!-- publish properties -->
   <PropertyGroup>
     <PublishReadyToRun Condition="'$(Configuration)' == 'Debug'">False</PublishReadyToRun>
     <PublishReadyToRun Condition="'$(Configuration)' != 'Debug'">True</PublishReadyToRun>
     <PublishTrimmed Condition="'$(Configuration)' == 'Debug'">False</PublishTrimmed>
-    <!-- trimming strips the WinRT/COM interop types the Windows App SDK resolves at runtime and crashes the app, never turn this on -->
+    <!-- never on: trimming strips the WinRT/COM interop types resolved at runtime, and the app crashes -->
     <PublishTrimmed Condition="'$(Configuration)' != 'Debug'">False</PublishTrimmed>
   </PropertyGroup>
 
   <!--
-    the store package is this same project with WindowsPackageType=MSIX passed on the command line by release.yml
-    the store wants a four part version, so the manifest is stamped here from the csproj Version instead of keeping
-    a second number in Package.appxmanifest
-    the stamp goes onto a copy in obj and @(AppxManifest) is pointed at that copy, because
-    _ValidatePresenceOfAppxManifestItems reads the version out of the source item and everything downstream hangs
-    off it: the package file name, the bundle manifest version and the final manifest
+    the store package: this project with WindowsPackageType=MSIX from release.yml
+    stamps the four part store version from Version onto a copy of the manifest in obj
+    (@(AppxManifest) points at the copy; _ValidatePresenceOfAppxManifestItems reads the version from it)
   -->
   <Target Name="StampAppxManifestVersion" BeforeTargets="_ValidatePresenceOfAppxManifestItems" Condition="'$(WindowsPackageType)' != 'None' and '@(AppxManifest)' != ''">
     <PropertyGroup>
