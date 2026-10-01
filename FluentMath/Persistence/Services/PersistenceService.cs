@@ -5,6 +5,7 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using FluentMath.Models;
 using FluentMath.Persistence.Models;
 
 namespace FluentMath.Persistence.Services
@@ -20,6 +21,7 @@ namespace FluentMath.Persistence.Services
         public const string SettingsFileName = "settings.json";
         public const string WindowStateFileName = "window-state.json";
         public const string PageStateFileName = "page-state.json";
+        public const string RatesFileName = "rates.json";
 
         // --- quarantine ---
         // a file that does not parse is moved here rather than read again, and kept for a while in case a
@@ -41,6 +43,7 @@ namespace FluentMath.Persistence.Services
         private readonly PendingFile _settings;
         private readonly PendingFile _windowStates;
         private readonly PendingFile _pageState;
+        private readonly string _ratesPath; // no debounce, see SaveRates
 
         // the timers fire on the thread pool; a write and the hand over of its json happen under this lock
         private readonly object _gate = new object();
@@ -69,6 +72,7 @@ namespace FluentMath.Persistence.Services
             _settings = new PendingFile(Path.Combine(rootFolder, SettingsFileName));
             _windowStates = new PendingFile(Path.Combine(rootFolder, WindowStateFileName));
             _pageState = new PendingFile(Path.Combine(rootFolder, PageStateFileName));
+            _ratesPath = Path.Combine(rootFolder, RatesFileName);
 
             TidyQuarantine();
         }
@@ -94,6 +98,27 @@ namespace FluentMath.Persistence.Services
             Flush(_settings);
             Flush(_windowStates);
             Flush(_pageState);
+        }
+
+        // rates:
+        // the last ECB rates, for when the feed cannot be reached; a cache rather than a setting, so outside
+        // every backup and reset, and written once per fetch rather than debounced
+        public RateTable? LoadRates()
+        {
+            RateTable? rates = LoadFile<RateTable>(_ratesPath);
+            return rates?.Rates?.Count > 0 ? rates : null;
+        }
+
+        public void SaveRates(RateTable rates)
+        {
+            string json = JsonSerializer.Serialize(rates, JsonOptions);
+
+            lock (_gate)
+            {
+                if (_isSuspended) return;
+
+                WriteFile(_ratesPath, json);
+            }
         }
 
         // reset:

@@ -72,7 +72,7 @@ FluentMath/
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
-│                 CalculatorSettings, ConvertCurrency, GetCurrencyData, CurrencyHelper
+│                 CalculatorSettings, ConvertCurrency, GetCurrencyData, CurrencyHelper, RateTable
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath or the package

@@ -255,6 +255,40 @@ namespace FluentMath.Tests
         }
 
 
+        // === rates ===
+
+        [Fact]
+        public void TheRatesComeBackWithTheirDayAndAreWrittenRightAway()
+        {
+            var rates = new RateTable { Date = new DateOnly(2026, 9, 30) };
+            rates.Rates["EUR"] = 1;
+            rates.Rates["JPY"] = 162.31;
+
+            new PersistenceService(_folder).SaveRates(rates);
+            RateTable? loaded = new PersistenceService(_folder).LoadRates();
+
+            Assert.NotNull(loaded);
+            Assert.Equal(new DateOnly(2026, 9, 30), loaded!.Date);
+            Assert.Equal(162.31, loaded.Rates["JPY"]);
+        }
+
+        [Theory]
+        [InlineData("{ \"Rates\": {} }")]
+        [InlineData("{ \"Rates\": null }")]
+        public void ATableWithoutRatesCountsAsNone(string json)
+        {
+            WriteRaw(PersistenceService.RatesFileName, json);
+
+            Assert.Null(new PersistenceService(_folder).LoadRates());
+        }
+
+        [Fact]
+        public void NoRatesOnDiskGiveNone()
+        {
+            Assert.Null(new PersistenceService(_folder).LoadRates());
+        }
+
+
         // === reset ===
 
         private PersistenceService ServiceWithAllThreeFiles()
@@ -394,6 +428,23 @@ namespace FluentMath.Tests
 
             Assert.Equal("Dark", service.LoadSettings().AppTheme);
             Assert.Equal("CHF", service.LoadPageState().CurrencyFrom);
+        }
+
+        [Fact]
+        public void TheRatesAreKeptButNeitherBackedUpNorReset()
+        {
+            PersistenceService service = ServiceWithAllThreeFiles();
+            service.SaveRates(new RateTable { Rates = { ["EUR"] = 1, ["USD"] = 1.0842 } });
+
+            service.ExportBackup(ZipPath);
+            using (ZipArchive zip = ZipFile.OpenRead(ZipPath))
+            {
+                Assert.DoesNotContain(zip.Entries, entry => entry.FullName == PersistenceService.RatesFileName);
+            }
+
+            service.ResetAll();
+
+            Assert.Equal(1.0842, new PersistenceService(_folder).LoadRates()!.Rates["USD"]);
         }
 
         [Fact]
