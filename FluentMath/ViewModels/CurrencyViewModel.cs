@@ -6,6 +6,8 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using FluentMath.Models;
+using FluentMath.Persistence.Models;
+using FluentMath.Persistence.Services;
 
 namespace FluentMath.ViewModels
 {
@@ -33,6 +35,7 @@ namespace FluentMath.ViewModels
                 if (_selectedCurrency1 == value) return;
                 _selectedCurrency1 = value;
                 OnPropertyChanged();
+                if (value != null) PageStateService.Instance.CurrencyFrom = value.Code;
                 UpdateRateText();
             }
         }
@@ -46,6 +49,7 @@ namespace FluentMath.ViewModels
                 if (_selectedCurrency2 == value) return;
                 _selectedCurrency2 = value;
                 OnPropertyChanged();
+                if (value != null) PageStateService.Instance.CurrencyTo = value.Code;
                 UpdateRateText();
             }
         }
@@ -84,7 +88,8 @@ namespace FluentMath.ViewModels
 
         // === constructor ===
 
-        // the picker list is whatever the ECB feed contains
+        // the picker list is whatever the ECB feed contains; the pair is the saved one, or EUR and USD when the
+        // feed lacks a saved code
         public CurrencyViewModel()
         {
             _converter = new ConvertCurrency();
@@ -93,14 +98,21 @@ namespace FluentMath.ViewModels
                 .Select(code => CurrencyHelper.GetInfo(code))
                 .ToList();
 
-            SelectedCurrency1 = AvailableCurrencies.FirstOrDefault(c => c.Code == "EUR");
-            SelectedCurrency2 = AvailableCurrencies.FirstOrDefault(c => c.Code == "USD");
+            SelectedCurrency1 = FindCurrency(PageStateService.Instance.CurrencyFrom)
+                ?? FindCurrency(PageStateData.DefaultCurrencyFrom);
+            SelectedCurrency2 = FindCurrency(PageStateService.Instance.CurrencyTo)
+                ?? FindCurrency(PageStateData.DefaultCurrencyTo);
 
             InputCommand = new RelayCommand<string>(AddInput);
             ClearCommand = new RelayCommand<string>(_ => Clear());
             BackspaceCommand = new RelayCommand<string>(_ => Backspace());
             CalculateCommand = new RelayCommand<string>(_ => Calculate());
             RefreshCommand = new RelayCommand<string>(_ => RefreshRates());
+        }
+
+        private CurrencyInfo? FindCurrency(string code)
+        {
+            return AvailableCurrencies.FirstOrDefault(c => c.Code == code);
         }
 
 

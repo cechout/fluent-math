@@ -8,9 +8,9 @@
   </PropertyGroup>
 
   <!--
-    the engine and the ViewModel are linked in rather than referenced: the app is a WinExe on a Windows
-    target framework and cannot be referenced from a plain net8.0 library, while everything under test
-    here is ordinary C# and runs on any dotnet runner
+    the engine, the ViewModel and the persistence layer are linked in rather than referenced: the app is a
+    WinExe on a Windows target framework and cannot be referenced from a plain net8.0 library, while
+    everything under test here is ordinary C# and runs on any dotnet runner
     the ViewModel only got here at all once its two Visibility properties became bools
   -->
   <ItemGroup>
@@ -24,6 +24,9 @@
     <Compile Include="..\FluentMath\Models\ExactValue.cs" />
     <Compile Include="..\FluentMath\ViewModels\CalculatorViewModel.cs" />
     <Compile Include="..\FluentMath\ViewModels\RelayCommand.cs" />
+    <Compile Include="..\FluentMath\Persistence\Models\*.cs" />
+    <Compile Include="..\FluentMath\Persistence\Services\PersistenceService.cs" />
+    <Compile Include="..\FluentMath\Persistence\Services\SettingsService.cs" />
   </ItemGroup>
 
   <ItemGroup>

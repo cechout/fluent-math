@@ -41,14 +41,14 @@
                 HorizontalAlignment="Stretch"
                 Spacing="4">
 
-                <!--  appearance  -->
+                <!--  general  -->
                 <TextBlock
                     Margin="4,8,0,6"
                     Style="{StaticResource BodyStrongTextBlockStyle}"
-                    Text="Appearance" />
+                    Text="General" />
 
                 <!--  app theme  -->
-                <!--  (applied through MainWindow; not persisted)  -->
+                <!--  (SettingsService keeps it, MainWindow applies it)  -->
                 <controls:SettingsCard
                     Description="Light, dark, or match Windows"
                     Header="App Theme"
@@ -60,6 +60,22 @@
                         <ComboBoxItem Content="System Default" Tag="Default" />
                         <ComboBoxItem Content="Light" Tag="Light" />
                         <ComboBoxItem Content="Dark" Tag="Dark" />
+                    </ComboBox>
+                </controls:SettingsCard>
+
+                <!--  start page  -->
+                <!--  (in the order of StartupPage; the labels mirror the navigation entries)  -->
+                <controls:SettingsCard
+                    Description="The page the app opens on"
+                    Header="Start Page"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE80F;}">
+                    <ComboBox
+                        x:Name="StartupPageComboBox"
+                        Width="150"
+                        SelectionChanged="StartupPageComboBox_SelectionChanged">
+                        <ComboBoxItem Content="Standard" />
+                        <ComboBoxItem Content="Scientific" />
+                        <ComboBoxItem Content="Currency" />
                     </ComboBox>
                 </controls:SettingsCard>
 

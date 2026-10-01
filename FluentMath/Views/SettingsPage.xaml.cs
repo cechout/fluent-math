@@ -1,4 +1,6 @@
 using FluentMath.Models;
+using FluentMath.Persistence.Models;
+using FluentMath.Persistence.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -29,6 +31,7 @@ namespace FluentMath.Views
             SeparatorsExpander.HeaderIcon = TextIcon("0,1", SeparatorsIconSize, SeparatorsIconWeight);
 
             RestoreThemeSelection();
+            StartupPageComboBox.SelectedIndex = (int)SettingsService.Instance.StartupPage;
             RestoreCalculatorSettings();
             VersionTextBlock.Text = VersionLabel();
             _isLoading = false;
@@ -43,22 +46,13 @@ namespace FluentMath.Views
 
             if (ThemeComboBox.SelectedItem is ComboBoxItem selectedItem)
             {
-                string themeTag = selectedItem.Tag.ToString();
-                if (MainWindow.Instance != null)
-                {
-                    MainWindow.Instance.ApplyTheme(themeTag);
-                }
+                SettingsService.Instance.AppTheme = selectedItem.Tag.ToString() ?? "Default";
             }
         }
 
-        // MainWindow holds the only copy of the theme; (not persisted)
         private void RestoreThemeSelection()
         {
-            string currentTheme = "Default";
-            if (MainWindow.Instance != null)
-            {
-                currentTheme = MainWindow.Instance.CurrentTheme;
-            }
+            string currentTheme = SettingsService.Instance.AppTheme;
 
             foreach (ComboBoxItem item in ThemeComboBox.Items)
             {
@@ -69,6 +63,17 @@ namespace FluentMath.Views
                 }
             }
             ThemeComboBox.SelectedIndex = 0;
+        }
+
+
+        // === start page ===
+
+        // the selected index is the StartupPage value, see the markup
+        private void StartupPageComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+
+            SettingsService.Instance.StartupPage = (StartupPage)StartupPageComboBox.SelectedIndex;
         }
 
 
