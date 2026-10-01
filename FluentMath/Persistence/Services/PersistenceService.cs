@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
@@ -43,6 +44,10 @@ namespace FluentMath.Persistence.Services
 
         // the timers fire on the thread pool; a write and the hand over of its json happen under this lock
         private readonly object _gate = new object();
+
+        // set by a reset or an import, which a restart follows; whatever the app still holds in memory is
+        // older than the disk by then and is never written
+        private bool _isSuspended;
 
 
         // === singleton instance ===
@@ -91,8 +96,127 @@ namespace FluentMath.Persistence.Services
             Flush(_pageState);
         }
 
+        // reset:
+        // deletes the files of one group; the others are written first, and nothing is written after, so the
+        // restart that follows brings the group back on its defaults
+        public void ResetSettings() => Reset(_settings);
+        public void ResetWindowAndPageStates() => Reset(_windowStates, _pageState);
+        public void ResetAll() => Reset(_settings, _windowStates, _pageState);
+
+        // backup:
+        // the files in one zip, after a flush, so it holds what the app shows right now; a file not written
+        // yet is left out and comes back on its defaults
+        public void ExportBackup(string zipPath)
+        {
+            FlushAll();
+
+            if (File.Exists(zipPath)) File.Delete(zipPath);
+
+            using ZipArchive zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
+            foreach (PendingFile file in AllFiles)
+            {
+                if (File.Exists(file.Path)) zip.CreateEntryFromFile(file.Path, Path.GetFileName(file.Path));
+            }
+        }
+
+        // all or nothing: every entry has to be one of the files and has to load as its type before anything
+        // on disk is touched; false leaves the disk as it was
+        // the files the backup lacks are deleted, as an export of their defaults would have left them out
+        public bool ImportBackup(string zipPath)
+        {
+            try
+            {
+                var contents = new Dictionary<PendingFile, string>();
+
+                using (ZipArchive zip = ZipFile.OpenRead(zipPath))
+                {
+                    foreach (ZipArchiveEntry entry in zip.Entries)
+                    {
+                        PendingFile? file = Array.Find(AllFiles, f => Path.GetFileName(f.Path) == entry.FullName);
+                        if (file == null || contents.ContainsKey(file)) return false;
+
+                        using var reader = new StreamReader(entry.Open());
+                        string json = reader.ReadToEnd();
+                        if (!Parses(file, json)) return false;
+
+                        contents[file] = json;
+                    }
+                }
+
+                lock (_gate)
+                {
+                    Suspend();
+
+                    foreach (PendingFile file in AllFiles)
+                    {
+                        if (contents.TryGetValue(file, out string? json)) WriteFile(file.Path, json);
+                        else DeleteFile(file.Path);
+                    }
+                }
+
+                return true;
+            }
+            catch
+            {
+                // not a zip, or an entry that cannot be read
+                return false;
+            }
+        }
+
 
         // === private helpers ===
+
+        private PendingFile[] AllFiles => new[] { _settings, _windowStates, _pageState };
+
+        private void Reset(params PendingFile[] files)
+        {
+            lock (_gate)
+            {
+                FlushAll();
+                Suspend();
+
+                foreach (PendingFile file in files)
+                {
+                    DeleteFile(file.Path);
+                }
+            }
+        }
+
+        // drops every pending write and refuses the later ones
+        private void Suspend()
+        {
+            _isSuspended = true;
+
+            foreach (PendingFile file in AllFiles)
+            {
+                file.Timer?.Dispose();
+                file.Timer = null;
+                file.Json = null;
+            }
+        }
+
+        private bool Parses(PendingFile file, string json)
+        {
+            try
+            {
+                if (file == _settings) return JsonSerializer.Deserialize<AppSettingsData>(json, JsonOptions) != null;
+                if (file == _windowStates) return JsonSerializer.Deserialize<Dictionary<string, WindowState>>(json, JsonOptions) != null;
+                return JsonSerializer.Deserialize<PageStateData>(json, JsonOptions) != null;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static void DeleteFile(string path)
+        {
+            try
+            {
+                if (File.Exists(path)) File.Delete(path);
+            }
+            catch { /* best effort; a file that stays is read on the next start like any other */ }
+        }
 
         // one file with its debounce timer and the json still waiting to be written
         private sealed class PendingFile
@@ -113,6 +237,8 @@ namespace FluentMath.Persistence.Services
 
             lock (_gate)
             {
+                if (_isSuspended) return;
+
                 file.Json = json;
                 file.Timer?.Dispose();
                 file.Timer = new Timer(_ => Flush(file), null, DebounceMs, Timeout.Infinite);

@@ -219,6 +219,55 @@
                 </controls:SettingsExpander>
 
 
+                <!--  backup and reset  -->
+                <TextBlock
+                    Margin="4,20,0,6"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Backup &amp; Reset" />
+
+                <!--  app data folder  -->
+                <!--  (the description becomes the real path, which differs per build)  -->
+                <controls:SettingsCard
+                    x:Name="AppDataFolderCard"
+                    Description="Where settings, window and page state are stored"
+                    Header="App Data Folder"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE8B7;}">
+                    <Button Click="OpenAppDataFolder_Click" Content="Open" />
+                </controls:SettingsCard>
+
+                <!--  export and import  -->
+                <controls:SettingsCard
+                    Description="Back up or restore all settings as a zip file (import restarts the app)"
+                    Header="Export / Import Settings"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE74E;}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Click="ExportSettings_Click" Content="Export" />
+                        <Button Click="ImportSettings_Click" Content="Import" />
+                    </StackPanel>
+                </controls:SettingsCard>
+
+                <!--  reset  -->
+                <!--  (everything in the header slot, one group per card inside)  -->
+                <controls:SettingsExpander
+                    Description="Restore the defaults (restarts the app)"
+                    Header="Reset to Defaults"
+                    HeaderIcon="{ui:FontIcon Glyph=&#xE777;}"
+                    IsExpanded="False">
+
+                    <Button Click="ResetAll_Click" Content="Reset All" />
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Description="Theme, start page and the calculator setup" Header="General Settings">
+                            <Button Click="ResetGeneralSettings_Click" Content="Reset" />
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Description="Window position and size, compact sizes, display height and currency pair" Header="Window and Page States">
+                            <Button Click="ResetWindowAndPageStates_Click" Content="Reset" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
+
+
                 <!--  about and open source  -->
                 <TextBlock
                     Margin="4,20,0,6"

@@ -4,7 +4,13 @@ using FluentMath.Persistence.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.Windows.AppLifecycle;
+using Microsoft.Windows.Storage.Pickers;
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Threading.Tasks;
 using Windows.UI.Text;
 
 namespace FluentMath.Views
@@ -33,6 +39,7 @@ namespace FluentMath.Views
             RestoreThemeSelection();
             StartupPageComboBox.SelectedIndex = (int)SettingsService.Instance.StartupPage;
             RestoreCalculatorSettings();
+            AppDataFolderCard.Description = PersistenceService.Instance.RootFolder;
             VersionTextBlock.Text = VersionLabel();
             _isLoading = false;
         }
@@ -130,6 +137,139 @@ namespace FluentMath.Views
         private void UpdateDigitsAvailability()
         {
             DigitsCard.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
+        }
+
+
+        // === backup and reset ===
+
+        // the folder may not exist yet, before the first save
+        private void OpenAppDataFolder_Click(object sender, RoutedEventArgs e)
+        {
+            string folder = PersistenceService.Instance.RootFolder;
+
+            try
+            {
+                Directory.CreateDirectory(folder);
+                Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
+            }
+            catch { /* no explorer reachable, and this page has nowhere to report that to */ }
+        }
+
+        private async void ExportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var picker = new FileSavePicker(MainWindow.Instance.AppWindow.Id)
+            {
+                SuggestedFileName = $"FluentMath-Backup-{DateTime.Now:yyyy-MM-dd}",
+                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+            };
+            picker.FileTypeChoices.Add("Backup File", new List<string> { ".zip" });
+
+            PickFileResult? picked = await picker.PickSaveFileAsync();
+            if (picked == null) return;
+
+            try
+            {
+                PersistenceService.Instance.ExportBackup(picked.Path);
+                await ShowInfoAsync("Export Successful", "Your settings have been exported.");
+            }
+            catch
+            {
+                await ShowInfoAsync("Export Failed", "The settings could not be exported.");
+            }
+        }
+
+        private async void ImportSettings_Click(object sender, RoutedEventArgs e)
+        {
+            var picker = new FileOpenPicker(MainWindow.Instance.AppWindow.Id)
+            {
+                SuggestedStartLocation = PickerLocationId.DocumentsLibrary
+            };
+            picker.FileTypeFilter.Add(".zip");
+
+            PickFileResult? picked = await picker.PickSingleFileAsync();
+            if (picked == null) return;
+
+            if (!await ConfirmAsync("Import Settings?",
+                "This overwrites all settings, window and page states, then restarts the app.", "Import")) return;
+
+            if (PersistenceService.Instance.ImportBackup(picked.Path))
+            {
+                await RestartAsync();
+            }
+            else
+            {
+                await ShowInfoAsync("Import Failed", "The selected file is not a valid Fluent Math backup.");
+            }
+        }
+
+        private async void ResetAll_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await ConfirmResetAsync("All Settings")) return;
+
+            PersistenceService.Instance.ResetAll();
+            await RestartAsync();
+        }
+
+        private async void ResetGeneralSettings_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await ConfirmResetAsync("General Settings")) return;
+
+            PersistenceService.Instance.ResetSettings();
+            await RestartAsync();
+        }
+
+        private async void ResetWindowAndPageStates_Click(object sender, RoutedEventArgs e)
+        {
+            if (!await ConfirmResetAsync("Window and Page States")) return;
+
+            PersistenceService.Instance.ResetWindowAndPageStates();
+            await RestartAsync();
+        }
+
+        private Task<bool> ConfirmResetAsync(string what)
+        {
+            return ConfirmAsync($"Reset {what}?",
+                "This restores the default values and restarts the app. It cannot be undone.", "Reset");
+        }
+
+        // everything is read at launch, so a new start is what brings the files on disk into the app
+        // Restart only returns when it failed; the disk is already done and nothing is saved over it, so a
+        // start by hand finishes the job
+        private async Task RestartAsync()
+        {
+            AppInstance.Restart("");
+
+            await ShowInfoAsync("Restart Fluent Math", "Close Fluent Math and open it again to finish.");
+        }
+
+        private async Task<bool> ConfirmAsync(string title, string message, string confirmText)
+        {
+            ContentDialog dialog = NewDialog(title, message);
+            dialog.PrimaryButtonText = confirmText;
+            dialog.CloseButtonText = "Cancel";
+            dialog.DefaultButton = ContentDialogButton.Close;
+
+            return await dialog.ShowAsync() == ContentDialogResult.Primary;
+        }
+
+        private async Task ShowInfoAsync(string title, string message)
+        {
+            ContentDialog dialog = NewDialog(title, message);
+            dialog.CloseButtonText = "OK";
+
+            await dialog.ShowAsync();
+        }
+
+        // a dialog sits beside the window content, so the theme the app sets there is handed over by hand
+        private ContentDialog NewDialog(string title, string message)
+        {
+            return new ContentDialog
+            {
+                Title = title,
+                Content = message,
+                XamlRoot = this.XamlRoot,
+                RequestedTheme = XamlRoot.Content is FrameworkElement root ? root.ActualTheme : ElementTheme.Default
+            };
         }
 
 

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using FluentMath.Models;
 using FluentMath.Persistence.Models;
 using FluentMath.Persistence.Services;
@@ -251,6 +252,160 @@ namespace FluentMath.Tests
 
             Assert.Empty(Directory.GetFiles(_folder, "*.tmp"));
             Assert.Equal(3, Directory.GetFiles(_folder, "*.json").Length);
+        }
+
+
+        // === reset ===
+
+        private PersistenceService ServiceWithAllThreeFiles()
+        {
+            var service = new PersistenceService(_folder);
+            service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
+            service.SaveWindowStatesDebounced(new Dictionary<string, WindowState> { ["Main"] = new WindowState { Width = 400 } });
+            service.SavePageStateDebounced(new PageStateData { CurrencyFrom = "CHF" });
+            service.FlushAll();
+            return service;
+        }
+
+        [Fact]
+        public void ResettingTheSettingsLeavesTheWindowAndPageStatesAlone()
+        {
+            ServiceWithAllThreeFiles().ResetSettings();
+
+            Assert.False(File.Exists(FilePath(PersistenceService.SettingsFileName)));
+            Assert.True(File.Exists(FilePath(PersistenceService.WindowStateFileName)));
+            Assert.True(File.Exists(FilePath(PersistenceService.PageStateFileName)));
+        }
+
+        [Fact]
+        public void ResettingTheWindowAndPageStatesLeavesTheSettingsAlone()
+        {
+            ServiceWithAllThreeFiles().ResetWindowAndPageStates();
+
+            Assert.True(File.Exists(FilePath(PersistenceService.SettingsFileName)));
+            Assert.False(File.Exists(FilePath(PersistenceService.WindowStateFileName)));
+            Assert.False(File.Exists(FilePath(PersistenceService.PageStateFileName)));
+        }
+
+        [Fact]
+        public void AResetWritesWhatTheOtherGroupStillHadPending()
+        {
+            var service = new PersistenceService(_folder);
+            service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
+            service.SavePageStateDebounced(new PageStateData { CurrencyFrom = "CHF" });
+
+            service.ResetWindowAndPageStates();
+
+            Assert.Equal("Dark", new PersistenceService(_folder).LoadSettings().AppTheme);
+            Assert.False(File.Exists(FilePath(PersistenceService.PageStateFileName)));
+        }
+
+        [Fact]
+        public void NothingIsWrittenAfterAReset()
+        {
+            PersistenceService service = ServiceWithAllThreeFiles();
+            service.ResetAll();
+
+            service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Light" });
+            service.SaveWindowStatesDebounced(new Dictionary<string, WindowState>());
+            service.FlushAll();
+
+            Assert.Empty(Directory.GetFiles(_folder, "*.json"));
+        }
+
+
+        // === backup ===
+
+        private string ZipPath => Path.Combine(_folder, "backup.zip");
+
+        [Fact]
+        public void AnExportedBackupImportsBackOverChangedState()
+        {
+            ServiceWithAllThreeFiles().ExportBackup(ZipPath);
+
+            var changed = new PersistenceService(_folder);
+            changed.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Light" });
+            changed.SavePageStateDebounced(new PageStateData { CurrencyFrom = "JPY" });
+            changed.FlushAll();
+
+            Assert.True(new PersistenceService(_folder).ImportBackup(ZipPath));
+
+            var loaded = new PersistenceService(_folder);
+            Assert.Equal("Dark", loaded.LoadSettings().AppTheme);
+            Assert.Equal(400, loaded.LoadWindowStates()["Main"].Width);
+            Assert.Equal("CHF", loaded.LoadPageState().CurrencyFrom);
+        }
+
+        [Fact]
+        public void AnExportFlushesWhatIsStillPending()
+        {
+            var service = new PersistenceService(_folder);
+            service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
+            service.ExportBackup(ZipPath);
+
+            Assert.True(new PersistenceService(_folder).ImportBackup(ZipPath));
+            Assert.Equal("Dark", new PersistenceService(_folder).LoadSettings().AppTheme);
+        }
+
+        [Fact]
+        public void AFileTheBackupLacksComesBackOnItsDefaults()
+        {
+            var early = new PersistenceService(_folder);
+            early.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
+            early.ExportBackup(ZipPath);
+
+            var later = new PersistenceService(_folder);
+            later.SavePageStateDebounced(new PageStateData { CurrencyFrom = "JPY" });
+            later.FlushAll();
+
+            Assert.True(new PersistenceService(_folder).ImportBackup(ZipPath));
+            Assert.False(File.Exists(FilePath(PersistenceService.PageStateFileName)));
+        }
+
+        [Fact]
+        public void NothingIsWrittenAfterAnImport()
+        {
+            ServiceWithAllThreeFiles().ExportBackup(ZipPath);
+
+            var service = new PersistenceService(_folder);
+            Assert.True(service.ImportBackup(ZipPath));
+
+            service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Light" });
+            service.FlushAll();
+
+            Assert.Equal("Dark", new PersistenceService(_folder).LoadSettings().AppTheme);
+        }
+
+        [Theory]
+        [InlineData("notes.txt", "hello")] // a file no backup has
+        [InlineData(PersistenceService.SettingsFileName, "{ not json")]
+        [InlineData(PersistenceService.SettingsFileName, "{ \"AngleMode\": \"Turns\" }")]
+        public void ABackupWithAnUnknownOrBrokenEntryChangesNothing(string entryName, string content)
+        {
+            ServiceWithAllThreeFiles();
+            using (ZipArchive zip = ZipFile.Open(ZipPath, ZipArchiveMode.Create))
+            {
+                using var writer = new StreamWriter(zip.CreateEntry(entryName).Open());
+                writer.Write(content);
+            }
+
+            var service = new PersistenceService(_folder);
+            Assert.False(service.ImportBackup(ZipPath));
+
+            Assert.Equal("Dark", service.LoadSettings().AppTheme);
+            Assert.Equal("CHF", service.LoadPageState().CurrencyFrom);
+        }
+
+        [Fact]
+        public void AFileThatIsNotAZipChangesNothing()
+        {
+            ServiceWithAllThreeFiles();
+            File.WriteAllText(ZipPath, "not a zip");
+
+            var service = new PersistenceService(_folder);
+            Assert.False(service.ImportBackup(ZipPath));
+
+            Assert.Equal("Dark", service.LoadSettings().AppTheme);
         }
     }
 }
