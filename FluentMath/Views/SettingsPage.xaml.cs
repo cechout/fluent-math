@@ -29,6 +29,10 @@ namespace FluentMath.Views
         private const double IconOverhang = 30; // how far a text icon may draw past its box on either side
         private const double IconBoxSize = 20; // SettingsCardHeaderIconMaxSize; (not a knob)
 
+        // --- dialogs ---
+        private const double DialogMaxWidthShare = 0.9; // of the window width
+        private const double DialogPlatformMinWidth = 320; // ContentDialogMinWidth; (not a knob)
+
         public SettingsPage()
         {
             InitializeComponent();
@@ -261,15 +265,22 @@ namespace FluentMath.Views
         }
 
         // a dialog sits beside the window content, so the theme the app sets there is handed over by hand
+        // its width is capped to a share of the window, the floor lowered with it for a narrow one
         private ContentDialog NewDialog(string title, string message)
         {
-            return new ContentDialog
+            var dialog = new ContentDialog
             {
                 Title = title,
                 Content = message,
                 XamlRoot = this.XamlRoot,
                 RequestedTheme = XamlRoot.Content is FrameworkElement root ? root.ActualTheme : ElementTheme.Default
             };
+
+            double maxWidth = XamlRoot.Size.Width * DialogMaxWidthShare;
+            dialog.Resources["ContentDialogMaxWidth"] = maxWidth;
+            dialog.Resources["ContentDialogMinWidth"] = Math.Min(DialogPlatformMinWidth, maxWidth);
+
+            return dialog;
         }
 
 
