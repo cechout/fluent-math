@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace FluentMath.Models
@@ -17,6 +19,8 @@ namespace FluentMath.Models
 
     public readonly struct NumberFormat
     {
+        public const int MaxDigits = 9;
+
         public NumberNotation Notation { get; }
 
         // the decimals of Fix or significant digits of Sci, 0 to 9; (Sci 0 is every digit, as on a Casio)
@@ -40,30 +44,41 @@ namespace FluentMath.Models
 
 
     // the calculator setup, one object for the whole app, since every page has its own ViewModel
-    // (not persisted across a restart yet)
+    // (every setter reports a change through Changed, which is what saves it)
     public sealed class CalculatorSettings
     {
+        // raised once per value that actually changed
+        public event Action? Changed;
+
         // the unit the caret bar selector and the settings page both edit
-        public AngleMode AngleMode { get; set; } = AngleMode.Degrees;
+        private AngleMode _angleMode = AngleMode.Degrees;
+        public AngleMode AngleMode { get => _angleMode; set => Set(ref _angleMode, value); }
 
         // a result opens as its fraction when it has one, as in MathI/MathO on a Casio; else as its decimal
-        public bool ExactFirst { get; set; } = true;
+        private bool _exactFirst = true;
+        public bool ExactFirst { get => _exactFirst; set => Set(ref _exactFirst, value); }
 
         // which of the two fraction forms comes first
-        public bool MixedFirst { get; set; }
+        private bool _mixedFirst;
+        public bool MixedFirst { get => _mixedFirst; set => Set(ref _mixedFirst, value); }
 
         // S⇔D passes a recurring decimal on its way to the decimal (2.3 with a bar for 7/3), if the period fits
-        public bool RecurringDecimals { get; set; } = true;
+        private bool _recurringDecimals = true;
+        public bool RecurringDecimals { get => _recurringDecimals; set => Set(ref _recurringDecimals, value); }
 
-        public NumberFormat NumberFormat { get; set; } = NumberFormat.Default;
+        private NumberFormat _numberFormat = NumberFormat.Default;
+        public NumberFormat NumberFormat { get => _numberFormat; set => Set(ref _numberFormat, value); }
 
         // a result in the ENG view is written with its decimal prefix, 1.234k rather than 1.234×10³
-        public bool UsePrefixes { get; set; }
+        private bool _usePrefixes;
+        public bool UsePrefixes { get => _usePrefixes; set => Set(ref _usePrefixes, value); }
 
         // a thin gap every three digits of a whole part, in the input line and in the result
-        public bool GroupDigits { get; set; }
+        private bool _groupDigits;
+        public bool GroupDigits { get => _groupDigits; set => Set(ref _groupDigits, value); }
 
-        public DecimalMark DecimalMark { get; set; } = DecimalMark.Region;
+        private DecimalMark _decimalMark = DecimalMark.Region;
+        public DecimalMark DecimalMark { get => _decimalMark; set => Set(ref _decimalMark, value); }
 
         // the mark the display draws; the region is asked each time, and anything but a comma is a dot
         public string DecimalMarkText => DecimalMark switch
@@ -72,5 +87,13 @@ namespace FluentMath.Models
             DecimalMark.Dot => ".",
             _ => CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator == "," ? "," : "."
         };
+
+        private void Set<T>(ref T field, T value)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value)) return;
+
+            field = value;
+            Changed?.Invoke();
+        }
     }
 }

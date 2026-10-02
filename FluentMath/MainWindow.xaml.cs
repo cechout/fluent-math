@@ -1,3 +1,5 @@
+using FluentMath.Persistence.Models;
+using FluentMath.Persistence.Services;
 using FluentMath.Views;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -5,12 +7,12 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Windows.Foundation;
 using Windows.Graphics;
 using WinUIEx;
+using WindowState = FluentMath.Persistence.Models.WindowState;
 
 namespace FluentMath
 {
@@ -41,8 +43,7 @@ namespace FluentMath
 
         public static MainWindow Instance { get; private set; }
 
-        // the applied theme tag; SettingsPage preselects its combo box with it
-        public string CurrentTheme { get; private set; } = "Default";
+        private const string WindowKey = "Main"; // in window-state.json
 
         // --- full window ---
         // in px
@@ -59,9 +60,8 @@ namespace FluentMath
 
         private readonly WindowManager _windowManager;
 
-        // the dragged compact size per page, and the full window bounds for the way back
+        // the full window bounds for the way back; (the dragged compact size per page is in PageStateService)
         private bool _isCompact;
-        private readonly Dictionary<Type, Size> _compactSizes = new Dictionary<Type, Size>();
         private RectInt32 _fullBounds;
         private bool _fullWasMaximized;
 
@@ -78,9 +78,10 @@ namespace FluentMath
             Instance = this;
             this.AppWindow.SetIcon("Assets\\Icon\\Icon.ico");
 
-            // opens on the standard calculator; its item is found by tag (the list starts with a header)
-            ShowPage(typeof(StandardPage));
-            NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == "Standard");
+            // opens on the start page from the settings; its item is found by tag (the list starts with a header)
+            string startTag = SettingsService.Instance.StartupPage.ToString();
+            ShowPage(PageForTag(startTag) ?? typeof(StandardPage));
+            NavView.SelectedItem = NavView.MenuItems.OfType<NavigationViewItem>().First(item => (string)item.Tag == startTag);
 
             // our own title bar in the client area; transparent caption buttons, so the Mica shows through
             AppWindow.TitleBar.PreferredTheme = TitleBarTheme.UseDefaultAppMode;
@@ -98,11 +99,17 @@ namespace FluentMath
             _titleBarTitle = AppTitleBar.Title;
             AppTitleBar.LeftHeader = null;
 
-            // start size, and a floor that keeps the keypad in the window
-            this.SetWindowSize(FullStartWidth, FullStartHeight);
+            ApplyTheme(SettingsService.Instance.AppTheme);
+            SettingsService.Instance.ThemeChanged += ApplyTheme;
+
+            // a floor that keeps the keypad in the window, then the saved bounds or the start size
             _windowManager = WindowManager.Get(this);
             _windowManager.MinWidth = FullMinWidth;
             _windowManager.MinHeight = FullMinHeight;
+            RestoreWindowState();
+
+            AppWindow.Changed += AppWindow_Changed;
+            this.Closed += MainWindow_Closed;
         }
 
 
@@ -110,9 +117,17 @@ namespace FluentMath
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {
-            string itemTag = args.InvokedItemContainer.Tag.ToString();
+            Type? page = PageForTag(args.InvokedItemContainer.Tag.ToString());
 
-            Type? page = itemTag switch
+            // a second click on the item already shown would navigate the page onto itself
+            if (page == null || MainFrame.CurrentSourcePageType == page) return;
+
+            ShowPage(page);
+        }
+
+        private static Type? PageForTag(string? itemTag)
+        {
+            return itemTag switch
             {
                 "Standard" => typeof(StandardPage),
                 "Scientific" => typeof(ScientificPage),
@@ -120,11 +135,6 @@ namespace FluentMath
                 "Settings" => typeof(SettingsPage),
                 _ => null
             };
-
-            // a second click on the item already shown would navigate the page onto itself
-            if (page == null || MainFrame.CurrentSourcePageType == page) return;
-
-            ShowPage(page);
         }
 
         // no frame slide; (the pad pages bring their own entrance)
@@ -176,7 +186,8 @@ namespace FluentMath
             _isCompact = true;
             ShowCompactChrome(true);
 
-            Size size = _compactSizes.TryGetValue(page.GetType(), out Size dragged) ? dragged : page.CompactStartSize;
+            CompactSize? dragged = PageStateService.Instance.GetCompactSize(page.GetType().Name);
+            Size size = dragged != null ? new Size(dragged.Width, dragged.Height) : page.CompactStartSize;
             this.SetWindowSize(size.Width, size.Height);
             PinCompactWindow();
         }
@@ -186,8 +197,7 @@ namespace FluentMath
         {
             if (!_isCompact) return;
 
-            double scale = Content.XamlRoot.RasterizationScale;
-            _compactSizes[MainFrame.Content.GetType()] = new Size(AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
+            SaveCompactSize();
 
             OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
             presenter.IsAlwaysOnTop = false;
@@ -249,14 +259,115 @@ namespace FluentMath
             ExitCompactMode();
         }
 
+        // the size the current page is dragged to while compact, for its next entry
+        // (the scale from the window, which still answers while it closes)
+        private void SaveCompactSize()
+        {
+            double scale = this.GetDpiForWindow() / 96.0;
+            PageStateService.Instance.SetCompactSize(MainFrame.Content.GetType().Name,
+                AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
+        }
+
+
+        // === window state ===
+
+        // the saved bounds when they still overlap a monitor, else the start size; a saved maximize either way
+        private void RestoreWindowState()
+        {
+            WindowState? saved = WindowStateService.Instance.GetState(WindowKey);
+            RectInt32 bounds = saved != null ? new RectInt32(saved.X, saved.Y, saved.Width, saved.Height) : default;
+
+            if (bounds.Width > 0 && bounds.Height > 0 && IsOnScreen(bounds))
+            {
+                AppWindow.MoveAndResize(bounds);
+            }
+            else
+            {
+                this.SetWindowSize(FullStartWidth, FullStartHeight);
+            }
+
+            if (saved?.IsMaximized == true) ((OverlappedPresenter)AppWindow.Presenter).Maximize();
+        }
+
+        private void AppWindow_Changed(AppWindow sender, AppWindowChangedEventArgs args)
+        {
+            if (args.DidPositionChange || args.DidSizeChange || args.DidPresenterChange) SaveWindowState();
+        }
+
+        // skipped while minimized or hidden, whose rect means nothing; a maximized window keeps the rect it
+        // returns to, and a compact one the full bounds kept for the way back, so a restart opens full
+        private void SaveWindowState()
+        {
+            OverlappedPresenter presenter = (OverlappedPresenter)AppWindow.Presenter;
+            if (presenter.State == OverlappedPresenterState.Minimized || !AppWindow.IsVisible) return;
+
+            WindowState state;
+            if (_isCompact)
+            {
+                state = StateOf(_fullBounds, _fullWasMaximized);
+            }
+            else if (presenter.State == OverlappedPresenterState.Maximized)
+            {
+                WindowState? existing = WindowStateService.Instance.GetState(WindowKey);
+                state = existing != null
+                    ? new WindowState { X = existing.X, Y = existing.Y, Width = existing.Width, Height = existing.Height }
+                    : new WindowState();
+                state.IsMaximized = true;
+            }
+            else
+            {
+                state = StateOf(new RectInt32(AppWindow.Position.X, AppWindow.Position.Y,
+                    AppWindow.Size.Width, AppWindow.Size.Height), false);
+            }
+
+            WindowStateService.Instance.SetState(WindowKey, state);
+        }
+
+        private static WindowState StateOf(RectInt32 bounds, bool isMaximized)
+        {
+            return new WindowState
+            {
+                X = bounds.X,
+                Y = bounds.Y,
+                Width = bounds.Width,
+                Height = bounds.Height,
+                IsMaximized = isMaximized
+            };
+        }
+
+        // a monitor taken away, or arranged differently, can leave a saved rect on none of them
+        // (indexed, since a foreach over FindAll throws an InvalidCastException in the WinRT projection)
+        private static bool IsOnScreen(RectInt32 bounds)
+        {
+            var displayAreas = DisplayArea.FindAll();
+            for (int i = 0; i < displayAreas.Count; i++)
+            {
+                RectInt32 work = displayAreas[i].WorkArea;
+                if (bounds.X < work.X + work.Width && bounds.X + bounds.Width > work.X
+                    && bounds.Y < work.Y + work.Height && bounds.Y + bounds.Height > work.Y)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // whatever still waits on a debounce goes to disk before the process ends; a compact window saves
+        // its size here, since otherwise only the way back to full does
+        private void MainWindow_Closed(object sender, WindowEventArgs args)
+        {
+            if (_isCompact) SaveCompactSize();
+
+            PersistenceService.Instance.FlushAll();
+        }
+
 
         // === theming ===
 
         // applies a theme to the content and the caption buttons; (those only follow PreferredTheme)
-        public void ApplyTheme(string themeTag)
+        private void ApplyTheme(string themeTag)
         {
-            CurrentTheme = themeTag;
-
             if (this.Content is FrameworkElement rootElement)
             {
                 rootElement.RequestedTheme = themeTag switch

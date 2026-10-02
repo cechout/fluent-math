@@ -9,10 +9,10 @@ namespace FluentMath.Models
     {
         public Dictionary<string, double> ExchangeRates { get; private set; }
 
-        // rates are fetched once per instance; CurrencyViewModel recreates the object to refresh them
-        public ConvertCurrency()
+        // the rates come from CurrencyViewModel, live or saved; a refresh makes a new converter
+        public ConvertCurrency(Dictionary<string, double> exchangeRates)
         {
-            ExchangeRates = GetCurrencyData.FetchAllRates();
+            ExchangeRates = exchangeRates;
         }
 
         public string GetAmountCurrency2(string currency1, string currency2, double amountCurrency1)

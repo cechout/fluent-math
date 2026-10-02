@@ -1,8 +1,10 @@
-﻿using FluentMath.ViewModels;
+﻿using FluentMath.Persistence.Services;
+using FluentMath.ViewModels;
 using Microsoft.UI.Composition;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Hosting;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Navigation;
 using System;
 using System.Linq;
@@ -54,6 +56,7 @@ namespace FluentMath.Views
 
             DisplayRow.MinHeight = DisplayFloor;
             PadRow.MinHeight = PadFloor;
+            RestoreDisplayHeight();
             SmallKeyLabels.Attach(Keypad, SmallKeysBelowHeight, SmallKeyTextScale);
 
             ApplyPanelBarFade();
@@ -124,6 +127,25 @@ namespace FluentMath.Views
             }
 
             return base.MeasureOverride(availableSize);
+        }
+
+        // the height the splitter was last dragged to; the measure above still lowers it for a short window
+        // (the handlers take handled events too, the splitter marks its own)
+        private void RestoreDisplayHeight()
+        {
+            if (PageStateService.Instance.ScientificDisplayHeight is double saved)
+            {
+                DisplayRow.Height = new GridLength(Math.Max(DisplayFloor, saved));
+            }
+
+            DisplaySplitter.AddHandler(ManipulationCompletedEvent, new ManipulationCompletedEventHandler((s, e) => SaveDisplayHeight()), true);
+            DisplaySplitter.AddHandler(KeyUpEvent, new KeyEventHandler((s, e) => SaveDisplayHeight()), true);
+        }
+
+        // only a drag is saved, never a push; the same window size pushes the same way on the next start
+        private void SaveDisplayHeight()
+        {
+            PageStateService.Instance.ScientificDisplayHeight = DisplayRow.Height.Value;
         }
 
 

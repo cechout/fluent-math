@@ -179,6 +179,7 @@
             (PreviousAndNext trades the display row against the pad row; their MinHeight is how far it goes)
         -->
         <toolkit:GridSplitter
+            x:Name="DisplaySplitter"
             Grid.Row="2"
             Height="9"
             Margin="-4,0,-4,0"

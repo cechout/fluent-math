@@ -106,7 +106,7 @@
                 VerticalAlignment="Center"
                 DisplayMemberPath="DisplayName"
                 IsHitTestVisible="False"
-                ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                ItemsSource="{x:Bind ViewModel.AvailableCurrencies, Mode=OneWay}"
                 Opacity="0"
                 SelectedItem="{x:Bind ViewModel.SelectedCurrency1, Mode=TwoWay}" />
         </Grid>
@@ -159,7 +159,7 @@
                 VerticalAlignment="Center"
                 DisplayMemberPath="DisplayName"
                 IsHitTestVisible="False"
-                ItemsSource="{x:Bind ViewModel.AvailableCurrencies}"
+                ItemsSource="{x:Bind ViewModel.AvailableCurrencies, Mode=OneWay}"
                 Opacity="0"
                 SelectedItem="{x:Bind ViewModel.SelectedCurrency2, Mode=TwoWay}" />
         </Grid>
@@ -191,14 +191,25 @@
             Height="26"
             Margin="0"
             Background="Transparent">
-            <TextBlock
-                x:Name="TextBlock_CurrencyRate"
-                Margin="0,0,7,0"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Center"
-                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                Style="{ThemeResource CaptionTextBlockStyle}"
-                Text="{x:Bind ViewModel.RateText, Mode=OneWay}" />
+            <Grid>
+                <!--  the day the rates are for  -->
+                <TextBlock
+                    Margin="7,0,0,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.RatesDateText, Mode=OneWay}" />
+
+                <TextBlock
+                    x:Name="TextBlock_CurrencyRate"
+                    Margin="0,0,7,0"
+                    HorizontalAlignment="Right"
+                    VerticalAlignment="Center"
+                    Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
+                    Style="{ThemeResource CaptionTextBlockStyle}"
+                    Text="{x:Bind ViewModel.RateText, Mode=OneWay}" />
+            </Grid>
         </Border>
 
 
