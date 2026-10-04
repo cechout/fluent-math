@@ -68,11 +68,14 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ```text
 FluentMath/
 ├── Assets/       the app icon and the package logos
-├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer
+├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer;
+│                 the converter layout every converter page shares: ConverterPanel
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
-│                 CalculatorSettings, ConvertCurrency, GetCurrencyData, CurrencyHelper, RateTable
+│                 CalculatorSettings, GetCurrencyData, CurrencyHelper, RateTable
+│   ├── Converters/ what each converter brings, UI-free: IUnitSource, UnitInfo, UnitFormat,
+│   │             CurrencyUnitSource
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath or the package
@@ -82,7 +85,7 @@ FluentMath/
 │   └── Services/ PersistenceService (the disk), AppDataFolder, and the live stores
 │                 SettingsService, WindowStateService, PageStateService
 ├── Properties/   PublishProfiles, launchSettings
-├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
+├── ViewModels/   CalculatorViewModel, ConverterViewModel, RelayCommand
 └── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance,
                   ICompactPage, SmallKeyLabels
 

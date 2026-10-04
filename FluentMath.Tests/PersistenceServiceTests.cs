@@ -95,10 +95,9 @@ namespace FluentMath.Tests
         {
             var saved = new PageStateData
             {
-                ScientificDisplayHeight = 212.5,
-                CurrencyFrom = "CHF",
-                CurrencyTo = "JPY"
+                ScientificDisplayHeight = 212.5
             };
+            saved.ConverterPairs["Currency"] = new UnitPair { From = "CHF", To = "JPY" };
             saved.CompactSizes["ScientificPage"] = new CompactSize { Width = 350, Height = 530 };
 
             var writer = new PersistenceService(_folder);
@@ -108,8 +107,8 @@ namespace FluentMath.Tests
             PageStateData loaded = new PersistenceService(_folder).LoadPageState();
 
             Assert.Equal(212.5, loaded.ScientificDisplayHeight);
-            Assert.Equal("CHF", loaded.CurrencyFrom);
-            Assert.Equal("JPY", loaded.CurrencyTo);
+            Assert.Equal("CHF", loaded.ConverterPairs["Currency"].From);
+            Assert.Equal("JPY", loaded.ConverterPairs["Currency"].To);
             Assert.Equal(350, loaded.CompactSizes["ScientificPage"].Width);
             Assert.Equal(530, loaded.CompactSizes["ScientificPage"].Height);
         }
@@ -134,7 +133,7 @@ namespace FluentMath.Tests
 
             Assert.Equal("Default", service.LoadSettings().AppTheme);
             Assert.Empty(service.LoadWindowStates());
-            Assert.Equal(PageStateData.DefaultCurrencyFrom, service.LoadPageState().CurrencyFrom);
+            Assert.Empty(service.LoadPageState().ConverterPairs);
             Assert.Null(service.LoadPageState().ScientificDisplayHeight);
         }
 
@@ -296,7 +295,7 @@ namespace FluentMath.Tests
             var service = new PersistenceService(_folder);
             service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
             service.SaveWindowStatesDebounced(new Dictionary<string, WindowState> { ["Main"] = new WindowState { Width = 400 } });
-            service.SavePageStateDebounced(new PageStateData { CurrencyFrom = "CHF" });
+            service.SavePageStateDebounced(new PageStateData { ScientificDisplayHeight = 100 });
             service.FlushAll();
             return service;
         }
@@ -326,7 +325,7 @@ namespace FluentMath.Tests
         {
             var service = new PersistenceService(_folder);
             service.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Dark" });
-            service.SavePageStateDebounced(new PageStateData { CurrencyFrom = "CHF" });
+            service.SavePageStateDebounced(new PageStateData { ScientificDisplayHeight = 100 });
 
             service.ResetWindowAndPageStates();
 
@@ -359,7 +358,7 @@ namespace FluentMath.Tests
 
             var changed = new PersistenceService(_folder);
             changed.SaveSettingsDebounced(new AppSettingsData { AppTheme = "Light" });
-            changed.SavePageStateDebounced(new PageStateData { CurrencyFrom = "JPY" });
+            changed.SavePageStateDebounced(new PageStateData { ScientificDisplayHeight = 200 });
             changed.FlushAll();
 
             Assert.True(new PersistenceService(_folder).ImportBackup(ZipPath));
@@ -367,7 +366,7 @@ namespace FluentMath.Tests
             var loaded = new PersistenceService(_folder);
             Assert.Equal("Dark", loaded.LoadSettings().AppTheme);
             Assert.Equal(400, loaded.LoadWindowStates()["Main"].Width);
-            Assert.Equal("CHF", loaded.LoadPageState().CurrencyFrom);
+            Assert.Equal(100, loaded.LoadPageState().ScientificDisplayHeight);
         }
 
         [Fact]
@@ -389,7 +388,7 @@ namespace FluentMath.Tests
             early.ExportBackup(ZipPath);
 
             var later = new PersistenceService(_folder);
-            later.SavePageStateDebounced(new PageStateData { CurrencyFrom = "JPY" });
+            later.SavePageStateDebounced(new PageStateData { ScientificDisplayHeight = 200 });
             later.FlushAll();
 
             Assert.True(new PersistenceService(_folder).ImportBackup(ZipPath));
@@ -427,7 +426,7 @@ namespace FluentMath.Tests
             Assert.False(service.ImportBackup(ZipPath));
 
             Assert.Equal("Dark", service.LoadSettings().AppTheme);
-            Assert.Equal("CHF", service.LoadPageState().CurrencyFrom);
+            Assert.Equal(100, service.LoadPageState().ScientificDisplayHeight);
         }
 
         [Fact]
