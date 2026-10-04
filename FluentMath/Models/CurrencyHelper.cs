@@ -1,22 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
+using FluentMath.Models.Converters;
 
 namespace FluentMath.Models
 {
-    // pairs the ISO code the conversion math runs on with the readable name the dropdown shows
-    public class CurrencyInfo
-    {
-        public string Code { get; set; }
-        public string DisplayName { get; set; }
-    }
-
-
     // the display name of an ISO currency code, from the regions Windows knows
     public static class CurrencyHelper
     {
         private static Dictionary<string, string> _currencyNames;
 
-        public static CurrencyInfo GetInfo(string code)
+        public static UnitInfo GetInfo(string code)
         {
             if (_currencyNames == null)
             {
@@ -25,7 +18,7 @@ namespace FluentMath.Models
 
             // no region for it: the raw code on both halves of the label
             string displayName = _currencyNames.ContainsKey(code) ? _currencyNames[code] : $"{code} - {code}";
-            return new CurrencyInfo { Code = code, DisplayName = displayName };
+            return new UnitInfo { Id = code, Symbol = code, DisplayName = displayName };
         }
 
         // built once, lazily; enumerating every culture is not cheap

@@ -5,18 +5,22 @@ namespace FluentMath.Persistence.Models
     // what the pages leave behind that is not a setting, saved to page-state.json
     public class PageStateData
     {
-        public const string DefaultCurrencyFrom = "EUR";
-        public const string DefaultCurrencyTo = "USD";
-
         // the size each page was last dragged to while compact, keyed by its type name
         public Dictionary<string, CompactSize> CompactSizes { get; set; } = new Dictionary<string, CompactSize>();
 
         // the scientific display row, in DIP; null until the splitter is first dragged
         public double? ScientificDisplayHeight { get; set; }
 
-        // the two currency pickers, as ISO codes
-        public string CurrencyFrom { get; set; } = DefaultCurrencyFrom;
-        public string CurrencyTo { get; set; } = DefaultCurrencyTo;
+        // the two pickers of each converter, keyed by its name; a converter not in here starts on its default
+        public Dictionary<string, UnitPair> ConverterPairs { get; set; } = new Dictionary<string, UnitPair>();
+    }
+
+
+    // unit ids, e.g. ISO currency codes
+    public class UnitPair
+    {
+        public string From { get; set; } = "";
+        public string To { get; set; } = "";
     }
 
 

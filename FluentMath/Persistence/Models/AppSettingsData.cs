@@ -1,4 +1,5 @@
 using FluentMath.Models;
+using FluentMath.Models.Converters;
 
 namespace FluentMath.Persistence.Models
 {
@@ -7,7 +8,9 @@ namespace FluentMath.Persistence.Models
     {
         Standard,
         Scientific,
-        Currency
+        Currency,
+        Volume,
+        Length
     }
 
 
@@ -15,10 +18,11 @@ namespace FluentMath.Persistence.Models
     // the initial values are the defaults, for a fresh install, a key an older file lacks and every reset
     //
     // the calculator defaults are read off a fresh CalculatorSettings, which the tests construct directly,
-    // so each default is still written in one place
+    // so each default is still written in one place; the converter defaults off a fresh ConverterSettings
     public class AppSettingsData
     {
         private static readonly CalculatorSettings CalculatorDefaults = new CalculatorSettings();
+        private static readonly ConverterSettings ConverterDefaults = new ConverterSettings();
 
         // --- general ---
         public string AppTheme { get; set; } = "Default"; // Default, Light or Dark
@@ -35,5 +39,10 @@ namespace FluentMath.Persistence.Models
         public bool UsePrefixes { get; set; } = CalculatorDefaults.UsePrefixes;
         public bool GroupDigits { get; set; } = CalculatorDefaults.GroupDigits;
         public DecimalMark DecimalMark { get; set; } = CalculatorDefaults.DecimalMark;
+
+        // --- converter ---
+        // see ConverterSettings
+        public int CurrencyDecimals { get; set; } = ConverterDefaults.CurrencyDecimals;
+        public int UnitDigits { get; set; } = ConverterDefaults.UnitDigits;
     }
 }

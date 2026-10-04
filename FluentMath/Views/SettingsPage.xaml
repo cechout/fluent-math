@@ -76,8 +76,40 @@
                         <ComboBoxItem Content="Standard" />
                         <ComboBoxItem Content="Scientific" />
                         <ComboBoxItem Content="Currency" />
+                        <ComboBoxItem Content="Volume" />
+                        <ComboBoxItem Content="Length" />
                     </ComboBox>
                 </controls:SettingsCard>
+
+                <!--  separators  -->
+                <!--  (no header control, the two inside are independent; the icon is text, see TextIcon)  -->
+                <controls:SettingsExpander
+                    x:Name="SeparatorsExpander"
+                    Description="The marks inside a number, in the calculators and the converters"
+                    Header="Separators"
+                    IsExpanded="False">
+
+                    <controls:SettingsExpander.Items>
+                        <controls:SettingsCard Header="Decimal Mark">
+                            <ComboBox
+                                x:Name="DecimalMarkComboBox"
+                                Width="150"
+                                SelectionChanged="CalculatorComboBox_SelectionChanged">
+                                <ComboBoxItem Content="Windows region" />
+                                <ComboBoxItem Content="Dot" />
+                                <ComboBoxItem Content="Comma" />
+                            </ComboBox>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Header="Digit Grouping">
+                            <ToggleSwitch
+                                x:Name="GroupDigitsToggle"
+                                OffContent="Off"
+                                OnContent="On"
+                                Toggled="CalculatorToggle_Toggled" />
+                        </controls:SettingsCard>
+                    </controls:SettingsExpander.Items>
+                </controls:SettingsExpander>
 
 
                 <!--  calculator  -->
@@ -188,32 +220,37 @@
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
 
-                <!--  separators  -->
-                <!--  (no header control, the two inside are independent; the icon is text, see TextIcon)  -->
+
+                <!--  converter  -->
+                <TextBlock
+                    Margin="4,20,0,6"
+                    Style="{StaticResource BodyStrongTextBlockStyle}"
+                    Text="Converter" />
+
+                <!--  precision  -->
+                <!--
+                    (no header control, the two inside are independent; the icon is text, see TextIcon)
+                    (the items are filled from the ranges in ConverterSettings)
+                -->
                 <controls:SettingsExpander
-                    x:Name="SeparatorsExpander"
-                    Description="The marks inside a number, in the formula and in the result"
-                    Header="Separators"
+                    x:Name="PrecisionExpander"
+                    Description="How many digits a converted amount keeps"
+                    Header="Precision"
                     IsExpanded="False">
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Header="Decimal Mark">
+                        <controls:SettingsCard Description="Decimals of a money amount" Header="Currency Decimals">
                             <ComboBox
-                                x:Name="DecimalMarkComboBox"
-                                Width="150"
-                                SelectionChanged="CalculatorComboBox_SelectionChanged">
-                                <ComboBoxItem Content="Windows region" />
-                                <ComboBoxItem Content="Dot" />
-                                <ComboBoxItem Content="Comma" />
-                            </ComboBox>
+                                x:Name="CurrencyDecimalsComboBox"
+                                Width="70"
+                                SelectionChanged="ConverterComboBox_SelectionChanged" />
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Header="Digit Grouping">
-                            <ToggleSwitch
-                                x:Name="GroupDigitsToggle"
-                                OffContent="Off"
-                                OnContent="On"
-                                Toggled="CalculatorToggle_Toggled" />
+                        <controls:SettingsCard Description="Significant digits of a measure" Header="Unit Digits">
+                            <ComboBox
+                                x:Name="UnitDigitsComboBox"
+                                Width="70"
+                                SelectionChanged="ConverterComboBox_SelectionChanged" />
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>
                 </controls:SettingsExpander>
@@ -257,11 +294,11 @@
                     <Button Click="ResetAll_Click" Content="Reset All" />
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Theme, start page and the calculator setup" Header="General Settings">
+                        <controls:SettingsCard Description="Theme, start page, separators, the calculator and the converter setup" Header="General Settings">
                             <Button Click="ResetGeneralSettings_Click" Content="Reset" />
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="Window position and size, compact sizes, display height and currency pair" Header="Window and Page States">
+                        <controls:SettingsCard Description="Window position and size, compact sizes, display height and converter units" Header="Window and Page States">
                             <Button Click="ResetWindowAndPageStates_Click" Content="Reset" />
                         </controls:SettingsCard>
                     </controls:SettingsExpander.Items>

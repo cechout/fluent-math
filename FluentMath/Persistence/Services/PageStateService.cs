@@ -2,7 +2,7 @@ using FluentMath.Persistence.Models;
 
 namespace FluentMath.Persistence.Services
 {
-    // the page state in memory: compact sizes, the scientific splitter and the currency pair
+    // the page state in memory: compact sizes, the scientific splitter and the converter pairs
     // every change goes to disk debounced
     public class PageStateService
     {
@@ -47,28 +47,19 @@ namespace FluentMath.Persistence.Services
             }
         }
 
-        public string CurrencyFrom
+        // null when this converter has never been picked on
+        public UnitPair? GetConverterPair(string converter)
         {
-            get => _data.CurrencyFrom;
-            set
-            {
-                if (_data.CurrencyFrom == value) return;
-
-                _data.CurrencyFrom = value;
-                Save();
-            }
+            return _data.ConverterPairs.TryGetValue(converter, out UnitPair? pair) ? pair : null;
         }
 
-        public string CurrencyTo
+        public void SetConverterPair(string converter, string from, string to)
         {
-            get => _data.CurrencyTo;
-            set
-            {
-                if (_data.CurrencyTo == value) return;
+            UnitPair? saved = GetConverterPair(converter);
+            if (saved != null && saved.From == from && saved.To == to) return;
 
-                _data.CurrencyTo = value;
-                Save();
-            }
+            _data.ConverterPairs[converter] = new UnitPair { From = from, To = to };
+            Save();
         }
 
         // persistence
@@ -76,8 +67,7 @@ namespace FluentMath.Persistence.Services
         public void LoadFromDisk(PageStateData loaded)
         {
             loaded.CompactSizes ??= new PageStateData().CompactSizes;
-            loaded.CurrencyFrom ??= PageStateData.DefaultCurrencyFrom;
-            loaded.CurrencyTo ??= PageStateData.DefaultCurrencyTo;
+            loaded.ConverterPairs ??= new PageStateData().ConverterPairs;
 
             _data = loaded;
         }

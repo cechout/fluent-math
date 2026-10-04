@@ -132,6 +132,8 @@ namespace FluentMath
                 "Standard" => typeof(StandardPage),
                 "Scientific" => typeof(ScientificPage),
                 "Currency" => typeof(CurrencyPage),
+                "Volume" => typeof(VolumePage),
+                "Length" => typeof(LengthPage),
                 "Settings" => typeof(SettingsPage),
                 _ => null
             };

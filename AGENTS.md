@@ -68,11 +68,14 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 ```text
 FluentMath/
 ├── Assets/       the app icon and the package logos
-├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer
+├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer;
+│                 the converter layout every converter page shares: ConverterPanel
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
-│                 CalculatorSettings, ConvertCurrency, GetCurrencyData, CurrencyHelper, RateTable
+│                 CalculatorSettings, GetCurrencyData, CurrencyHelper, RateTable
+│   ├── Converters/ what each converter brings, UI-free: IUnitSource, UnitInfo, UnitFormat,
+│   │             ConverterSettings, CurrencyUnitSource, LinearUnitSource, VolumeUnits, LengthUnits
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath or the package
@@ -82,17 +85,18 @@ FluentMath/
 │   └── Services/ PersistenceService (the disk), AppDataFolder, and the live stores
 │                 SettingsService, WindowStateService, PageStateService
 ├── Properties/   PublishProfiles, launchSettings
-├── ViewModels/   CalculatorViewModel, CurrencyViewModel, RelayCommand
-└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance,
-                  ICompactPage, SmallKeyLabels
+├── ViewModels/   CalculatorViewModel, ConverterViewModel, RelayCommand
+└── Views/        StandardPage, ScientificPage, CurrencyPage, VolumePage, LengthPage, SettingsPage,
+                  PadEntrance, ICompactPage, SmallKeyLabels
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
 bar, and sizes the window through `WinUIEx.WindowManager`. The navigation groups the pages under two
-headers, the calculators (Standard, Scientific) and the converters (Currency). Both calculators share
-`CalculatorViewModel` and `CalculatorDisplay`, and every page but the settings is cached, so it keeps
+headers, the calculators (Standard, Scientific) and the converters (Currency, Volume, Length). Both
+calculators share `CalculatorViewModel` and `CalculatorDisplay`, every converter shares
+`ConverterViewModel` and `ConverterPanel`, and every page but the settings is cached, so it keeps
 its content across a navigation. `MainWindow` also owns compact mode, a small window on top of every
 other one that holds the page it was asked from; each page brings its own sizes through `ICompactPage`.
 
@@ -138,7 +142,7 @@ dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:Publis
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter, the keypad
-routing in `CalculatorViewModel` and the persistence layer. It targets plain `net8.0` and links the sources it tests rather than
+routing in `CalculatorViewModel`, the converters and the persistence layer. It targets plain `net8.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 
