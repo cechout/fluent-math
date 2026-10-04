@@ -9,6 +9,11 @@
     xmlns:ui="using:CommunityToolkit.WinUI"
     mc:Ignorable="d">
 
+    <Page.Resources>
+        <!--  (the page hides the header icons itself, all at one width, see UpdateHeaderIcons)  -->
+        <x:Double x:Key="SettingsCardWrapNoIconThreshold">0</x:Double>
+    </Page.Resources>
+
     <!--
         no page margin, so the cards scroll out at the window edge and the scroll bar sits on it
         (the header and the cards carry the 4 of the other pages themselves)
@@ -36,9 +41,11 @@
 
         <ScrollViewer Grid.Row="1">
             <StackPanel
+                x:Name="CardsPanel"
                 MaxWidth="1000"
                 Margin="16,12,16,20"
                 HorizontalAlignment="Stretch"
+                SizeChanged="CardsPanel_SizeChanged"
                 Spacing="4">
 
                 <!--  general  -->

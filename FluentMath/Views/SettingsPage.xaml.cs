@@ -1,3 +1,4 @@
+using CommunityToolkit.WinUI.Controls;
 using FluentMath.Models;
 using FluentMath.Models.Converters;
 using FluentMath.Persistence.Models;
@@ -31,6 +32,11 @@ namespace FluentMath.Views
         private const ushort PrecisionIconWeight = 400;
         private const double IconOverhang = 30; // how far a text icon may draw past its box on either side
         private const double IconBoxSize = 20; // SettingsCardHeaderIconMaxSize; (not a knob)
+        private const double HeaderIconsMinWidth = 286; // card width; SettingsCardWrapNoIconThreshold
+
+        // every card and expander with a header icon, and the icon to restore
+        private readonly List<(Control Element, IconElement Icon)> _headerIcons = new();
+        private bool _headerIconsShown = true;
 
         // --- dialogs ---
         private const double DialogMaxWidthShare = 0.9; // of the window width
@@ -43,6 +49,7 @@ namespace FluentMath.Views
             NumberFormatExpander.HeaderIcon = TextIcon("×10ⁿ", NumberFormatIconSize, NumberFormatIconWeight);
             SeparatorsExpander.HeaderIcon = TextIcon("0,1", SeparatorsIconSize, SeparatorsIconWeight);
             PrecisionExpander.HeaderIcon = TextIcon(".00", PrecisionIconSize, PrecisionIconWeight);
+            CollectHeaderIcons();
 
             RestoreThemeSelection();
             StartupPageComboBox.SelectedIndex = (int)SettingsService.Instance.StartupPage;
@@ -348,6 +355,42 @@ namespace FluentMath.Views
                 Height = IconBoxSize,
                 Margin = new Thickness(-IconOverhang, 0, -IconOverhang, 0)
             };
+        }
+
+        private void CollectHeaderIcons()
+        {
+            foreach (UIElement child in CardsPanel.Children)
+            {
+                IconElement? icon = child switch
+                {
+                    SettingsCard card => card.HeaderIcon,
+                    SettingsExpander expander => expander.HeaderIcon,
+                    _ => null
+                };
+                if (icon != null) _headerIcons.Add(((Control)child, icon));
+            }
+        }
+
+        private void CardsPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            UpdateHeaderIcons(e.NewSize.Width >= HeaderIconsMinWidth);
+        }
+
+        // hides or restores every header icon at once, measured on the width of a plain card
+        //
+        // the toolkit would hide each icon by the width of its own card, and an expander header is a card
+        // narrowed by its chevron; so the toolkit threshold is off and the page decides for all of them
+        private void UpdateHeaderIcons(bool show)
+        {
+            if (show == _headerIconsShown) return;
+            _headerIconsShown = show;
+
+            foreach (var (element, icon) in _headerIcons)
+            {
+                IconElement value = show ? icon : null!; // null takes the icon and its gap out
+                if (element is SettingsCard card) card.HeaderIcon = value;
+                else if (element is SettingsExpander expander) expander.HeaderIcon = value;
+            }
         }
     }
 }
