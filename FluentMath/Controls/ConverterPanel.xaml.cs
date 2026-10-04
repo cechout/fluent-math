@@ -81,6 +81,18 @@ namespace FluentMath.Controls
             ViewModel.ActivateLine(top: false);
         }
 
+        // a longer or shorter number keeps the line at its right end, where the next digit lands
+        // (the offset is clamped to the end; the width of the number is always past it)
+        private void Amount1_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            AmountScroller1.ChangeView(e.NewSize.Width, null, null, true);
+        }
+
+        private void Amount2_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            AmountScroller2.ChangeView(e.NewSize.Width, null, null, true);
+        }
+
         // the TitleLarge semibold for the line that takes the input, two steps lighter for the other
         private FontWeight WeightOf(bool active)
         {

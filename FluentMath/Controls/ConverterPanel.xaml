@@ -20,7 +20,7 @@
             <RowDefinition x:Name="PickerRow2" Height="Auto" />
             <RowDefinition x:Name="AmountRow2" Height="*" />
             <RowDefinition x:Name="RateRow" Height="Auto" />
-            <RowDefinition x:Name="PadRow" Height="5*" />
+            <RowDefinition x:Name="PadRow" Height="4*" />
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -86,6 +86,7 @@
             Height="26">
 
             <Button
+                Margin="0,-2.5,0,0"
                 Padding="4,0,4,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Stretch"
@@ -111,25 +112,31 @@
 
         <!--  amount 1  -->
         <!--
-            (scrolls sideways, so a long number never resizes the layout)
+            (scrolls sideways, so a long number never resizes the layout; the wheel too, with vertical off)
             a tap makes it the line that takes the input, which is one weight heavier
+            the bottom margin reaches over the row gap and 4 into the empty top of the row below, out of
+            the way of the number, and the padding gives it back, so the number stays where it was
         -->
         <ScrollViewer
+            x:Name="AmountScroller1"
             Grid.Row="2"
             Grid.Column="0"
             Grid.ColumnSpan="3"
-            Margin="4,0,4,0"
-            Padding="0"
+            Margin="4,0,4,-6.5"
+            Padding="0,0,0,6.5"
             Background="Transparent"
             HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Auto"
             Tapped="Amount1_Tapped"
-            VerticalScrollBarVisibility="Disabled">
+            VerticalScrollBarVisibility="Disabled"
+            VerticalScrollMode="Disabled">
             <TextBlock
                 x:Name="TextBlock_Amount1"
                 Margin="0,-12,0,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 FontWeight="{x:Bind WeightOf(ViewModel.IsTopActive), Mode=OneWay}"
+                SizeChanged="Amount1_SizeChanged"
                 Style="{ThemeResource TitleLargeTextBlockStyle}"
                 Text="{x:Bind ViewModel.TopText, Mode=OneWay}" />
         </ScrollViewer>
@@ -170,20 +177,25 @@
         <!--  amount 2  -->
         <!--  (same line as amount 1)  -->
         <ScrollViewer
+            x:Name="AmountScroller2"
             Grid.Row="4"
             Grid.Column="0"
             Grid.ColumnSpan="3"
-            Margin="4,0,4,0"
+            Margin="4,0,4,-6.5"
+            Padding="0,0,0,6.5"
             Background="Transparent"
             HorizontalScrollBarVisibility="Auto"
+            HorizontalScrollMode="Auto"
             Tapped="Amount2_Tapped"
-            VerticalScrollBarVisibility="Disabled">
+            VerticalScrollBarVisibility="Disabled"
+            VerticalScrollMode="Disabled">
             <TextBlock
                 x:Name="TextBlock_Amount2"
                 Margin="0,-12,0,0"
                 HorizontalAlignment="Right"
                 VerticalAlignment="Center"
                 FontWeight="{x:Bind WeightOf(ViewModel.IsBottomActive), Mode=OneWay}"
+                SizeChanged="Amount2_SizeChanged"
                 Style="{ThemeResource TitleLargeTextBlockStyle}"
                 Text="{x:Bind ViewModel.BottomText, Mode=OneWay}" />
         </ScrollViewer>
