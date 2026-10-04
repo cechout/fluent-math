@@ -142,7 +142,7 @@ dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:Publis
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter, the keypad
-routing in `CalculatorViewModel` and the persistence layer. It targets plain `net8.0` and links the sources it tests rather than
+routing in `CalculatorViewModel`, the converters and the persistence layer. It targets plain `net8.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 

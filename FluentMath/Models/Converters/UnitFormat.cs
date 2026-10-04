@@ -68,7 +68,7 @@ namespace FluentMath.Models.Converters
             }
 
             // the decimals that leave the wanted significant digits; negative rounds whole tens away
-            int decimals = digits - 1 - (int)Math.Floor(Math.Log10(size));
+            int decimals = digits - 1 - Magnitude(size);
             if (decimals < 0)
             {
                 double step = Math.Pow(10, -decimals);
@@ -76,6 +76,15 @@ namespace FluentMath.Models.Converters
             }
 
             return value.ToString(Pattern(Math.Max(decimals, 0)), CultureInfo.InvariantCulture);
+        }
+
+        // the power of ten of the leading digit; (Log10 alone rounds 999999999999999 up to 15)
+        private static int Magnitude(double size)
+        {
+            int magnitude = (int)Math.Floor(Math.Log10(size));
+            if (Math.Pow(10, magnitude) > size) magnitude--;
+            else if (Math.Pow(10, magnitude + 1) <= size) magnitude++;
+            return magnitude;
         }
 
         // "0.##" for two decimals; rounds, writes no exponent and drops trailing zeros
