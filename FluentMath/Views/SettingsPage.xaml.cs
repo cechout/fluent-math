@@ -1,4 +1,5 @@
 using FluentMath.Models;
+using FluentMath.Models.Converters;
 using FluentMath.Persistence.Models;
 using FluentMath.Persistence.Services;
 using Microsoft.UI.Xaml;
@@ -26,6 +27,8 @@ namespace FluentMath.Views
         private const ushort NumberFormatIconWeight = 400;
         private const double SeparatorsIconSize = 18; // 0,1
         private const ushort SeparatorsIconWeight = 400;
+        private const double PrecisionIconSize = 17; // .00
+        private const ushort PrecisionIconWeight = 400;
         private const double IconOverhang = 30; // how far a text icon may draw past its box on either side
         private const double IconBoxSize = 20; // SettingsCardHeaderIconMaxSize; (not a knob)
 
@@ -39,10 +42,12 @@ namespace FluentMath.Views
 
             NumberFormatExpander.HeaderIcon = TextIcon("×10ⁿ", NumberFormatIconSize, NumberFormatIconWeight);
             SeparatorsExpander.HeaderIcon = TextIcon("0,1", SeparatorsIconSize, SeparatorsIconWeight);
+            PrecisionExpander.HeaderIcon = TextIcon(".00", PrecisionIconSize, PrecisionIconWeight);
 
             RestoreThemeSelection();
             StartupPageComboBox.SelectedIndex = (int)SettingsService.Instance.StartupPage;
             RestoreCalculatorSettings();
+            RestoreConverterSettings();
             AppDataFolderCard.Description = PersistenceService.Instance.RootFolder;
             VersionTextBlock.Text = VersionLabel();
             _isLoading = false;
@@ -141,6 +146,37 @@ namespace FluentMath.Views
         private void UpdateDigitsAvailability()
         {
             DigitsCard.IsEnabled = NotationComboBox.SelectedIndex >= (int)NumberNotation.Fix;
+        }
+
+
+        // === converter ===
+
+        // each combo box lists its range from the lowest value, so the index is the value less the minimum
+        private void RestoreConverterSettings()
+        {
+            ConverterSettings settings = SettingsService.Instance.Converter;
+
+            FillRange(CurrencyDecimalsComboBox, ConverterSettings.MinCurrencyDecimals, ConverterSettings.MaxCurrencyDecimals);
+            FillRange(UnitDigitsComboBox, ConverterSettings.MinUnitDigits, ConverterSettings.MaxUnitDigits);
+
+            CurrencyDecimalsComboBox.SelectedIndex = settings.CurrencyDecimals - ConverterSettings.MinCurrencyDecimals;
+            UnitDigitsComboBox.SelectedIndex = settings.UnitDigits - ConverterSettings.MinUnitDigits;
+        }
+
+        private static void FillRange(ComboBox comboBox, int min, int max)
+        {
+            for (int value = min; value <= max; value++)
+                comboBox.Items.Add(value.ToString());
+        }
+
+        private void ConverterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isLoading) return;
+
+            ConverterSettings settings = SettingsService.Instance.Converter;
+
+            settings.CurrencyDecimals = CurrencyDecimalsComboBox.SelectedIndex + ConverterSettings.MinCurrencyDecimals;
+            settings.UnitDigits = UnitDigitsComboBox.SelectedIndex + ConverterSettings.MinUnitDigits;
         }
 
 

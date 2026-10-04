@@ -75,7 +75,7 @@ FluentMath/
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
 │                 CalculatorSettings, GetCurrencyData, CurrencyHelper, RateTable
 │   ├── Converters/ what each converter brings, UI-free: IUnitSource, UnitInfo, UnitFormat,
-│   │             CurrencyUnitSource
+│   │             ConverterSettings, CurrencyUnitSource, LinearUnitSource, VolumeUnits, LengthUnits
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
 ├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath or the package
@@ -86,16 +86,17 @@ FluentMath/
 │                 SettingsService, WindowStateService, PageStateService
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   CalculatorViewModel, ConverterViewModel, RelayCommand
-└── Views/        StandardPage, ScientificPage, CurrencyPage, SettingsPage, PadEntrance,
-                  ICompactPage, SmallKeyLabels
+└── Views/        StandardPage, ScientificPage, CurrencyPage, VolumePage, LengthPage, SettingsPage,
+                  PadEntrance, ICompactPage, SmallKeyLabels
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
 bar, and sizes the window through `WinUIEx.WindowManager`. The navigation groups the pages under two
-headers, the calculators (Standard, Scientific) and the converters (Currency). Both calculators share
-`CalculatorViewModel` and `CalculatorDisplay`, and every page but the settings is cached, so it keeps
+headers, the calculators (Standard, Scientific) and the converters (Currency, Volume, Length). Both
+calculators share `CalculatorViewModel` and `CalculatorDisplay`, every converter shares
+`ConverterViewModel` and `ConverterPanel`, and every page but the settings is cached, so it keeps
 its content across a navigation. `MainWindow` also owns compact mode, a small window on top of every
 other one that holds the page it was asked from; each page brings its own sizes through `ICompactPage`.
 

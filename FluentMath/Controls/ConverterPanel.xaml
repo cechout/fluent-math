@@ -378,7 +378,7 @@
                 Command="{x:Bind ViewModel.InputCommand}"
                 CommandParameter="."
                 Style="{StaticResource NumberPadButtonStyle}">
-                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="." />
+                <TextBlock Style="{ThemeResource BodyLargeTextBlockStyle}" Text="{x:Bind ViewModel.DecimalMarkLabel, Mode=OneWay}" />
             </Button>
             <Button
                 Grid.Row="4"

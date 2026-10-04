@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using FluentMath.Models;
 using FluentMath.Models.Converters;
 using FluentMath.Persistence.Models;
 using FluentMath.Persistence.Services;
@@ -16,13 +17,18 @@ namespace FluentMath.ViewModels
     //
     // every key press converts at once, and so does a picker change: the active line keeps its number and
     // the other one is recomputed
+    // the lines are kept as plain text with a dot and only dressed with the decimal mark and the grouping
+    // on the way out, so a settings change redraws them without touching the input
     public class ConverterViewModel : INotifyPropertyChanged
     {
         // === fields ===
 
         private readonly IUnitSource _source;
+        private readonly CalculatorSettings _numbers; // the decimal mark and the grouping
+        private readonly ConverterSettings _precision;
 
         private string _input = "0"; // the active line as typed; (a dot, never a comma)
+        private string _result = "0"; // the other line, rounded; (a dot as well)
         private bool _replaceOnNextKey; // set when a line becomes active; its value goes on the first key
 
 
@@ -106,6 +112,9 @@ namespace FluentMath.ViewModels
 
         public bool CanRefresh => _source.CanRefresh;
 
+        // the label of the decimal key
+        public string DecimalMarkLabel => _numbers.DecimalMarkText;
+
 
         // === commands ===
 
@@ -117,9 +126,12 @@ namespace FluentMath.ViewModels
 
         // === constructor ===
 
-        public ConverterViewModel(IUnitSource source)
+        // the settings are handed in like on CalculatorViewModel, so a test can bring its own
+        public ConverterViewModel(IUnitSource source, CalculatorSettings numbers, ConverterSettings precision)
         {
             _source = source;
+            _numbers = numbers;
+            _precision = precision;
 
             InputCommand = new RelayCommand<string>(AddInput);
             ClearCommand = new RelayCommand<string>(_ => Clear());
@@ -127,6 +139,10 @@ namespace FluentMath.ViewModels
             RefreshCommand = new RelayCommand<string>(_ => Refresh());
 
             ApplyUnits();
+
+            // the page lives as long as the app, so the subscriptions are never taken back
+            _numbers.Changed += SettingsChanged;
+            _precision.Changed += SettingsChanged;
         }
 
 
@@ -160,6 +176,10 @@ namespace FluentMath.ViewModels
         {
             _source.Refresh();
             ApplyUnits();
+
+            // the page lives as long as the app, so the subscriptions are never taken back
+            _numbers.Changed += SettingsChanged;
+            _precision.Changed += SettingsChanged;
         }
 
         private void UnitsChanged()
@@ -212,7 +232,7 @@ namespace FluentMath.ViewModels
         {
             if (top == IsTopActive) return;
 
-            _input = top ? TopText : BottomText;
+            _input = _result;
             _replaceOnNextKey = true;
             IsTopActive = top;
             Convert();
@@ -227,16 +247,18 @@ namespace FluentMath.ViewModels
             UnitInfo? from = IsTopActive ? TopUnit : BottomUnit;
             UnitInfo? to = IsTopActive ? BottomUnit : TopUnit;
 
-            string result = "0";
+            _result = "0";
             if (from != null && to != null
                 && double.TryParse(_input, NumberStyles.Float, CultureInfo.InvariantCulture, out double amount)
                 && _source.Convert(from.Id, to.Id, amount) is double converted)
             {
-                result = UnitFormat.Amount(converted);
+                _result = UnitFormat.Amount(converted, _source.RoundsToDecimals, _precision);
             }
 
-            TopText = IsTopActive ? _input : result;
-            BottomText = IsTopActive ? result : _input;
+            string input = UnitFormat.Display(_input, _numbers);
+            string result = UnitFormat.Display(_result, _numbers);
+            TopText = IsTopActive ? input : result;
+            BottomText = IsTopActive ? result : input;
         }
 
         private void UpdateRateText()
@@ -248,7 +270,16 @@ namespace FluentMath.ViewModels
             }
 
             double? rate = _source.Convert(TopUnit.Id, BottomUnit.Id, 1);
-            RateText = rate is double r ? $"1 {TopUnit.Symbol} = {UnitFormat.Rate(r)} {BottomUnit.Symbol}" : "";
+            RateText = rate is double r
+                ? $"1 {TopUnit.Symbol} = {UnitFormat.Display(UnitFormat.Rate(r, _source.RoundsToDecimals, _precision), _numbers)} {BottomUnit.Symbol}"
+                : "";
+        }
+
+        private void SettingsChanged()
+        {
+            OnPropertyChanged(nameof(DecimalMarkLabel));
+            UpdateRateText();
+            Convert();
         }
 
 

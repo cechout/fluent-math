@@ -12,7 +12,8 @@ namespace FluentMath.Views
         public CurrencyPage()
         {
             this.InitializeComponent();
-            Panel.ViewModel = new ConverterViewModel(new CurrencyUnitSource(LoadRates));
+            Panel.ViewModel = new ConverterViewModel(new CurrencyUnitSource(LoadRates),
+                App.Settings, SettingsService.Instance.Converter);
         }
 
         // the live feed, kept on disk for the next time it cannot be reached; else the kept one; else none

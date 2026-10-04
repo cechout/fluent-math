@@ -1,5 +1,6 @@
 using System;
 using FluentMath.Models;
+using FluentMath.Models.Converters;
 using FluentMath.Persistence.Models;
 
 namespace FluentMath.Persistence.Services
@@ -27,6 +28,7 @@ namespace FluentMath.Persistence.Services
         private SettingsService()
         {
             Calculator.Changed += SaveDebounced;
+            Converter.Changed += SaveDebounced;
         }
 
 
@@ -34,6 +36,9 @@ namespace FluentMath.Persistence.Services
 
         // the calculator setup every page holds
         public CalculatorSettings Calculator { get; } = new CalculatorSettings();
+
+        // the converter setup every converter page holds
+        public ConverterSettings Converter { get; } = new ConverterSettings();
 
         // Default, Light or Dark; MainWindow applies it
         private string _appTheme = Defaults.AppTheme;
@@ -86,6 +91,11 @@ namespace FluentMath.Persistence.Services
             Calculator.GroupDigits = data.GroupDigits;
             Calculator.DecimalMark = Defined(data.DecimalMark, Defaults.DecimalMark);
 
+            Converter.CurrencyDecimals = Math.Clamp(data.CurrencyDecimals,
+                ConverterSettings.MinCurrencyDecimals, ConverterSettings.MaxCurrencyDecimals);
+            Converter.UnitDigits = Math.Clamp(data.UnitDigits,
+                ConverterSettings.MinUnitDigits, ConverterSettings.MaxUnitDigits);
+
             _isLoading = false;
         }
 
@@ -105,7 +115,10 @@ namespace FluentMath.Persistence.Services
                 NumberDigits = Calculator.NumberFormat.Digits,
                 UsePrefixes = Calculator.UsePrefixes,
                 GroupDigits = Calculator.GroupDigits,
-                DecimalMark = Calculator.DecimalMark
+                DecimalMark = Calculator.DecimalMark,
+
+                CurrencyDecimals = Converter.CurrencyDecimals,
+                UnitDigits = Converter.UnitDigits
             };
         }
 

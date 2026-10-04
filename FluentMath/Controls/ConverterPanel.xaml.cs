@@ -81,10 +81,10 @@ namespace FluentMath.Controls
             ViewModel.ActivateLine(top: false);
         }
 
-        // one step up from the TitleLarge semibold for the line that takes the input
+        // the TitleLarge semibold for the line that takes the input, two steps lighter for the other
         private FontWeight WeightOf(bool active)
         {
-            return active ? FontWeights.SemiBold : FontWeights.Normal;
+            return active ? FontWeights.SemiBold : FontWeights.SemiLight;
         }
 
 
