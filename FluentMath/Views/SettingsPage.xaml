@@ -246,14 +246,14 @@
                     IsExpanded="False">
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Decimals of a money amount" Header="Currency Decimals">
+                        <controls:SettingsCard Header="Currency Decimals">
                             <ComboBox
                                 x:Name="CurrencyDecimalsComboBox"
                                 Width="70"
                                 SelectionChanged="ConverterComboBox_SelectionChanged" />
                         </controls:SettingsCard>
 
-                        <controls:SettingsCard Description="Significant digits of a measure" Header="Unit Digits">
+                        <controls:SettingsCard Header="Unit Digits">
                             <ComboBox
                                 x:Name="UnitDigitsComboBox"
                                 Width="70"
