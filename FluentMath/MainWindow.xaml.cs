@@ -1,3 +1,4 @@
+using FluentMath.Distribution;
 using FluentMath.Persistence.Models;
 using FluentMath.Persistence.Services;
 using FluentMath.Views;
@@ -98,6 +99,7 @@ namespace FluentMath
             _titleBarIcon = AppTitleBar.IconSource;
             _titleBarTitle = AppTitleBar.Title;
             AppTitleBar.LeftHeader = null;
+            AppTitleBar.Content = null; // the update pill, see ShowUpdatePill
 
             ApplyTheme(SettingsService.Instance.AppTheme);
             SettingsService.Instance.ThemeChanged += ApplyTheme;
@@ -110,6 +112,10 @@ namespace FluentMath
 
             AppWindow.Changed += AppWindow_Changed;
             this.Closed += MainWindow_Closed;
+
+            // last; the check runs in the background and only ever adds the pill
+            UpdateService.Instance.UpdateStateChanged += ShowUpdatePill;
+            UpdateService.Instance.Start(this.GetWindowHandle());
         }
 
 
@@ -249,6 +255,7 @@ namespace FluentMath
             AppTitleBar.IconSource = compact ? null : _titleBarIcon;
             AppTitleBar.Title = compact ? "" : _titleBarTitle;
             AppTitleBar.LeftHeader = compact ? CompactReturnButton : null;
+            ShowUpdatePill();
 
             if (MainFrame.Content is ICompactPage page)
             {
@@ -268,6 +275,31 @@ namespace FluentMath
             double scale = this.GetDpiForWindow() / 96.0;
             PageStateService.Instance.SetCompactSize(MainFrame.Content.GetType().Name,
                 AppWindow.Size.Width / scale, AppWindow.Size.Height / scale);
+        }
+
+
+        // === update ===
+
+        // the pill names the waiting version; a store update GitHub could not name yet still needs a label
+        private void ShowUpdatePill()
+        {
+            UpdateService service = UpdateService.Instance;
+
+            string versionLabel = UpdateService.VersionLabel(service.Latest?.Version);
+            UpdatePillText.Text = versionLabel.Length > 0 ? versionLabel : "Update";
+
+            AppTitleBar.Content = service.IsUpdateAvailable && !_isCompact ? UpdatePillButton : null;
+        }
+
+        private async void UpdatePillButton_Click(object sender, RoutedEventArgs e)
+        {
+            await UpdateDialog.ShowAsync(Content.XamlRoot, UpdateService.Instance.Latest);
+        }
+
+        // the update script waits for this process to end; Closed flushes what still waits to be saved
+        public void ExitForUpdate()
+        {
+            this.Close();
         }
 
 

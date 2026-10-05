@@ -54,6 +54,36 @@
                     <FontIcon FontSize="16" Glyph="&#xEE47;" />
                 </Button>
             </TitleBar.LeftHeader>
+
+            <!--  update pill  -->
+            <!--
+                only in the bar while an update is waiting and the window is full, see ShowUpdatePill
+                (the foreground is set on both children, an accent button does not pass its own down)
+            -->
+            <TitleBar.Content>
+                <Button
+                    x:Name="UpdatePillButton"
+                    Height="22"
+                    Margin="4,1,0,0"
+                    Padding="8,0"
+                    HorizontalAlignment="Left"
+                    VerticalAlignment="Center"
+                    Click="UpdatePillButton_Click"
+                    Style="{StaticResource AccentButtonStyle}">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <FontIcon
+                            VerticalAlignment="Center"
+                            FontSize="11"
+                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Glyph="&#xE896;" />
+                        <TextBlock
+                            x:Name="UpdatePillText"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                            Style="{ThemeResource CaptionTextBlockStyle}" />
+                    </StackPanel>
+                </Button>
+            </TitleBar.Content>
         </TitleBar>
 
         <!--  navigation view  -->

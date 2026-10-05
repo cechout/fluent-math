@@ -70,8 +70,9 @@ FluentMath/
 ├── Assets/       the app icon and the package logos
 ├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer;
 │                 the converter layout every converter page shares: ConverterPanel
-├── Distribution/ the channel the running build came from, installer, portable or store:
-│                 AppDistribution
+├── Distribution/ the channel the running build came from, installer, portable or store, and the
+│                 update check for each: AppDistribution, UpdateService, UpdateInstaller,
+│                 StoreUpdateSource
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
@@ -89,7 +90,7 @@ FluentMath/
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   CalculatorViewModel, ConverterViewModel, RelayCommand
 └── Views/        StandardPage, ScientificPage, CurrencyPage, VolumePage, LengthPage, SettingsPage,
-                  PadEntrance, ICompactPage, SmallKeyLabels
+                  UpdateDialog, PadEntrance, ICompactPage, SmallKeyLabels
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
@@ -238,7 +239,11 @@ repository setting, not in the build.
   `Persistence` folder beside it; the `.iss` excludes both, so an installed build never writes into Program
   Files.
 - **The release workflow creates a draft, and a human publishes it.** Publishing straight from CI would
-  put every tag in front of users the moment the build finishes.
+  put every tag in front of users the moment the build finishes, and the update check would offer it to
+  every running copy at once: `UpdateService` reads `releases/latest`, which only returns published releases.
+- **The store build only names its update from GitHub.** Whether there is one is the Store's answer; the
+  GitHub release only gives it a version. Publish the GitHub release once the Store version is live, or the
+  store build shows an unnamed update until then.
 - **Two `.gitignore` negations stay.** The stock template silently excludes files the build needs: the
   macOS `Icon` rule swallowed `FluentMath/Assets/Icon/`, so a fresh checkout failed with `CS7064`
   and the error named the icon rather than anything about git, and `*.pubxml` swallowed all three publish

@@ -301,7 +301,7 @@
                     <Button Click="ResetAll_Click" Content="Reset All" />
 
                     <controls:SettingsExpander.Items>
-                        <controls:SettingsCard Description="Theme, start page, separators, the calculator and the converter setup" Header="General Settings">
+                        <controls:SettingsCard Description="Theme, start page, updates, separators, the calculator and the converter setup" Header="General Settings">
                             <Button Click="ResetGeneralSettings_Click" Content="Reset" />
                         </controls:SettingsCard>
 
@@ -319,19 +319,85 @@
                     Text="About &amp; Open Source" />
 
                 <!--  app info  -->
-                <!--  (the version in the header slot is read off the assembly, see VersionLabel)  -->
+                <!--
+                    (the version in the header slot is read off the assembly, see UpdateService.CurrentVersion;
+                    the pill beside it shows while an update waits, like the one in the title bar)
+                -->
                 <controls:SettingsExpander
                     Description="© 2026 Daniel Čech · MIT License"
                     Header="Fluent Math"
                     HeaderIcon="{ui:FontIcon Glyph=&#xE946;}"
                     IsExpanded="False">
 
-                    <TextBlock
-                        x:Name="VersionTextBlock"
-                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                        IsTextSelectionEnabled="True" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <!--  update pill  -->
+                        <Button
+                            x:Name="UpdatePillButton"
+                            Height="22"
+                            Padding="8,0"
+                            VerticalAlignment="Center"
+                            Click="UpdatePillButton_Click"
+                            Style="{StaticResource AccentButtonStyle}"
+                            Visibility="Collapsed">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <FontIcon
+                                    VerticalAlignment="Center"
+                                    FontSize="11"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                    Glyph="&#xE896;" />
+                                <TextBlock
+                                    x:Name="UpdatePillText"
+                                    VerticalAlignment="Center"
+                                    Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                                    Style="{ThemeResource CaptionTextBlockStyle}" />
+                            </StackPanel>
+                        </Button>
+
+                        <!--  version  -->
+                        <TextBlock
+                            x:Name="VersionTextBlock"
+                            VerticalAlignment="Center"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            IsTextSelectionEnabled="True" />
+                    </StackPanel>
 
                     <controls:SettingsExpander.Items>
+                        <!--  update state  -->
+                        <!--  (a click depends on the state, see UpdateStatusCard_Click)  -->
+                        <controls:SettingsCard
+                            x:Name="UpdateStatusCard"
+                            Click="UpdateStatusCard_Click"
+                            IsActionIconVisible="False"
+                            IsClickEnabled="True">
+                            <Grid>
+                                <!--  state badge and progress ring, never shown together  -->
+                                <Border
+                                    x:Name="UpdateBadge"
+                                    Width="24"
+                                    Height="24"
+                                    CornerRadius="12">
+                                    <FontIcon
+                                        x:Name="UpdateBadgeIcon"
+                                        FontSize="12"
+                                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}" />
+                                </Border>
+                                <ProgressRing
+                                    x:Name="UpdateCheckingRing"
+                                    Width="22"
+                                    Height="22"
+                                    IsActive="False"
+                                    Visibility="Collapsed" />
+                            </Grid>
+                        </controls:SettingsCard>
+
+                        <controls:SettingsCard Description="Ask once per start whether a newer version is out" Header="Check for Updates on Startup">
+                            <ToggleSwitch
+                                x:Name="CheckUpdatesToggle"
+                                OffContent="Off"
+                                OnContent="On"
+                                Toggled="CheckUpdatesToggle_Toggled" />
+                        </controls:SettingsCard>
+
                         <controls:SettingsCard Header="Documentation">
                             <HyperlinkButton Content="GitHub" NavigateUri="https://github.com/cechout/fluent-math" />
                         </controls:SettingsCard>

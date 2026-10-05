@@ -1,12 +1,18 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+using Windows.ApplicationModel;
+using Windows.System;
 
 namespace FluentMath.Distribution
 {
     // the distribution channel:
     // installer, portable or store, the one place to ask; installer and portable are the GitHub downloads and
     // differ only in where the state lives
+    // a packaged store build never runs its own updater: the store forbids it, the install folder is read only and
+    // signed, and the inno installer would leave a second copy
     public static class AppDistribution
     {
         // === win32 api imports ===
@@ -34,8 +40,48 @@ namespace FluentMath.Distribution
 
         public static bool IsPortableBuild => _isPortableBuild.Value;
 
+        // the in-app updater keys off this; (the store build updates through the store, see StoreUpdateSource)
+        public static bool SupportsSelfUpdate => !IsPackaged;
+
+        // the product page, where an update can always be installed by hand; found by the package family name,
+        // so no store id has to be kept here
+        public static Task OpenStorePageAsync()
+        {
+            if (!IsPackaged) return Task.CompletedTask;
+
+            string familyName;
+            try
+            {
+                familyName = Package.Current.Id.FamilyName;
+            }
+            catch
+            {
+                // no identity after all; nothing to open
+                return Task.CompletedTask;
+            }
+
+            return LaunchStoreAsync(new Uri($"ms-windows-store://pdp/?PFN={familyName}"));
+        }
+
 
         // === private helpers ===
+
+        // Launcher first, the shell as the fallback; (the answer of Launcher may never come back while the store
+        // replaces the package, so nothing waits on it)
+        private static async Task LaunchStoreAsync(Uri uri)
+        {
+            try
+            {
+                if (await Launcher.LaunchUriAsync(uri)) return;
+            }
+            catch { /* the shell below gets the next try */ }
+
+            try
+            {
+                Process.Start(new ProcessStartInfo(uri.ToString()) { UseShellExecute = true });
+            }
+            catch { /* nothing left to try, the click simply does nothing */ }
+        }
 
         // a zero length buffer probes the identity: ERROR_INSUFFICIENT_BUFFER when packaged, APPMODEL_ERROR_NO_PACKAGE
         // otherwise; (Package.Current would throw on every unpackaged start)

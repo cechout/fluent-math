@@ -69,6 +69,34 @@ namespace FluentMath.Persistence.Services
             }
         }
 
+        // the one automatic GitHub or store request per start; UpdateService asks when it starts
+        private bool _checkUpdatesOnStartup = Defaults.CheckUpdatesOnStartup;
+        public bool CheckUpdatesOnStartup
+        {
+            get => _checkUpdatesOnStartup;
+            set
+            {
+                if (_checkUpdatesOnStartup == value) return;
+
+                _checkUpdatesOnStartup = value;
+                SaveDebounced();
+            }
+        }
+
+        // the version "Skip this version" declined, bare (2.5.0); empty = none
+        private string _skippedUpdateVersion = Defaults.SkippedUpdateVersion;
+        public string SkippedUpdateVersion
+        {
+            get => _skippedUpdateVersion;
+            set
+            {
+                if (_skippedUpdateVersion == value) return;
+
+                _skippedUpdateVersion = value;
+                SaveDebounced();
+            }
+        }
+
 
         // === persistence ===
 
@@ -80,6 +108,8 @@ namespace FluentMath.Persistence.Services
 
             _appTheme = data.AppTheme is "Default" or "Light" or "Dark" ? data.AppTheme : Defaults.AppTheme;
             _startupPage = Defined(data.StartupPage, Defaults.StartupPage);
+            _checkUpdatesOnStartup = data.CheckUpdatesOnStartup;
+            _skippedUpdateVersion = data.SkippedUpdateVersion ?? Defaults.SkippedUpdateVersion;
 
             Calculator.AngleMode = Defined(data.AngleMode, Defaults.AngleMode);
             Calculator.ExactFirst = data.ExactFirst;
@@ -106,6 +136,8 @@ namespace FluentMath.Persistence.Services
             {
                 AppTheme = _appTheme,
                 StartupPage = _startupPage,
+                CheckUpdatesOnStartup = _checkUpdatesOnStartup,
+                SkippedUpdateVersion = _skippedUpdateVersion,
 
                 AngleMode = Calculator.AngleMode,
                 ExactFirst = Calculator.ExactFirst,
