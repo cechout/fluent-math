@@ -136,7 +136,7 @@ edit. The release workflow runs it last, because it rebuilds into the same `bin`
 installer is compiled from. The result is an unsigned `.msixupload`; the Store signs the package itself.
 
 ```powershell
-dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:PublishProfile=win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageSigningEnabled=false
+dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:PublishProfile=win-x64 -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true -p:UapAppxPackageBuildMode=StoreUpload -p:AppxPackageSigningEnabled=false -p:AppxSymbolPackageEnabled=false
 ```
 
 ## Test

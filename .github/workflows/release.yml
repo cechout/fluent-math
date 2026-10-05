@@ -70,7 +70,8 @@ jobs:
 
       # last, after the draft exists, since it rebuilds into the same bin and obj and a red step must not
       # cost the installer; StoreUpload makes an unsigned .msixupload, the store signs it
-      # (the version comes from StampAppxManifestVersion in the csproj)
+      # (the version comes from StampAppxManifestVersion in the csproj); no symbol package, since its
+      # mspdbcmf.exe ships with visual studio only and the dotnet cli fails the whole upload without it
       - name: package msix for the store
         run: >
           dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64
@@ -79,6 +80,7 @@ jobs:
           -p:GenerateAppxPackageOnBuild=true
           -p:UapAppxPackageBuildMode=StoreUpload
           -p:AppxPackageSigningEnabled=false
+          -p:AppxSymbolPackageEnabled=false
           "-p:AppxPackageDir=${{ github.workspace }}\Setup\Output\Msix\\"
 
       # an artifact, not a release asset; it is uploaded to partner center by hand
