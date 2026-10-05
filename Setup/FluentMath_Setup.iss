@@ -54,7 +54,9 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 ; must stay in sync with PublishDir in FluentMath/Properties/PublishProfiles/win-x64.pubxml
 Source: "..\FluentMath\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "..\FluentMath\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Excludes keeps a local portable marker and its Persistence folder out, so no installed build writes
+; into Program Files
+Source: "..\FluentMath\bin\x64\Release\net8.0-windows10.0.19041.0\publish\win-x64\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "\portable.txt,\Persistence"
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
