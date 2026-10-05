@@ -1,0 +1,10 @@
+Fluent Math - portable mode
+===========================
+
+As long as this file sits next to FluentMath.exe, the app keeps all of its settings in the
+"Persistence" folder inside this directory instead of %LocalAppData%\FluentMath.
+
+That means you can move or copy this folder to another drive or machine and your settings,
+window positions and the last downloaded exchange rates travel with it. Deleting the folder
+removes every trace of the app. Delete just this file if you want this copy to use the normal
+per-user location instead.

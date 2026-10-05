@@ -4,8 +4,8 @@ This project is a C#/.NET 8 WinUI 3 desktop app: a calculator for Windows that w
 pocket calculator does. The whole equation is typed first and evaluated on `=`, which is what guarantees
 the correct order of operations, rather than being evaluated after every operator the way the built-in
 Windows Calculator does. It also converts currencies from the European Central Bank daily reference
-rates. It ships unpackaged and self-contained through an installer, is packaged as an MSIX for the
-Microsoft Store from the same project, and needs no elevation.
+rates. It ships unpackaged and self-contained through an installer and as a portable zip, is packaged
+as an MSIX for the Microsoft Store from the same project, and needs no elevation.
 
 - Keep the work scoped to what was asked. Avoid opportunistic refactors, formatting churn, dependency
   bumps and drive-by renames.
@@ -70,6 +70,8 @@ FluentMath/
 ├── Assets/       the app icon and the package logos
 ├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer;
 │                 the converter layout every converter page shares: ConverterPanel
+├── Distribution/ the channel the running build came from, installer, portable or store:
+│                 AppDistribution
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
@@ -78,8 +80,8 @@ FluentMath/
 │   │             ConverterSettings, CurrencyUnitSource, LinearUnitSource, VolumeUnits, LengthUnits
 │   └── Layout/   the formula layout, UI-free: MathBox, MathLayoutEngine, MathLayoutStyle,
 │                 MathFit, MathHitTest, ITextMeasurer
-├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath or the package
-│                 LocalState:
+├── Persistence/  what survives a restart, as json under %LocalAppData%\FluentMath, the package
+│                 LocalState, or a Persistence folder next to the exe in the portable build:
 │   ├── Models/   the file shapes, whose initial values are the defaults: AppSettingsData,
 │   │             WindowState, PageStateData
 │   └── Services/ PersistenceService (the disk), AppDataFolder, and the live stores
@@ -100,8 +102,9 @@ calculators share `CalculatorViewModel` and `CalculatorDisplay`, every converter
 its content across a navigation. `MainWindow` also owns compact mode, a small window on top of every
 other one that holds the page it was asked from; each page brings its own sizes through `ICompactPage`.
 
-`Setup/` holds the Inno Setup installer scripts, `Calculator/` the retired WPF version 1, and `.github/`
-the workflows, the issue and pull request templates and the public README.
+`Setup/` holds the Inno Setup installer scripts and the `portable.txt` marker of the portable zip,
+`Calculator/` the retired WPF version 1, and `.github/` the workflows, the issue and pull request
+templates and the public README.
 
 ## Build
 
@@ -226,9 +229,14 @@ repository setting, not in the build.
 - **The package identity matches Partner Center.** `Name`, `Publisher` and `PublisherDisplayName` in
   `Package.appxmanifest` are dictated by the reserved app in Partner Center; an upload with any other
   value is rejected.
-- **The release asset name is a contract.** `FluentMath_Installer.exe` is what the release workflow
+- **The release asset names are a contract.** `FluentMath_Installer.exe` is what the release workflow
   uploads, what the Inno Setup script produces, and what the release notes tell people to download.
-  Renaming one of the three breaks the other two quietly.
+  Renaming one of the three breaks the other two quietly. The same holds for
+  `FluentMath_Portable_<version>.zip`, which keeps its top level folder (`Compress-Archive -Path $staging`,
+  not `$staging/*`).
+- **The portable marker stays out of the installer.** `portable.txt` next to the exe moves the state into a
+  `Persistence` folder beside it; the `.iss` excludes both, so an installed build never writes into Program
+  Files.
 - **The release workflow creates a draft, and a human publishes it.** Publishing straight from CI would
   put every tag in front of users the moment the build finishes.
 - **Two `.gitignore` negations stay.** The stock template silently excludes files the build needs: the
