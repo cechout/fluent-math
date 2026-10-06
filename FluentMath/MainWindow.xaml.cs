@@ -3,11 +3,14 @@ using FluentMath.Persistence.Models;
 using FluentMath.Persistence.Services;
 using FluentMath.Views;
 using Microsoft.UI;
+using Microsoft.UI.Dispatching;
+using Microsoft.UI.Input;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media.Animation;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using Windows.Foundation;
@@ -66,9 +69,8 @@ namespace FluentMath
         private RectInt32 _fullBounds;
         private bool _fullWasMaximized;
 
-        // the title bar icon and name, hidden while compact
-        private readonly IconSource? _titleBarIcon;
-        private readonly string _titleBarTitle;
+        // --- title bar ---
+        private const double TitleBarDeactivatedOpacity = 0.5; // TitleBarDeactivatedOpacity of the WinUI TitleBar
 
 
         // === constructor ===
@@ -95,11 +97,9 @@ namespace FluentMath
                 AppWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
             }
 
-            // the return key only hangs in the bar while compact; any set header changes the bar layout
-            _titleBarIcon = AppTitleBar.IconSource;
-            _titleBarTitle = AppTitleBar.Title;
-            AppTitleBar.LeftHeader = null;
-            AppTitleBar.Content = null; // the update pill, see ShowUpdatePill
+            // the whole bar drags the window; its buttons get passthrough rects, see UpdateTitleBarPassthrough
+            this.SetTitleBar(AppTitleBar);
+            this.Activated += MainWindow_Activated;
 
             ApplyTheme(SettingsService.Instance.AppTheme);
             SettingsService.Instance.ThemeChanged += ApplyTheme;
@@ -252,9 +252,9 @@ namespace FluentMath
             NavView.IsPaneOpen = false;
             NavView.IsPaneToggleButtonVisible = !compact;
 
-            AppTitleBar.IconSource = compact ? null : _titleBarIcon;
-            AppTitleBar.Title = compact ? "" : _titleBarTitle;
-            AppTitleBar.LeftHeader = compact ? CompactReturnButton : null;
+            AppTitleIcon.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+            AppTitleText.Visibility = compact ? Visibility.Collapsed : Visibility.Visible;
+            CompactReturnButton.Visibility = compact ? Visibility.Visible : Visibility.Collapsed;
             ShowUpdatePill();
 
             if (MainFrame.Content is ICompactPage page)
@@ -278,6 +278,77 @@ namespace FluentMath
         }
 
 
+        // === title bar ===
+
+        // the bar dims while another window is active, as the WinUI TitleBar does
+        private void MainWindow_Activated(object sender, WindowActivatedEventArgs args)
+        {
+            bool inactive = args.WindowActivationState == WindowActivationState.Deactivated;
+
+            AppTitleText.Opacity = inactive ? TitleBarDeactivatedOpacity : 1;
+            AppTitleIcon.Opacity = inactive ? TitleBarDeactivatedOpacity : 1;
+            UpdatePillButton.Opacity = inactive ? TitleBarDeactivatedOpacity : 1;
+        }
+
+        private void AppTitleBar_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateTitleBarLayout();
+
+        // the pill and the return key appear without the bar changing size
+        private void TitleBarElement_SizeChanged(object sender, SizeChangedEventArgs e) => UpdateTitleBarLayout();
+
+        private void UpdateTitleBarLayout()
+        {
+            FitTitle();
+            UpdateTitleBarPassthrough();
+        }
+
+        // the title trims rather than push the pill under the caption buttons in a narrow window
+        private void FitTitle()
+        {
+            if (Content?.XamlRoot == null) return;
+
+            double captionButtons = AppWindow.TitleBar.RightInset / Content.XamlRoot.RasterizationScale;
+
+            double others = AppTitleText.Margin.Left + AppTitleText.Margin.Right;
+            for (int column = 0; column < AppTitleBar.ColumnDefinitions.Count; column++)
+            {
+                GridLength width = AppTitleBar.ColumnDefinitions[column].Width;
+                if (width.IsAbsolute || (width.IsAuto && column != Grid.GetColumn(AppTitleText)))
+                {
+                    others += AppTitleBar.ColumnDefinitions[column].ActualWidth;
+                }
+            }
+
+            AppTitleText.MaxWidth = Math.Max(0, AppTitleBar.ActualWidth - captionButtons - others);
+        }
+
+        // SetTitleBar makes the whole bar drag the window, so every button in it needs a passthrough rect
+        // in window pixels; again whenever one of them appears, goes or moves
+        private void UpdateTitleBarPassthrough()
+        {
+            if (Content?.XamlRoot == null) return;
+
+            double scale = Content.XamlRoot.RasterizationScale;
+            var rects = new List<RectInt32>();
+
+            foreach (FrameworkElement element in new FrameworkElement[] { CompactReturnButton, UpdatePillButton })
+            {
+                if (element.Visibility != Visibility.Visible || element.ActualWidth <= 0) continue;
+
+                Rect bounds = element.TransformToVisual(null).TransformBounds(
+                    new Rect(0, 0, element.ActualWidth, element.ActualHeight));
+
+                rects.Add(new RectInt32(
+                    (int)Math.Round(bounds.X * scale),
+                    (int)Math.Round(bounds.Y * scale),
+                    (int)Math.Round(bounds.Width * scale),
+                    (int)Math.Round(bounds.Height * scale)));
+            }
+
+            InputNonClientPointerSource.GetForWindowId(AppWindow.Id)
+                .SetRegionRects(NonClientRegionKind.Passthrough, rects.ToArray());
+        }
+
+
         // === update ===
 
         // the pill names the waiting version; a store update GitHub could not name yet still needs a label
@@ -288,7 +359,10 @@ namespace FluentMath
             string versionLabel = UpdateService.VersionLabel(service.Latest?.Version);
             UpdatePillText.Text = versionLabel.Length > 0 ? versionLabel : "Update";
 
-            AppTitleBar.Content = service.IsUpdateAvailable && !_isCompact ? UpdatePillButton : null;
+            UpdatePillButton.Visibility = service.IsUpdateAvailable && !_isCompact ? Visibility.Visible : Visibility.Collapsed;
+
+            // after layout; a button that just went measures nothing and raises no SizeChanged
+            DispatcherQueue.TryEnqueue(DispatcherQueuePriority.Low, UpdateTitleBarLayout);
         }
 
         private async void UpdatePillButton_Click(object sender, RoutedEventArgs e)

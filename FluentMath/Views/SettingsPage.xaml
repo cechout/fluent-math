@@ -363,9 +363,13 @@
 
                     <controls:SettingsExpander.Items>
                         <!--  update state  -->
-                        <!--  (a click depends on the state, see UpdateStatusCard_Click)  -->
+                        <!--
+                            (a click depends on the state, see UpdateStatusCard_Click; the right padding of the
+                            plain items, which a clickable card trades for its action icon)
+                        -->
                         <controls:SettingsCard
                             x:Name="UpdateStatusCard"
+                            Padding="58,8,44,8"
                             Click="UpdateStatusCard_Click"
                             IsActionIconVisible="False"
                             IsClickEnabled="True">
