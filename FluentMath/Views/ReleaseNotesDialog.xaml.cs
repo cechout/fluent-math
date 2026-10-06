@@ -23,7 +23,7 @@ namespace FluentMath.Views
         private const double MaxDialogHeight = 740;
         private const double MinDialogHeight = 460;
         private const double HeightFraction = 0.85; // of the window height
-        private const double MaxWindowShare = 0.9; // of the window width and height
+        private const double MaxWindowShare = 0.95; // of the window width and height
 
 
         // === constructor ===

@@ -10,7 +10,7 @@
 
     <Page.Resources>
         <!--  the release body inset  -->
-        <Thickness x:Key="ReleaseContentPadding">24,16,24,28</Thickness>
+        <Thickness x:Key="ReleaseContentPadding">16,16,16,28</Thickness>
 
         <!--  the full changelog label; the link button has its own style  -->
         <x:Double x:Key="ChangelogLabelFontSize">12</x:Double>
