@@ -110,7 +110,8 @@ in a narrow window.
 
 `Setup/` holds the Inno Setup installer scripts and the `portable.txt` marker of the portable zip,
 `Calculator/` the retired WPF version 1, and `.github/` the workflows, the issue and pull request
-templates and the public README.
+templates, the public README with its header image under `assets/`, and the privacy page. `PRIVACY.md`
+lists every request the app makes; a new one, or a changed one, updates that page in the same pull request.
 
 ## Build
 
