@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using Windows.Foundation;
 using Windows.Graphics;
 using WinUIEx;
@@ -123,6 +124,12 @@ namespace FluentMath
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {
+            if (args.InvokedItemContainer.Tag?.ToString() == "WhatsNew")
+            {
+                _ = ShowReleaseNotesAsync();
+                return;
+            }
+
             Type? page = PageForTag(args.InvokedItemContainer.Tag.ToString());
 
             // a second click on the item already shown would navigate the page onto itself
@@ -143,6 +150,18 @@ namespace FluentMath
                 "Settings" => typeof(SettingsPage),
                 _ => null
             };
+        }
+
+        // a dialog sits beside the window content, so the theme the app sets there is handed over by hand
+        private async Task ShowReleaseNotesAsync()
+        {
+            var dialog = new ReleaseNotesDialog
+            {
+                XamlRoot = Content.XamlRoot,
+                RequestedTheme = Content is FrameworkElement root ? root.ActualTheme : ElementTheme.Default
+            };
+
+            await dialog.ShowAsync();
         }
 
         // no frame slide; (the pad pages bring their own entrance)

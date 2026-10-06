@@ -64,6 +64,14 @@
     <Content Update="Assets\Icon\Icon.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!--
+      the release banners too: the content glob puts them in the build output, but publish skips an item
+      without copy metadata, which leaves an installed build without Assets\Releases
+    -->
+    <Content Update="Assets\Releases\*.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Page Update="Views\SettingsPage.xaml">

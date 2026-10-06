@@ -425,6 +425,17 @@
                 </Setter>
             </Style>
 
+            <!--  source link  -->
+            <!--  (a small link beside other text; the negative margin keeps its text in line with the text above)  -->
+            <Style x:Key="SourceLinkButtonStyle" TargetType="HyperlinkButton">
+                <Setter Property="Padding" Value="6,2,6,2" />
+                <Setter Property="Margin" Value="-6,0,0,0" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="HorizontalContentAlignment" Value="Left" />
+                <Setter Property="FontSize" Value="12" />
+            </Style>
+
         </ResourceDictionary>
     </Application.Resources>
 </Application>
