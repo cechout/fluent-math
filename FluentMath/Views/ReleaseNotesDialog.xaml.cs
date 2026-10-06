@@ -21,9 +21,9 @@ namespace FluentMath.Views
         // in px; the window can be far narrower than the dialog, so both sides are capped to a share of it
         private const double DialogWidth = 550;
         private const double MaxDialogHeight = 740;
-        private const double MinDialogHeight = 460;
+        private const double MinDialogHeight = 400;
         private const double HeightFraction = 0.85; // of the window height
-        private const double MaxWindowShare = 0.95; // of the window width and height
+        private const double MaxWindowShare = 1.0; // of the window width and height
 
 
         // === constructor ===
