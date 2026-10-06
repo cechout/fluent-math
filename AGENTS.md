@@ -67,12 +67,13 @@ double hyphen inside a comment is an XML parse error, so anomaly tags are writte
 
 ```text
 FluentMath/
-├── Assets/       the app icon and the package logos
+├── Assets/       the app icon, the package logos, and a banner per release under Releases/
 ├── Controls/     the formula display: CalculatorDisplay, MathPanel, XamlTextMeasurer;
-│                 the converter layout every converter page shares: ConverterPanel
+│                 the converter layout every converter page shares: ConverterPanel;
+│                 the release notes body: MarkdownRenderer
 ├── Distribution/ the channel the running build came from, installer, portable or store, and the
 │                 update check for each: AppDistribution, UpdateService, UpdateInstaller,
-│                 StoreUpdateSource
+│                 StoreUpdateSource; the release history: ReleaseCatalog
 ├── Engines/      the input model and the evaluator, both UI-free: MathInputManager, MathEvaluator
 ├── Models/       the token model, the exact values, the calculator setup and the currency logic:
 │                 MathToken, NavigationMetadata, EvaluationMetadata, ExactValue, ResultFormatter,
@@ -90,7 +91,8 @@ FluentMath/
 ├── Properties/   PublishProfiles, launchSettings
 ├── ViewModels/   CalculatorViewModel, ConverterViewModel, RelayCommand
 └── Views/        StandardPage, ScientificPage, CurrencyPage, VolumePage, LengthPage, SettingsPage,
-                  UpdateDialog, PadEntrance, ICompactPage, SmallKeyLabels
+                  UpdateDialog, ReleaseNotesDialog, ReleaseNotesPage, PadEntrance, ICompactPage,
+                  SmallKeyLabels
 
 FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
 ```
@@ -100,8 +102,11 @@ bar, and sizes the window through `WinUIEx.WindowManager`. The navigation groups
 headers, the calculators (Standard, Scientific) and the converters (Currency, Volume, Length). Both
 calculators share `CalculatorViewModel` and `CalculatorDisplay`, every converter shares
 `ConverterViewModel` and `ConverterPanel`, and every page but the settings is cached, so it keeps
-its content across a navigation. `MainWindow` also owns compact mode, a small window on top of every
-other one that holds the page it was asked from; each page brings its own sizes through `ICompactPage`.
+its content across a navigation. "What's New" above the settings opens the release history in a dialog
+and never selects. `MainWindow` also owns compact mode, a small window on top of every other one that
+holds the page it was asked from; each page brings its own sizes through `ICompactPage`. The title bar
+is a plain `Grid` rather than the WinUI `TitleBar`, which hides its title once it holds the update pill
+in a narrow window.
 
 `Setup/` holds the Inno Setup installer scripts and the `portable.txt` marker of the portable zip,
 `Calculator/` the retired WPF version 1, and `.github/` the workflows, the issue and pull request
@@ -244,10 +249,13 @@ repository setting, not in the build.
 - **The store build only names its update from GitHub.** Whether there is one is the Store's answer; the
   GitHub release only gives it a version. Publish the GitHub release once the Store version is live, or the
   store build shows an unnamed update until then.
-- **Two `.gitignore` negations stay.** The stock template silently excludes files the build needs: the
+- **Three `.gitignore` negations stay.** The stock template silently excludes files the build needs: the
   macOS `Icon` rule swallowed `FluentMath/Assets/Icon/`, so a fresh checkout failed with `CS7064`
-  and the error named the icon rather than anything about git, and `*.pubxml` swallowed all three publish
-  profiles.
+  and the error named the icon rather than anything about git, `*.pubxml` swallowed all three publish
+  profiles, and `[Rr]eleases/` would swallow the release banners in `FluentMath/Assets/Releases/`.
+- **Every minor or major release ships a banner.** `FluentMath/Assets/Releases/v<x>-<y>-<z>.png`, the
+  version label with dashes for dots, added before the tag. The release history shows it as the header
+  of that release; without the file the release simply has none.
 - **The CodeQL default setup stays switched off in the repository settings.** It collides with the
   advanced setup in `codeql.yml`, which builds manually because CodeQL autobuild cannot build a WinUI 3
   project.
