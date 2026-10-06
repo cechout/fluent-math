@@ -34,6 +34,7 @@
     <Grid x:Name="RootGrid">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
@@ -76,7 +77,12 @@
             </Button>
         </Grid>
 
-        <!--  content: a NavigationView driving a Frame, for the native page transition  -->
+        <!--  release list: a NavigationView driving the Frame below, for the native page transition  -->
+        <!--
+            (the Frame is not its content: on top the pane asks for its items, the overflow button and a 48 wide
+            custom content column, and a narrower dialog arranges the whole control at that width and clips it,
+            the page with it)
+        -->
         <NavigationView
             x:Name="ReleaseNav"
             Grid.Row="1"
@@ -85,9 +91,21 @@
             IsPaneToggleButtonVisible="False"
             IsSettingsVisible="False"
             OpenPaneLength="80"
-            PaneDisplayMode="Left"
+            PaneDisplayMode="Top"
             SelectionChanged="ReleaseNav_SelectionChanged">
 
+            <!--  (no custom content in the pane, so its column needs no width of its own)  -->
+            <NavigationView.Resources>
+                <x:Double x:Key="TopNavigationViewPaneCustomContentMinWidth">0</x:Double>
+            </NavigationView.Resources>
+        </NavigationView>
+
+        <!--  release page, with the fill and the line the NavigationView would draw under a top pane  -->
+        <Border
+            Grid.Row="2"
+            Background="{ThemeResource NavigationViewContentBackground}"
+            BorderBrush="{ThemeResource NavigationViewContentGridBorderBrush}"
+            BorderThickness="{ThemeResource TopNavigationViewContentGridBorderThickness}">
             <Grid>
                 <!--  release page  -->
                 <Frame x:Name="ReleaseFrame" />
@@ -114,6 +132,6 @@
                     TextWrapping="Wrap"
                     Visibility="Collapsed" />
             </Grid>
-        </NavigationView>
+        </Border>
     </Grid>
 </ContentDialog>
