@@ -29,8 +29,6 @@
             Grid.Row="0"
             Height="32"
             Background="Transparent"
-            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-            BorderThickness="0,0,0,1"
             SizeChanged="AppTitleBar_SizeChanged">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="2" />
