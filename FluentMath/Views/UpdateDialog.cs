@@ -22,8 +22,8 @@ namespace FluentMath.Views
 
         // === public api ===
 
-        // three ways forward (the app does it, you do it, neither) and the checkbox as a modifier on the exit; Close is
-        // the neutral way out, ESC included
+        // three ways forward (the app does it, you do it through the link, neither) and the checkbox as a modifier on
+        // the exit; Close is the neutral way out, ESC included
         public static async Task ShowAsync(XamlRoot? xamlRoot, UpdateInfo? info)
         {
             if (xamlRoot == null || info == null) return;
@@ -40,6 +40,20 @@ namespace FluentMath.Views
                 Content = "Skip this version",
                 Margin = new Thickness(0, 12, 0, 0),
                 Visibility = hasVersion ? Visibility.Visible : Visibility.Collapsed
+            };
+
+            // the manual way: the release page, or the store page in the store build; (the negative margin takes the
+            // padding back out, so the text lines up with the content)
+            var manualLink = new HyperlinkButton
+            {
+                Content = isStoreBuild ? "Open the Microsoft Store" : "Install manually from GitHub",
+                Margin = new Thickness(-8, 12, -4, 0)
+            };
+
+            manualLink.Click += (_, _) =>
+            {
+                if (isStoreBuild) _ = AppDistribution.OpenStorePageAsync();
+                else OpenReleasePage(info.ReleaseUrl);
             };
 
             var progress = new ProgressBar
@@ -65,6 +79,7 @@ namespace FluentMath.Views
                 TextWrapping = TextWrapping.Wrap
             });
             content.Children.Add(skipCheckBox);
+            content.Children.Add(manualLink);
             content.Children.Add(progress);
             content.Children.Add(statusText);
 
@@ -74,7 +89,6 @@ namespace FluentMath.Views
                 Title = "Update available",
                 Content = content,
                 PrimaryButtonText = "Update",
-                SecondaryButtonText = isStoreBuild ? "Open Store" : "Manual Install",
                 CloseButtonText = "Close",
                 DefaultButton = ContentDialogButton.Primary,
                 XamlRoot = xamlRoot,
@@ -96,7 +110,7 @@ namespace FluentMath.Views
             void SetDownloading(bool downloading)
             {
                 dialog.IsPrimaryButtonEnabled = !downloading;
-                dialog.IsSecondaryButtonEnabled = !downloading;
+                manualLink.IsEnabled = !downloading;
                 dialog.CloseButtonText = downloading ? "Cancel" : "Close";
                 skipCheckBox.IsEnabled = !downloading;
                 progress.Visibility = downloading ? Visibility.Visible : Visibility.Collapsed;
@@ -146,15 +160,6 @@ namespace FluentMath.Views
                 }
 
                 SetDownloading(false);
-            };
-
-            // stays open, the browser (or the store page) opens beside it
-            dialog.SecondaryButtonClick += (sender, args) =>
-            {
-                args.Cancel = true;
-
-                if (isStoreBuild) _ = AppDistribution.OpenStorePageAsync();
-                else OpenReleasePage(info.ReleaseUrl);
             };
 
             // Closing, not CloseButtonClick, so ESC takes the same path: past the abort a download would run unseen,
