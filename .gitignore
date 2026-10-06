@@ -27,6 +27,8 @@ mono_crash.*
 [Dd]ebugPublic/
 [Rr]elease/
 [Rr]eleases/
+# the release banners are app assets, not the "Releases" build output the rule above is aimed at
+!FluentMath/Assets/Releases/
 x64/
 x86/
 [Ww][Ii][Nn]32/
