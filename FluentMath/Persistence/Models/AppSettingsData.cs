@@ -28,6 +28,10 @@ namespace FluentMath.Persistence.Models
         public string AppTheme { get; set; } = "Default"; // Default, Light or Dark
         public StartupPage StartupPage { get; set; } = StartupPage.Standard;
 
+        // --- updates ---
+        public bool CheckUpdatesOnStartup { get; set; } = true;
+        public string SkippedUpdateVersion { get; set; } = ""; // e.g. "2.5.0", empty = none
+
         // --- calculator ---
         // see CalculatorSettings; (the number format is kept flat)
         public AngleMode AngleMode { get; set; } = CalculatorDefaults.AngleMode;

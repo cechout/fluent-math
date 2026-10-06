@@ -109,5 +109,29 @@ namespace FluentMath.Tests
 
             Assert.Equal("Default", Service.AppTheme);
         }
+
+        [Fact]
+        public void TheUpdateSettingsComeBackUnchanged()
+        {
+            Service.LoadFromData(new AppSettingsData { CheckUpdatesOnStartup = false, SkippedUpdateVersion = "2.5.0" });
+
+            Assert.False(Service.CheckUpdatesOnStartup);
+            Assert.Equal("2.5.0", Service.SkippedUpdateVersion);
+
+            AppSettingsData back = Service.ToData();
+
+            Assert.False(back.CheckUpdatesOnStartup);
+            Assert.Equal("2.5.0", back.SkippedUpdateVersion);
+        }
+
+        // a file written before the update check, or edited by hand, may carry a null
+        [Fact]
+        public void AMissingSkippedVersionMeansNone()
+        {
+            Service.LoadFromData(new AppSettingsData { SkippedUpdateVersion = null! });
+
+            Assert.Equal("", Service.SkippedUpdateVersion);
+            Assert.True(new AppSettingsData().CheckUpdatesOnStartup);
+        }
     }
 }

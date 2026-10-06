@@ -1,4 +1,5 @@
 using CommunityToolkit.WinUI.Controls;
+using FluentMath.Distribution;
 using FluentMath.Models;
 using FluentMath.Models.Converters;
 using FluentMath.Persistence.Models;
@@ -13,6 +14,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
+using Windows.UI;
 using Windows.UI.Text;
 
 namespace FluentMath.Views
@@ -42,6 +44,15 @@ namespace FluentMath.Views
         private const double DialogMaxWidthShare = 0.9; // of the window width
         private const double DialogPlatformMinWidth = 320; // ContentDialogMinWidth; (not a knob)
 
+        // --- update badge ---
+        // literals, not theme resources: a status colour means the same in both themes, and a white glyph on a
+        // coloured plate reads on both; the accent states use the system accent
+        private static readonly Color SuccessColor = Color.FromArgb(0xFF, 0x4C, 0xA2, 0x2E);
+        private static readonly Color CautionColor = Color.FromArgb(0xFF, 0xC1, 0x8A, 0x1B);
+        private static readonly Color CriticalColor = Color.FromArgb(0xFF, 0xC4, 0x3E, 0x1C);
+        private static readonly Color NeutralColor = Color.FromArgb(0xFF, 0x6B, 0x6B, 0x6B);
+        private static readonly Color AccentFallbackColor = Color.FromArgb(0xFF, 0x00, 0x78, 0xD4);
+
         public SettingsPage()
         {
             InitializeComponent();
@@ -56,8 +67,17 @@ namespace FluentMath.Views
             RestoreCalculatorSettings();
             RestoreConverterSettings();
             AppDataFolderCard.Description = PersistenceService.Instance.RootFolder;
-            VersionTextBlock.Text = VersionLabel();
+            VersionTextBlock.Text = UpdateService.VersionLabel(UpdateService.CurrentVersion);
+            CheckUpdatesToggle.IsOn = SettingsService.Instance.CheckUpdatesOnStartup;
             _isLoading = false;
+
+            // the page is built anew on every visit, so it follows the update service only while shown
+            Loaded += (_, _) =>
+            {
+                UpdateService.Instance.UpdateStateChanged += RefreshUpdateState;
+                RefreshUpdateState();
+            };
+            Unloaded += (_, _) => UpdateService.Instance.UpdateStateChanged -= RefreshUpdateState;
         }
 
 
@@ -327,13 +347,108 @@ namespace FluentMath.Views
         }
 
 
-        // === about ===
+        // === updates ===
 
-        // the running version as v2.2.0, from <Version> in the csproj
-        private static string VersionLabel()
+        // the pill and the state card, pulled from the service on every change
+        private void RefreshUpdateState()
         {
-            Version? version = typeof(App).Assembly.GetName().Version;
-            return version == null ? "" : $"v{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
+            UpdateService service = UpdateService.Instance;
+
+            string versionLabel = UpdateService.VersionLabel(service.Latest?.Version);
+            UpdatePillText.Text = versionLabel.Length > 0 ? versionLabel : "Update";
+            UpdatePillButton.Visibility = service.IsUpdateAvailable ? Visibility.Visible : Visibility.Collapsed;
+
+            bool checking = service.UiState == UpdateUiState.Checking;
+            UpdateCheckingRing.IsActive = checking;
+            UpdateCheckingRing.Visibility = checking ? Visibility.Visible : Visibility.Collapsed;
+            UpdateBadge.Visibility = checking ? Visibility.Collapsed : Visibility.Visible;
+            UpdateStatusCard.IsEnabled = !checking;
+
+            string lastChecked = service.LastCheckedAt.HasValue
+                ? $"Last checked {service.LastCheckedAt.Value:dd.MM. HH:mm}"
+                : "Not checked yet";
+
+            switch (service.UiState)
+            {
+                case UpdateUiState.UpToDate:
+                    SetUpdateState("\uE73E", SuccessColor, "You are up to date", lastChecked);
+                    break;
+
+                case UpdateUiState.Checking:
+                    SetUpdateState("\uE895", AccentColor(), "Checking for updates", "");
+                    break;
+
+                case UpdateUiState.UpdateAvailable:
+                    // a store update without a GitHub name has no version
+                    SetUpdateState("\uE896", AccentColor(), "Update available", versionLabel.Length > 0
+                        ? $"{versionLabel} is ready to install"
+                        : "A new version is ready to install");
+                    break;
+
+                case UpdateUiState.Skipped:
+                    SetUpdateState("\uE7BA", CautionColor, $"{UpdateService.VersionLabel(service.SkippedVersion)} skipped",
+                        "Select to install it anyway");
+                    break;
+
+                case UpdateUiState.Failed:
+                    SetUpdateState("\uE711", CriticalColor, "Check failed", AppDistribution.SupportsSelfUpdate
+                        ? "Could not reach GitHub, select to try again"
+                        : "Could not reach the Microsoft Store, select to try again");
+                    break;
+
+                default:
+                    SetUpdateState("\uE895", NeutralColor, "Check for updates", lastChecked);
+                    break;
+            }
+        }
+
+        private void SetUpdateState(string glyph, Color color, string title, string description)
+        {
+            UpdateBadgeIcon.Glyph = glyph;
+            UpdateBadge.Background = new SolidColorBrush(color);
+            UpdateStatusCard.Header = title;
+            UpdateStatusCard.Description = description;
+        }
+
+        // the Windows accent, else the WinUI default
+        private static Color AccentColor() =>
+            Application.Current.Resources.TryGetValue("SystemAccentColor", out object value) && value is Color color
+                ? color
+                : AccentFallbackColor;
+
+        // one card, three jobs, by service state
+        private async void UpdateStatusCard_Click(object sender, RoutedEventArgs e)
+        {
+            UpdateService service = UpdateService.Instance;
+
+            switch (service.UiState)
+            {
+                case UpdateUiState.UpdateAvailable:
+                    await UpdateDialog.ShowAsync(XamlRoot, service.Latest);
+                    break;
+
+                case UpdateUiState.Skipped:
+                    // the way back out of a skip
+                    service.ClearSkippedVersion();
+                    await UpdateDialog.ShowAsync(XamlRoot, service.Latest);
+                    break;
+
+                default:
+                    await service.CheckAsync();
+                    break;
+            }
+        }
+
+        private async void UpdatePillButton_Click(object sender, RoutedEventArgs e)
+        {
+            await UpdateDialog.ShowAsync(XamlRoot, UpdateService.Instance.Latest);
+        }
+
+        private void CheckUpdatesToggle_Toggled(object sender, RoutedEventArgs e)
+        {
+            if (_isLoading) return;
+
+            SettingsService.Instance.CheckUpdatesOnStartup = CheckUpdatesToggle.IsOn;
         }
 
 

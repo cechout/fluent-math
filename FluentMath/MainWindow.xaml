@@ -20,41 +20,93 @@
         </Grid.RowDefinitions>
 
         <!--  custom title bar  -->
-        <!--  (the content extends into the caption area)  -->
-        <TitleBar
+        <!--
+            the content extends into the caption area; the metrics of the WinUI TitleBar, which hid its title
+            once content was set and the window got narrow (SetTitleBar and the passthrough, see MainWindow)
+        -->
+        <Grid
             x:Name="AppTitleBar"
-            Title="Fluent Math"
             Grid.Row="0"
+            Height="32"
             Background="Transparent"
-            BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-            BorderThickness="0,0,0,1"
-            IsBackButtonVisible="False"
-            IsPaneToggleButtonVisible="False">
-
-            <!--  (holds the bar at 32 with the return key in it, as high as the close button)  -->
-            <TitleBar.Resources>
-                <x:Double x:Key="TitleBarExpandedHeight">32</x:Double>
-            </TitleBar.Resources>
-
-            <TitleBar.IconSource>
-                <ImageIconSource ImageSource="/Assets/Icon/Icon.ico" />
-            </TitleBar.IconSource>
+            SizeChanged="AppTitleBar_SizeChanged">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
 
             <!--  compact return key  -->
             <!--
                 only in the bar while compact, sized and placed from MainWindow
                 (the Windows Calculator back to full view glyph)
             -->
-            <TitleBar.LeftHeader>
-                <Button
-                    x:Name="CompactReturnButton"
-                    VerticalAlignment="Top"
-                    Click="CompactReturnButton_Click"
-                    Style="{StaticResource SubtleBarButtonStyle}">
-                    <FontIcon FontSize="16" Glyph="&#xEE47;" />
-                </Button>
-            </TitleBar.LeftHeader>
-        </TitleBar>
+            <Button
+                x:Name="CompactReturnButton"
+                Grid.Column="1"
+                VerticalAlignment="Top"
+                Click="CompactReturnButton_Click"
+                SizeChanged="TitleBarElement_SizeChanged"
+                Style="{StaticResource SubtleBarButtonStyle}"
+                Visibility="Collapsed">
+                <FontIcon FontSize="16" Glyph="&#xEE47;" />
+            </Button>
+
+            <!--  icon  -->
+            <ImageIcon
+                x:Name="AppTitleIcon"
+                Grid.Column="3"
+                Width="16"
+                Height="16"
+                Margin="0,0,16,0"
+                VerticalAlignment="Center"
+                Source="/Assets/Icon/Icon.ico" />
+
+            <!--  title  -->
+            <TextBlock
+                x:Name="AppTitleText"
+                Grid.Column="4"
+                Margin="0,0,8,0"
+                VerticalAlignment="Center"
+                Style="{StaticResource CaptionTextBlockStyle}"
+                Text="Fluent Math"
+                TextTrimming="CharacterEllipsis"
+                TextWrapping="NoWrap" />
+
+            <!--  update pill  -->
+            <!--
+                only while an update is waiting and the window is full, see ShowUpdatePill
+                (the foreground is set on both children, an accent button does not pass its own down)
+            -->
+            <Button
+                x:Name="UpdatePillButton"
+                Grid.Column="5"
+                Height="22"
+                Margin="4,1,0,0"
+                Padding="8,0"
+                VerticalAlignment="Center"
+                Click="UpdatePillButton_Click"
+                SizeChanged="TitleBarElement_SizeChanged"
+                Style="{StaticResource AccentButtonStyle}"
+                Visibility="Collapsed">
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <FontIcon
+                        VerticalAlignment="Center"
+                        FontSize="11"
+                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                        Glyph="&#xE896;" />
+                    <TextBlock
+                        x:Name="UpdatePillText"
+                        VerticalAlignment="Center"
+                        Foreground="{ThemeResource TextOnAccentFillColorPrimaryBrush}"
+                        Style="{ThemeResource CaptionTextBlockStyle}" />
+                </StackPanel>
+            </Button>
+        </Grid>
 
         <!--  navigation view  -->
         <NavigationView
