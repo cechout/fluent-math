@@ -3,7 +3,7 @@
 ###
 
 <p align="left">
-  <a href="https://github.com/cechout/fluent-math/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/cechout/fluent-math?label=release&color=8b5cf6"></a>
+  <a href="https://github.com/cechout/fluent-math/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/cechout/fluent-math?label=release&color=f97316"></a>
   <a href="https://github.com/cechout/fluent-math/releases"><img alt="Downloads" src="https://img.shields.io/github/downloads/cechout/fluent-math/total?color=brightgreen"></a>
   <a href="https://github.com/cechout/fluent-math/releases"><img alt="Windows" src="https://img.shields.io/badge/platform-Windows%2010%2F11-0284c7?logo=windows11&logoColor=white"></a>
 </p>
