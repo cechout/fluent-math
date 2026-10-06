@@ -179,6 +179,17 @@
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
+                <!--  release history  -->
+                <!--  (opens the dialog and never selects, so the page behind it keeps its highlight)  -->
+                <NavigationViewItem
+                    Content="What's New"
+                    SelectsOnInvoked="False"
+                    Tag="WhatsNew">
+                    <NavigationViewItem.Icon>
+                        <FontIcon Glyph="&#xE789;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+
                 <NavigationViewItem Content="Settings" Tag="Settings">
                     <NavigationViewItem.Icon>
                         <FontIcon Glyph="&#xE713;" />
