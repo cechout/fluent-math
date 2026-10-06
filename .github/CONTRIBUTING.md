@@ -19,7 +19,7 @@ git checkout -b feature/your-feature-name
 
 4. Make your changes, then push and [open a pull request](https://github.com/cechout/fluent-math/compare) against `main`
 
-See the "How to Run" section in the [README](https://github.com/cechout/fluent-math/blob/main/.github/README.md) for build prerequisites.
+See the "How to Build" section in the [README](https://github.com/cechout/fluent-math/blob/main/.github/README.md) for build prerequisites.
 
 `FluentMath` is the project that is being developed. `Calculator` is the original WPF version 1.0.0 and is kept for history only, changes to it are not accepted.
 
