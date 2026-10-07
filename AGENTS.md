@@ -1,6 +1,6 @@
 # Fluent Math Development Guidelines
 
-This project is a C#/.NET 8 WinUI 3 desktop app: a calculator for Windows that works the way a physical
+This project is a C#/.NET 10 WinUI 3 desktop app: a calculator for Windows that works the way a physical
 pocket calculator does. The whole equation is typed first and evaluated on `=`, which is what guarantees
 the correct order of operations, rather than being evaluated after every operator the way the built-in
 Windows Calculator does. It also converts currencies from the European Central Bank daily reference
@@ -94,7 +94,7 @@ FluentMath/
                   UpdateDialog, ReleaseNotesDialog, ReleaseNotesPage, PadEntrance, ICompactPage,
                   SmallKeyLabels
 
-FluentMath.Tests/   the engine tests, plain net8.0, no reference to the app
+FluentMath.Tests/   the engine tests, plain net10.0, no reference to the app
 ```
 
 `MainWindow` holds the `NavigationView` and the `Frame` the pages are shown in, extends into the title
@@ -152,7 +152,7 @@ dotnet publish FluentMath/FluentMath.csproj -c Release -p:Platform=x64 -p:Publis
 ## Test
 
 `FluentMath.Tests/` covers the input engine, the evaluator, the result formatter, the keypad
-routing in `CalculatorViewModel`, the converters and the persistence layer. It targets plain `net8.0` and links the sources it tests rather than
+routing in `CalculatorViewModel`, the converters and the persistence layer. It targets plain `net10.0` and links the sources it tests rather than
 referencing the app, which is a `WinExe` on a Windows target framework and cannot be referenced from a
 plain library, so the suite runs on any dotnet runner.
 

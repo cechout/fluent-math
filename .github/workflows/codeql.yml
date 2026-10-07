@@ -37,7 +37,7 @@ jobs:
       - name: setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       # always the project, never FluentMath.slnx; the solution also holds WPF v1, which needs net472
       - name: restore

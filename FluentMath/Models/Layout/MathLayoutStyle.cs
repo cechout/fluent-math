@@ -3,7 +3,7 @@ namespace FluentMath.Models.Layout
     // the formula layout knobs:
     // every number that shapes the formula display; lengths in em, 1.0 being the font size of the part
     // they belong to, so the formula scales with FontSizePx
-    // (no WinUI types, the tests build this on plain net8.0; the colors stay in the markup)
+    // (no WinUI types, the tests build this on plain net10.0; the colors stay in the markup)
     public class MathLayoutStyle
     {
         // === the two display lines ===

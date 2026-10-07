@@ -57,7 +57,7 @@ jobs:
       - name: setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
           cache: true
           cache-dependency-path: FluentMath/FluentMath.csproj
 
@@ -78,7 +78,7 @@ jobs:
       - name: report publish size
         shell: pwsh
         run: |
-          $publishDir = "FluentMath/bin/x64/Release/net8.0-windows10.0.19041.0/publish/win-x64"
+          $publishDir = "FluentMath/bin/x64/Release/net10.0-windows10.0.19041.0/publish/win-x64"
           $root = (Resolve-Path $publishDir).Path
           $files = Get-ChildItem $root -Recurse -File
           $total = ($files | Measure-Object -Property Length -Sum).Sum
@@ -111,11 +111,11 @@ jobs:
       - name: setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
           cache: true
           cache-dependency-path: FluentMath.Tests/FluentMath.Tests.csproj
 
-      # plain net8.0, so neither a platform nor a runtime identifier
+      # plain net10.0, so neither a platform nor a runtime identifier
       - name: engine tests
         run: dotnet test FluentMath.Tests/FluentMath.Tests.csproj -c Release
 
@@ -131,7 +131,7 @@ jobs:
       - name: setup dotnet
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "10.0.x"
 
       # whitespace only, against the .editorconfig
       # (no -p:Platform, which dotnet format answers with its usage help; lf holds through .gitattributes)
